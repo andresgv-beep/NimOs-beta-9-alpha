@@ -10,7 +10,7 @@ set -euo pipefail
 
 # ── Config ──
 NIMOS_VERSION="9.0-alpha"
-NIMOS_REPO="https://github.com/andresgv-beep/NimOs-beta-9"
+NIMOS_REPO="https://github.com/andresgv-beep/NimOs-beta-9-alpha"
 NIMOS_BRANCH="main"
 INSTALL_DIR="/opt/nimos"
 DATA_DIR="/var/lib/nimos"
@@ -200,8 +200,8 @@ install_nimos() {
   step "Installing NimOS application"
 
   # Download via tarball (no git auth needed)
-  TARBALL_URL="https://github.com/andresgv-beep/NimOs-beta-9/archive/refs/heads/${NIMOS_BRANCH}.tar.gz"
-  
+  TARBALL_URL="https://github.com/andresgv-beep/NimOs-beta-9-alpha/archive/refs/heads/${NIMOS_BRANCH}.tar.gz"
+
   if [[ -d "$INSTALL_DIR/daemon" ]]; then
     log "Updating existing installation..."
     curl -fsSL "$TARBALL_URL" | tar xz --strip-components=1 --overwrite -C "$INSTALL_DIR"
@@ -222,9 +222,9 @@ install_nimos() {
   # ── Build NimTorrent daemon ──
   if command -v g++ &>/dev/null && command -v make &>/dev/null && dpkg -l libtorrent-rasterbar-dev &>/dev/null 2>&1; then
     log "Building NimTorrent daemon..."
-    
+
     systemctl stop nimos-torrentd 2>/dev/null || true
-    
+
     cd "$INSTALL_DIR/torrentd"
 
     if [[ ! -f httplib.h ]]; then
