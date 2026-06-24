@@ -100,24 +100,24 @@
     font-weight: 600;
     color: var(--accent);
     background: rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     text-transform: uppercase;
   }
 
   /* ─── TAMAÑOS (standard de UI moderna) ─── */
   /* xs · 32px · Tablas, filas densas, NimHealth rows */
-  .size-xs { width: 32px; height: 32px; }
-  .size-xs .app-icon-fallback { font-size: 12px; border-radius: 6px; }
+  .size-xs { width: 2rem; height: 2rem; }
+  .size-xs .app-icon-fallback { font-size: var(--fs-12); border-radius: var(--radius-sm); }
 
   /* sm · 36px · Taskbar (standard Windows 10 / KDE / GNOME) */
-  .size-sm { width: 36px; height: 36px; }
-  .size-sm .app-icon-fallback { font-size: 14px; border-radius: 8px; }
+  .size-sm { width: 2.25rem; height: 2.25rem; }
+  .size-sm .app-icon-fallback { font-size: var(--fs-14); border-radius: var(--radius-md); }
 
   /* md · 48px · Launcher (standard Windows 11 / KDE / ChromeOS) */
-  .size-md { width: 48px; height: 48px; }
-  .size-md .app-icon-fallback { font-size: 20px; border-radius: 10px; }
+  .size-md { width: 3rem; height: 3rem; }
+  .size-md .app-icon-fallback { font-size: 1.25rem; border-radius: var(--bev-md); }
 
   /* lg · 80px · Header de detalle (NimHealth selected service, etc.) */
-  .size-lg { width: 80px; height: 80px; }
-  .size-lg .app-icon-fallback { font-size: 28px; border-radius: 12px; }
+  .size-lg { width: 5rem; height: 5rem; }
+  .size-lg .app-icon-fallback { font-size: 1.75rem; border-radius: var(--radius-lg); }
 </style>

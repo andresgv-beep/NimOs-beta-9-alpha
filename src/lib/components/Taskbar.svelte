@@ -352,7 +352,7 @@
   .taskbar {
     position: fixed;
     left: 0; right: 0; bottom: 0;
-    height: var(--taskbar-height, 44px);
+    height: var(--taskbar-height, 2.75rem);
     /* Cristal translúcido: la barra es fija → el blur cuesta poco y
        deja translucir el wallpaper. El color/opacidad vienen del tema
        (--taskbar-bg): oscuro en dark, claro en cream. */
@@ -370,28 +370,28 @@
   .tb-left, .tb-right {
     display: flex;
     align-items: center;
-    padding: 0 6px;
-    gap: 5px;
+    padding: 0 0.375rem;
+    gap: 0.3125rem;
   }
   .tb-center { flex: 1; }
 
   .tb-sep {
     width: 1px;
     align-self: center;
-    height: 22px;
+    height: 1.375rem;
     background: var(--border, #1f1f1f);
-    margin: 0 6px;
+    margin: 0 0.375rem;
   }
 
   .app-row {
     display: flex;
-    gap: 6px;
+    gap: 0.375rem;
   }
 
   /* ─── Logo NimOS · botón sin marco con drop-shadow lechoso ─── */
   .tb-logo-btn {
-    width: 44px;
-    height: 36px;
+    width: 2.75rem;
+    height: 2.25rem;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -430,8 +430,8 @@
   /* ─── App icon · sin border-radius · LED bajo cuando está abierta ─── */
   .tb-app {
     position: relative;
-    width: 44px;
-    height: 44px;
+    width: 2.75rem;
+    height: 2.75rem;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -448,7 +448,7 @@
      NO sobreescribimos width/height aquí (rompía la proporción)
      ni añadimos drop-shadow (los SVG ya tienen su propio look). */
   .tb-emoji {
-    font-size: 22px;
+    font-size: var(--fs-22);
     line-height: 1;
   }
 
@@ -456,34 +456,34 @@
   .tb-app.open::after {
     content: '';
     position: absolute;
-    bottom: 2px;
+    bottom: 0.125rem;
     left: 50%;
     transform: translateX(-50%);
-    width: 16px;
+    width: 1rem;
     height: 2px;
     background: var(--accent-color, #00ff9f);
     box-shadow: 0 0 5px var(--accent-color, #00ff9f);
   }
   .tb-app.focused::after {
-    width: 22px;
+    width: 1.375rem;
     box-shadow: 0 0 7px var(--accent-color, #00ff9f);
   }
   .tb-app.minimized::after {
-    width: 8px;
+    width: 0.5rem;
     opacity: 0.4;
   }
 
   /* Tooltip arriba del icono · chaflán técnico */
   .tb-tooltip {
     position: absolute;
-    bottom: calc(100% + 6px);
+    bottom: calc(100% + 0.375rem);
     left: 50%;
     transform: translateX(-50%);
     background: var(--bg-elev, #242429);
     border: 1px solid var(--border-bright, #2a2a2a);
-    padding: 4px 10px;
+    padding: var(--sp-1) 0.625rem;
     font-family: var(--font-mono, monospace);
-    font-size: 9px;
+    font-size: var(--fs-9);
     color: var(--ink);
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -501,15 +501,15 @@
   /* ─── Tray buttons ─── */
   .tb-tray {
     position: relative;
-    width: 36px;
-    height: 36px;
+    width: 2.25rem;
+    height: 2.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
     background: transparent;
     border: none;
     color: var(--fg-dim, #9a9aa3);
-    font-size: 18px;
+    font-size: var(--fs-18);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
   }
@@ -533,15 +533,15 @@
 
   .tray-badge {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    min-width: 14px;
-    height: 12px;
-    padding: 0 3px;
+    top: var(--sp-1);
+    right: var(--sp-1);
+    min-width: 0.875rem;
+    height: 0.75rem;
+    padding: 0 0.1875rem;
     background: var(--crit, #d76b6b);
     color: #fff;
     font-family: var(--font-mono, monospace);
-    font-size: 8.5px;
+    font-size: 0.53125rem;
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -555,7 +555,11 @@
     box-shadow: 0 0 4px rgba(0, 255, 159, 0.4);
   }
 
-  /* ─── Reloj LCD · mismo patrón que widget del dashboard ─── */
+  /* ─── Reloj LCD · mismo patrón que widget del dashboard ───
+     OJO: los dígitos son un <canvas> (lcd-canvas) dibujado en JS a px
+     fijos. Hasta que el canvas sea consciente de la escala (pasada JS,
+     mismo saco que el grid de widgets), el reloj se queda en px para no
+     descuadrar dígitos-canvas vs CSS escalado. NO migrar a rem todavía. */
   .tb-clock {
     display: flex;
     flex-direction: column;
@@ -598,7 +602,7 @@
 
   /* ─── Power ─── */
   .tb-account {
-    width: 44px;
+    width: 2.75rem;
     height: 100%;
     display: flex;
     align-items: center;
@@ -610,15 +614,15 @@
     color: var(--account-ic-color, #f2f2f5);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
-    margin-left: 4px;
+    margin-left: var(--sp-1);
   }
   .tb-account:hover {
     background: var(--hover-surface, rgba(255, 255, 255, 0.06));
     color: var(--account-ic-hover, var(--ink, #f2f2f5));
   }
   .account-ic {
-    width: 21px;
-    height: 21px;
+    width: 1.3125rem;
+    height: 1.3125rem;
     display: block;
     filter: drop-shadow(0 0 3px rgba(220, 255, 235, 0.18));
   }
@@ -633,7 +637,7 @@
   }
   .ctx-menu {
     position: fixed;
-    min-width: 210px;
+    min-width: 13.125rem;
     background: linear-gradient(180deg, #161616 0%, #0f0f0f 100%);
     border: 1px solid var(--border-bright, #2a2a2a);
     box-shadow:
@@ -641,16 +645,16 @@
       0 0 40px rgba(220, 255, 235, 0.03);
     z-index: 9510;
     font-family: var(--font-mono, monospace);
-    font-size: 11px;
-    padding: 4px;
+    font-size: var(--fs-11);
+    padding: var(--sp-1);
     clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
   }
   .ctx-item {
-    padding: 8px 12px;
+    padding: var(--sp-2) var(--sp-3);
     color: var(--ink);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0.625rem;
     cursor: pointer;
     transition: background 0.08s, color 0.08s;
     letter-spacing: 0.5px;
@@ -661,14 +665,14 @@
   }
   .ctx-ic {
     color: var(--fg-mute, #5a5a62);
-    width: 14px;
+    width: 0.875rem;
     text-align: center;
-    font-size: 11px;
+    font-size: var(--fs-11);
   }
   .ctx-item:hover .ctx-ic { color: var(--accent-color, #00ff9f); }
   .ctx-sep {
     height: 1px;
     background: var(--border, #1f1f1f);
-    margin: 4px 2px;
+    margin: var(--sp-1) 0.125rem;
   }
 </style>
