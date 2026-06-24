@@ -56,7 +56,7 @@ html, body {
 
 /* ── MANDO MAESTRO DE ESCALA ──────────────────────────────────────
    El font-size raíz es el único mando de escala de la UI. Todo lo
-   dimensionado en rem (tokens --fs-*/--sp-*/--radius-*/--bev-* y los
+   dimensionado en rem (tokens --fs-, --sp-, --radius-, --bev- y los
    componentes migrados) escala desde aquí. Reemplaza al antiguo
    `zoom`, que corrompía el espacio de coordenadas y rompía la maqueta
    medida en JS (ventanas, grid) en pantallas distintas. Con font-size
