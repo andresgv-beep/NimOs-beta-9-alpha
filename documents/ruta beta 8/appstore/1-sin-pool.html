@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>NimOS · AppStore · sin pool</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   NimOS · AppStore mockups · shell de ventana real
+   Basado en nimos-window-shell.html — sin inventos
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --nim-green: #00ff9f;
+  --ui-select: #7a9eb1;
+  --ui-select-bg: rgba(122, 158, 177, 0.10);
+  --ui-select-border: rgba(122, 158, 177, 0.35);
+  --st-ok: #00ff9f;
+  --st-warn: #ffc857;
+  --st-crit: #ff5a5a;
+  --st-info: #4db8ff;
+  --bg-window: #16161a;
+  --bg-main: #1a1a1f;
+  --bg-side: #131316;
+  --bg-card: #15151a;
+  --bg-inner: #101015;
+  --fg: #f0f0f0;
+  --fg-2: #d0d0d4;
+  --fg-3: #9c9ca4;
+  --fg-4: #7a7a82;
+  --fg-5: #5a5a62;
+  --bd: rgba(255,255,255,0.04);
+  --bd-2: #20202a;
+  --bd-3: #2a2a32;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0d0d10;
+  padding: 10px;
+  min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--fg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHELL DE VENTANA (igual que nimos-window-shell.html)
+   ═══════════════════════════════════════════════════════════ */
+.r-win {
+  display: grid;
+  grid-template-columns: 172px 1fr;
+  background: var(--bg-window);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--bd);
+  min-height: 620px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.r-win.no-side {
+  grid-template-columns: 1fr;
+}
+
+/* ── SIDEBAR ── */
+.r-side {
+  background: var(--bg-side);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 10px 12px;
+  border-right: 1px solid var(--bd);
+}
+.r-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 16px;
+}
+.r-brand-box {
+  width: 22px; height: 22px;
+  background: var(--nim-green);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bg-window);
+}
+.r-brand-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: 0.6px;
+}
+
+/* Nav del sidebar · categorías */
+.r-nav-section {
+  font-size: 10px;
+  color: var(--fg-5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 12px 8px 6px;
+  font-weight: 600;
+}
+.r-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  margin: 1px 0;
+}
+.r-nav-item:hover {
+  color: var(--fg);
+  background: rgba(255,255,255,0.025);
+}
+.r-nav-item.active {
+  color: var(--ui-select);
+  background: var(--ui-select-bg);
+}
+.r-nav-item .lbl { flex: 1; }
+.r-nav-item .count {
+  font-size: 10px;
+  color: var(--fg-4);
+  font-variant-numeric: tabular-nums;
+}
+.r-nav-item.active .count { color: var(--ui-select); }
+
+/* ── MAIN ── */
+.r-main {
+  background: var(--bg-main);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Titlebar absoluto · LEDs cuadrados 11px */
+.r-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 10;
+}
+.r-ctl {
+  width: 11px; height: 11px;
+  border-radius: 3px;
+  background: #2a2a30;
+  cursor: pointer;
+}
+.r-ctl.c1 { background: var(--st-warn); }
+.r-ctl.c2 { background: var(--st-ok); }
+.r-ctl.c3 { background: var(--st-crit); }
+
+/* Header del main · título de la pantalla */
+.r-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-right: 70px; /* deja espacio para los LEDs */
+  margin-bottom: 18px;
+}
+.r-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.r-subtitle {
+  font-size: 11px;
+  color: var(--fg-4);
+}
+
+/* Search inline · pequeño */
+.r-search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--bd-2);
+  font-size: 11px;
+  width: 200px;
+}
+.r-search svg { width: 10px; height: 10px; color: var(--fg-4); flex-shrink: 0; }
+.r-search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  outline: none;
+  font-family: inherit;
+  font-size: 11px;
+}
+.r-search input::placeholder { color: var(--fg-5); }
+
+/* Body scrollable */
+.r-body {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+</style>
+<style>
+  /* Setup centrado · sin sidebar */
+  .setup-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+  }
+  .setup-card {
+    width: 100%;
+    max-width: 440px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .setup-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: rgba(0, 255, 159, 0.10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--nim-green);
+    margin-bottom: 4px;
+  }
+  .setup-icon svg { width: 26px; height: 26px; }
+  .setup-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--fg);
+    letter-spacing: -0.2px;
+  }
+  .setup-desc {
+    font-size: 12.5px;
+    color: var(--fg-3);
+    line-height: 1.55;
+    max-width: 380px;
+  }
+  .setup-desc b {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .setup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .btn-primary {
+    padding: 9px 18px;
+    border-radius: 7px;
+    border: none;
+    background: var(--nim-green);
+    color: var(--bg-window);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: filter 0.12s;
+  }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-secondary {
+    padding: 9px 16px;
+    border-radius: 7px;
+    border: 1px solid var(--bd-2);
+    background: transparent;
+    color: var(--fg-2);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s, color 0.12s;
+  }
+  .btn-secondary:hover {
+    color: var(--fg);
+    background: rgba(255,255,255,0.025);
+  }
+</style>
+</head>
+<body>
+
+<div class="r-win no-side">
+  <main class="r-main">
+    <div class="r-titlebar">
+      <span class="r-ctl c1"></span>
+      <span class="r-ctl c2"></span>
+      <span class="r-ctl c3"></span>
+    </div>
+
+    <div class="setup-wrap">
+      <div class="setup-card">
+
+        <div class="setup-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+        </div>
+
+        <div class="setup-title">Necesitas un pool de almacenamiento</div>
+
+        <div class="setup-desc">
+          AppStore usa contenedores Docker que necesitan persistir datos.
+          Crea primero un <b>pool BTRFS</b> desde Storage donde se instalarán
+          los contenedores, volúmenes y configuraciones.
+        </div>
+
+        <div class="setup-actions">
+          <button class="btn-primary">
+            Abrir Storage
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:11px;height:11px">
+              <path d="M5 12h14"/>
+              <path d="M12 5l7 7-7 7"/>
+            </svg>
+          </button>
+          <button class="btn-secondary">Reintentar</button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>NimOS · Crear Share · Wizard</title>
+<style>
+:root {
+  --nim-green: #00ff9f;
+  --ui-select: #7a9eb1;
+  --ui-select-bg: rgba(122, 158, 177, 0.10);
+  --st-ok: #00ff9f;
+  --st-warn: #ffc857;
+  --st-crit: #ff5a5a;
+  --st-info: #4db8ff;
+  --bg-window: #16161a;
+  --bg-main: #1a1a1f;
+  --bg-card: #15151a;
+  --bg-inner: #101015;
+  --fg: #f0f0f0;
+  --fg-2: #d0d0d4;
+  --fg-3: #9c9ca4;
+  --fg-4: #7a7a82;
+  --fg-5: #5a5a62;
+  --bd: rgba(255,255,255,0.04);
+  --bd-2: #20202a;
+  --bd-3: #2a2a32;
+  --nim-folder: #ff9c5a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background:
+    radial-gradient(ellipse 900px 500px at 30% 30%, rgba(0, 60, 40, 0.10) 0%, transparent 65%),
+    #08080a;
+  min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.mono { font-family: ui-monospace, "JetBrains Mono", monospace; }
+
+/* Demo step controls */
+.demo-controls {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 1000;
+  background: rgba(20, 20, 24, 0.92);
+  border: 1px solid var(--bd-2);
+  border-radius: 8px;
+  padding: 6px;
+}
+.demo-btn {
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--bd-2);
+  border-radius: 4px;
+  color: var(--fg-3);
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+.demo-btn:hover { color: var(--fg); border-color: var(--bd-3); }
+.demo-btn.active { color: var(--nim-green); border-color: rgba(0,255,159,0.4); background: rgba(0,255,159,0.06); }
+
+/* ═══ WIZARD FRAME ═══ */
+.wiz {
+  width: 560px;
+  background: var(--bg-window);
+  border: 1px solid var(--bd-2);
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Head */
+.wiz-head {
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid var(--bd-2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wiz-head-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(0, 255, 159, 0.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nim-green);
+  flex-shrink: 0;
+}
+.wiz-head-icon svg { width: 17px; height: 17px; }
+.wiz-head-text { flex: 1; }
+.wiz-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wiz-tag {
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(255,156,90,0.12);
+  color: var(--nim-folder);
+  letter-spacing: 0.5px;
+}
+.wiz-sub {
+  font-size: 11px;
+  color: var(--fg-4);
+  margin-top: 3px;
+}
+
+/* Steps indicator */
+.wiz-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--bd-2);
+  background: var(--bg-inner);
+}
+.wiz-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.wiz-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--bd-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--fg-4);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.wiz-step.active .wiz-step-num {
+  background: var(--nim-green);
+  border-color: var(--nim-green);
+  color: var(--bg-window);
+}
+.wiz-step.done .wiz-step-num {
+  background: rgba(0,255,159,0.12);
+  border-color: rgba(0,255,159,0.35);
+  color: var(--nim-green);
+}
+.wiz-step-lbl {
+  font-size: 11px;
+  color: var(--fg-4);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.wiz-step.active .wiz-step-lbl { color: var(--fg); }
+.wiz-step.done .wiz-step-lbl { color: var(--fg-3); }
+.wiz-step-line {
+  flex: 1;
+  height: 1px;
+  background: var(--bd-2);
+  margin: 0 10px;
+}
+.wiz-step.done + .wiz-step .wiz-step-line,
+.wiz-step.done .wiz-step-line { background: rgba(0,255,159,0.25); }
+
+/* Body */
+.wiz-body {
+  padding: 22px;
+  min-height: 280px;
+}
+
+/* Field */
+.field { margin-bottom: 16px; }
+.field-label {
+  font-size: 10px;
+  color: var(--fg-4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 7px;
+  display: flex;
+  justify-content: space-between;
+}
+.field-label .opt { color: var(--fg-5); text-transform: none; letter-spacing: 0; font-weight: 400; }
+.field input, .field textarea, .field select {
+  width: 100%;
+  background: var(--bg-inner);
+  border: 1px solid var(--bd-2);
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: rgba(0,255,159,0.35);
+  background: rgba(0,255,159,0.03);
+}
+.field input::placeholder { color: var(--fg-5); }
+.field .hint {
+  font-size: 11px;
+  color: var(--fg-5);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.field .hint .path {
+  font-family: ui-monospace, monospace;
+  color: var(--fg-3);
+}
+
+/* Pool selector */
+.pool-grid { display: flex; flex-direction: column; gap: 6px; }
+.pool-opt {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border-radius: 7px;
+  border: 1px solid var(--bd-2);
+  background: var(--bg-inner);
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.pool-opt:hover { border-color: var(--bd-3); }
+.pool-opt.sel { border-color: rgba(0,255,159,0.35); background: rgba(0,255,159,0.04); }
+.pool-radio {
+  width: 14px; height: 14px;
+  border: 1.5px solid var(--fg-5);
+  border-radius: 3px;
+  flex-shrink: 0;
+  position: relative;
+}
+.pool-opt.sel .pool-radio { border-color: var(--nim-green); }
+.pool-opt.sel .pool-radio::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 1.5px;
+  background: var(--nim-green);
+}
+.pool-cube { width: 9px; height: 9px; border-radius: 2px; background: var(--nim-folder); flex-shrink: 0; }
+.pool-info { flex: 1; }
+.pool-name { font-size: 13px; color: var(--fg); font-weight: 500; }
+.pool-meta { font-family: ui-monospace, monospace; font-size: 10px; color: var(--fg-4); margin-top: 2px; }
+.pool-free { font-family: ui-monospace, monospace; font-size: 11px; color: var(--fg-3); }
+
+/* ═══ PASO 2 · PERMISOS ═══ */
+.perm-intro {
+  font-size: 12px;
+  color: var(--fg-3);
+  line-height: 1.55;
+  margin-bottom: 16px;
+}
+.perm-list { display: flex; flex-direction: column; gap: 4px; }
+.perm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  background: var(--bg-inner);
+  border: 1px solid var(--bd-2);
+  border-radius: 7px;
+}
+.perm-avatar {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--bd-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--ui-select);
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.perm-user { flex: 1; }
+.perm-name { font-size: 13px; color: var(--fg); font-weight: 500; }
+.perm-role { font-family: ui-monospace, monospace; font-size: 9px; color: var(--fg-5); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
+.perm-seg {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--bd-2);
+  border-radius: 6px;
+  padding: 2px;
+}
+.perm-seg-btn {
+  padding: 5px 11px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--fg-4);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+  transition: all 0.1s;
+}
+.perm-seg-btn:hover { color: var(--fg-2); }
+.perm-seg-btn.sel.none { background: rgba(122,122,130,0.2); color: var(--fg-2); }
+.perm-seg-btn.sel.ro { background: rgba(77,184,255,0.15); color: var(--st-info); }
+.perm-seg-btn.sel.rw { background: rgba(0,255,159,0.15); color: var(--nim-green); }
+.perm-owner-tag {
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  color: var(--nim-green);
+  padding: 3px 8px;
+  border: 1px solid rgba(0,255,159,0.3);
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ═══ PASO 3 · CUOTA ═══ */
+.quota-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.quota-opt {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid var(--bd-2);
+  border-radius: 8px;
+  background: var(--bg-inner);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.12s, background 0.12s;
+}
+.quota-opt:hover { border-color: var(--bd-3); }
+.quota-opt.sel { border-color: rgba(0,255,159,0.35); background: rgba(0,255,159,0.04); }
+.quota-opt-title { font-size: 13px; color: var(--fg); font-weight: 600; margin-bottom: 3px; }
+.quota-opt-desc { font-size: 11px; color: var(--fg-4); }
+.quota-input-wrap { display: flex; gap: 8px; align-items: flex-end; }
+.quota-input-wrap .field { flex: 1; margin-bottom: 0; }
+.quota-unit-seg {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--bd-2);
+  border-radius: 7px;
+  padding: 2px;
+}
+.quota-unit-btn {
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 5px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--fg-4);
+  cursor: pointer;
+  font-weight: 600;
+}
+.quota-unit-btn.sel { background: var(--nim-green); color: var(--bg-window); }
+
+.quota-preview {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--bg-inner);
+  border-radius: 8px;
+  border: 1px solid var(--bd-2);
+}
+.quota-preview-bar {
+  height: 6px;
+  background: var(--bg-card);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.quota-preview-fill {
+  height: 100%;
+  width: 12%;
+  background: var(--nim-green);
+  border-radius: 2px;
+}
+.quota-preview-text {
+  display: flex;
+  justify-content: space-between;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--fg-4);
+}
+.quota-preview-text .em { color: var(--fg-2); }
+
+/* Recycle bin toggle */
+.recycle-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--bd-2);
+  background: var(--bg-inner);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.recycle-toggle.sel {
+  border-color: rgba(0,255,159,0.3);
+  background: rgba(0,255,159,0.04);
+}
+.rt-icon {
+  width: 32px; height: 32px;
+  border-radius: 7px;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-4);
+  flex-shrink: 0;
+  transition: color 0.12s;
+}
+.recycle-toggle.sel .rt-icon { color: var(--nim-green); }
+.rt-icon svg { width: 16px; height: 16px; }
+.rt-text { flex: 1; }
+.rt-title { font-size: 13px; color: var(--fg); font-weight: 500; }
+.rt-desc { font-size: 11px; color: var(--fg-4); margin-top: 2px; line-height: 1.4; }
+.rt-switch {
+  width: 34px; height: 20px;
+  background: var(--bd-3);
+  border-radius: 4px;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.rt-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  background: var(--fg-4);
+  border-radius: 3px;
+  transition: left 0.15s, background 0.15s;
+}
+.recycle-toggle.sel .rt-switch { background: var(--nim-green); }
+.recycle-toggle.sel .rt-switch::after { left: 16px; background: var(--bg-window); }
+
+/* Footer */
+.wiz-foot {
+  padding: 14px 22px;
+  border-top: 1px solid var(--bd-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wiz-foot .spacer { flex: 1; }
+.btn {
+  padding: 9px 18px;
+  border-radius: 7px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--bd-2);
+  background: transparent;
+  color: var(--fg-3);
+  transition: all 0.12s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover { color: var(--fg); border-color: var(--bd-3); }
+.btn.primary {
+  background: var(--nim-green);
+  color: var(--bg-window);
+  border-color: var(--nim-green);
+}
+.btn.primary:hover { filter: brightness(1.08); }
+.btn svg { width: 12px; height: 12px; }
+</style>
+</head>
+<body>
+
+<div class="demo-controls">
+  <button class="demo-btn active" onclick="setStep(1, event)">1 · Carpeta</button>
+  <button class="demo-btn" onclick="setStep(2, event)">2 · Permisos</button>
+  <button class="demo-btn" onclick="setStep(3, event)">3 · Cuota</button>
+</div>
+
+<div class="wiz">
+  <!-- HEAD -->
+  <div class="wiz-head">
+    <div class="wiz-head-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      </svg>
+    </div>
+    <div class="wiz-head-text">
+      <div class="wiz-title">Nueva carpeta compartida</div>
+      <div class="wiz-sub" id="head-sub">Define el nombre y el pool de destino</div>
+    </div>
+  </div>
+
+  <!-- STEPS -->
+  <div class="wiz-steps" id="steps">
+    <div class="wiz-step active" data-s="1">
+      <span class="wiz-step-num">1</span>
+      <span class="wiz-step-lbl">Carpeta</span>
+      <span class="wiz-step-line"></span>
+    </div>
+    <div class="wiz-step" data-s="2">
+      <span class="wiz-step-num">2</span>
+      <span class="wiz-step-lbl">Permisos</span>
+      <span class="wiz-step-line"></span>
+    </div>
+    <div class="wiz-step" data-s="3">
+      <span class="wiz-step-num">3</span>
+      <span class="wiz-step-lbl">Cuota</span>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="wiz-body" id="body"></div>
+
+  <!-- FOOTER -->
+  <div class="wiz-foot" id="foot"></div>
+</div>
+
+<script>
+const steps = {
+  1: {
+    sub: 'Define el nombre y el pool de destino',
+    body: () => `
+      <div class="field">
+        <div class="field-label">Nombre de la carpeta</div>
+        <input type="text" placeholder="proyectos" value="proyectos" autofocus>
+        <div class="hint">Se creará en <span class="path">/nimbus/pools/data3/shares/proyectos</span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Pool de destino</div>
+        <div class="pool-grid">
+          <div class="pool-opt sel">
+            <span class="pool-radio"></span>
+            <span class="pool-cube"></span>
+            <div class="pool-info">
+              <div class="pool-name">data3</div>
+              <div class="pool-meta">btrfs · raid1</div>
+            </div>
+            <span class="pool-free">3.9 TB libres</span>
+          </div>
+          <div class="pool-opt">
+            <span class="pool-radio"></span>
+            <span class="pool-cube"></span>
+            <div class="pool-info">
+              <div class="pool-name">backups</div>
+              <div class="pool-meta">btrfs · single</div>
+            </div>
+            <span class="pool-free">850 GB libres</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Descripción <span class="opt">· opcional</span></div>
+        <input type="text" placeholder="Carpeta de proyectos del equipo">
+      </div>
+
+      <div class="field" style="margin-bottom:0">
+        <div class="recycle-toggle sel" onclick="this.classList.toggle('sel')">
+          <div class="rt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+          </div>
+          <div class="rt-text">
+            <div class="rt-title">Papelera de reciclaje</div>
+            <div class="rt-desc">Los archivos borrados se mueven a una papelera en lugar de eliminarse al instante</div>
+          </div>
+          <div class="rt-switch"></div>
+        </div>
+      </div>
+    `,
+    foot: () => `
+      <button class="btn">Cancelar</button>
+      <div class="spacer"></div>
+      <button class="btn primary" onclick="setStep(2)">
+        Continuar
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+      </button>
+    `
+  },
+  2: {
+    sub: 'Asigna quién puede acceder y con qué permiso',
+    body: () => `
+      <div class="perm-intro">
+        El creador tiene acceso completo automáticamente. Asigna permisos al resto de usuarios:
+        <b style="color:var(--st-info)">RO</b> solo lectura · <b style="color:var(--nim-green)">RW</b> lectura y escritura.
+      </div>
+
+      <div class="perm-list">
+        <div class="perm-row">
+          <div class="perm-avatar">A</div>
+          <div class="perm-user">
+            <div class="perm-name">andres</div>
+            <div class="perm-role">admin · creador</div>
+          </div>
+          <span class="perm-owner-tag">owner · rw</span>
+        </div>
+
+        <div class="perm-row">
+          <div class="perm-avatar">M</div>
+          <div class="perm-user">
+            <div class="perm-name">maria</div>
+            <div class="perm-role">usuario</div>
+          </div>
+          <div class="perm-seg">
+            <button class="perm-seg-btn none">sin acceso</button>
+            <button class="perm-seg-btn ro sel ro">ro</button>
+            <button class="perm-seg-btn rw">rw</button>
+          </div>
+        </div>
+
+        <div class="perm-row">
+          <div class="perm-avatar">J</div>
+          <div class="perm-user">
+            <div class="perm-name">jordi</div>
+            <div class="perm-role">usuario</div>
+          </div>
+          <div class="perm-seg">
+            <button class="perm-seg-btn none sel none">sin acceso</button>
+            <button class="perm-seg-btn ro">ro</button>
+            <button class="perm-seg-btn rw">rw</button>
+          </div>
+        </div>
+
+        <div class="perm-row">
+          <div class="perm-avatar">P</div>
+          <div class="perm-user">
+            <div class="perm-name">pau</div>
+            <div class="perm-role">usuario</div>
+          </div>
+          <div class="perm-seg">
+            <button class="perm-seg-btn none">sin acceso</button>
+            <button class="perm-seg-btn ro">ro</button>
+            <button class="perm-seg-btn rw sel rw">rw</button>
+          </div>
+        </div>
+      </div>
+    `,
+    foot: () => `
+      <button class="btn" onclick="setStep(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        Atrás
+      </button>
+      <div class="spacer"></div>
+      <button class="btn primary" onclick="setStep(3)">
+        Continuar
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+      </button>
+    `
+  },
+  3: {
+    sub: 'Limita el espacio que puede ocupar esta carpeta',
+    body: () => `
+      <div class="quota-toggle">
+        <div class="quota-opt">
+          <div class="quota-opt-title">Sin límite</div>
+          <div class="quota-opt-desc">usa todo el pool</div>
+        </div>
+        <div class="quota-opt sel">
+          <div class="quota-opt-title">Con cuota</div>
+          <div class="quota-opt-desc">límite fijo</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Tamaño máximo</div>
+        <div class="quota-input-wrap">
+          <div class="field">
+            <input type="number" value="500" placeholder="500">
+          </div>
+          <div class="quota-unit-seg">
+            <button class="quota-unit-btn">MB</button>
+            <button class="quota-unit-btn sel">GB</button>
+            <button class="quota-unit-btn">TB</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="quota-preview">
+        <div class="quota-preview-bar">
+          <div class="quota-preview-fill"></div>
+        </div>
+        <div class="quota-preview-text">
+          <span><span class="em">500 GB</span> de cuota</span>
+          <span>pool data3 · <span class="em">3.9 TB</span> libres</span>
+        </div>
+      </div>
+    `,
+    foot: () => `
+      <button class="btn" onclick="setStep(2)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        Atrás
+      </button>
+      <div class="spacer"></div>
+      <button class="btn primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Crear carpeta
+      </button>
+    `
+  }
+};
+
+function setStep(n, e) {
+  document.getElementById('head-sub').textContent = steps[n].sub;
+  document.getElementById('body').innerHTML = steps[n].body();
+  document.getElementById('foot').innerHTML = steps[n].foot();
+
+  document.querySelectorAll('.wiz-step').forEach(s => {
+    const sn = parseInt(s.dataset.s);
+    s.classList.toggle('active', sn === n);
+    s.classList.toggle('done', sn < n);
+  });
+
+  document.querySelectorAll('.demo-btn').forEach((b, i) => b.classList.toggle('active', i === n-1));
+  if (e) { document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); }
+}
+
+setStep(1);
+</script>
+</body>
+</html>

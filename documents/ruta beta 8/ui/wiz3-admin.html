@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NimOS · Setup · Admin</title>
+<style>
+:root{--nim-green:#00ff9f;--ui-select:#7a9eb1;--ui-select-bg:rgba(122,158,177,0.10);--st-ok:#00ff9f;--st-warn:#ffc857;--st-crit:#ff5a5a;--st-info:#4db8ff;--bg-window:#16161a;--bg-main:#1a1a1f;--bg-side:#131316;--bg-card:#15151a;--bg-inner:#101015;--fg:#f0f0f0;--fg-2:#d0d0d4;--fg-3:#9c9ca4;--fg-4:#7a7a82;--fg-5:#5a5a62;--bd:rgba(255,255,255,0.04);--bd-2:#20202a;--bd-3:#2a2a32}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(ellipse at top, rgba(0,255,159,0.04) 0%, transparent 50%), #0a0a0c;color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden}
+body::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);background-size:40px 40px;pointer-events:none}
+.mono{font-family:ui-monospace,Menlo,monospace}
+
+.corner{position:absolute;font-family:ui-monospace,monospace;font-size:9px;color:var(--fg-5);letter-spacing:0.8px;text-transform:uppercase;z-index:2}
+.corner.tl{top:20px;left:20px;display:flex;align-items:center;gap:8px}
+.corner.tr{top:20px;right:20px}
+.corner.bl{bottom:20px;left:20px}
+.corner.br{bottom:20px;right:20px}
+.corner-led{width:6px;height:6px;border-radius:1.5px;background:var(--st-warn);box-shadow:0 0 5px var(--st-warn);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+.wrap{position:relative;z-index:1;width:100%;max-width:480px;display:flex;flex-direction:column;gap:24px}
+
+.brand{display:flex;flex-direction:column;align-items:center;gap:10px}
+.logo{display:flex;filter:drop-shadow(0 0 6px rgba(220,255,235,0.5)) drop-shadow(0 0 2px rgba(255,255,255,0.6))}
+.cube-1{animation:pulse-cube 3.5s ease-in-out infinite}
+.cube-2{animation:pulse-cube 3.5s ease-in-out infinite 1.2s}
+.cube-3{animation:pulse-cube 3.5s ease-in-out infinite 2.4s}
+@keyframes pulse-cube{0%,100%{opacity:1}50%{opacity:0.5}}
+.brand-text{display:flex;flex-direction:column;align-items:center;gap:4px}
+.brand-name{font-size:18px;font-weight:600}
+.brand-sub{font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-4);letter-spacing:0.4px}
+.brand-sub .accent{color:var(--nim-green)}
+
+.stepper{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0}
+.step{display:flex;align-items:center;gap:6px}
+.step-num{width:20px;height:20px;border-radius:5px;background:var(--bg-card);border:1px solid var(--bd-3);font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-4);display:flex;align-items:center;justify-content:center;font-weight:600}
+.step.active .step-num{background:var(--nim-green);color:var(--bg-window);border-color:var(--nim-green)}
+.step.done .step-num{background:rgba(0,255,159,0.15);color:var(--nim-green);border-color:rgba(0,255,159,0.3)}
+.step-line{width:24px;height:1px;background:var(--bd-3)}
+.step.done + .step-line{background:rgba(0,255,159,0.3)}
+
+.card{background:var(--bg-card);border:1px solid var(--bd-2);border-radius:14px;padding:24px 24px 20px}
+.card-head{margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--bd-2)}
+.card-title{font-size:16px;font-weight:500;margin-bottom:4px;display:flex;align-items:center;gap:9px}
+.card-title-icon{width:24px;height:24px;border-radius:6px;background:var(--bg-inner);display:flex;align-items:center;justify-content:center;color:var(--nim-green)}
+.card-title-icon svg{width:13px;height:13px}
+.card-desc{font-size:11px;color:var(--fg-4);line-height:1.5}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field-label{display:flex;align-items:center;justify-content:space-between}
+.field-label-text{font-family:ui-monospace,monospace;font-size:9px;color:var(--fg-4);letter-spacing:0.6px;text-transform:uppercase;font-weight:500}
+.field-label-req{color:var(--st-crit);margin-left:3px}
+.field-input{background:var(--bg-inner);border:1px solid var(--bd-3);color:var(--fg);padding:10px 12px;border-radius:6px;font-size:13px;font-family:ui-monospace,monospace;outline:none;width:100%}
+.field-input:focus{border-color:var(--ui-select);background:#0d0d11}
+.field-input::placeholder{color:var(--fg-5)}
+.field-hint{font-size:10px;color:var(--fg-5);font-family:ui-monospace,monospace;letter-spacing:0.3px;margin-top:2px}
+.field-hint.ok{color:var(--st-ok)}
+.field-hint.warn{color:var(--st-warn)}
+
+.pw-strength{display:flex;gap:3px;margin-top:6px}
+.pw-bar{flex:1;height:3px;border-radius:1px;background:var(--bd-3)}
+.pw-bar.fill-1{background:var(--st-crit)}
+.pw-bar.fill-2{background:var(--st-warn)}
+.pw-bar.fill-3{background:var(--st-ok)}
+
+.actions{display:flex;gap:10px;margin-top:18px;padding-top:18px;border-top:1px solid var(--bd-2)}
+.btn{padding:11px 14px;border-radius:7px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;cursor:pointer;border:1px solid;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--nim-green);color:var(--bg-window);border-color:var(--nim-green);flex:1}
+.btn-primary:hover{background:#00e08b}
+.btn-primary svg{width:13px;height:13px}
+.btn-ghost{background:transparent;color:var(--fg-3);border-color:var(--bd-3);flex:0 0 90px}
+.btn-ghost:hover{color:var(--fg);border-color:#4a4a52}
+
+.sysinfo{display:flex;justify-content:space-between;font-family:ui-monospace,monospace;font-size:9px;color:var(--fg-5);letter-spacing:0.4px;padding:0 4px}
+</style>
+</head>
+<body>
+
+<div class="corner tl"><span class="corner-led"></span><span>FIRST BOOT</span></div>
+<div class="corner tr">v8.1</div>
+<div class="corner bl">nimos-nas.local</div>
+<div class="corner br">STEP 3/5</div>
+
+<div class="wrap">
+
+  <div class="brand">
+    <div class="logo">
+      <svg width="48" height="48" viewBox="-15 0 200 185" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path class="cube-1" d="M 4.22 62.36 L 45.78 38.36 A 16 16 0 0 1 67.64 44.22 L 91.64 85.78 A 16 16 0 0 1 85.78 107.64 L 44.22 131.64 A 16 16 0 0 1 22.36 125.78 L -1.64 84.22 A 16 16 0 0 1 4.22 62.36 Z" fill="#ffffff"/>
+        <rect class="cube-2" x="108" y="12" width="60" height="60" rx="10" fill="#ffffff"/>
+        <rect class="cube-3" x="108" y="98" width="60" height="60" rx="10" fill="#ffffff"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">NimOS</div>
+      <div class="brand-sub">your <span class="accent">NAS</span> for developers</div>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="step done"><span class="step-num">✓</span></div>
+    <span class="step-line"></span>
+    <div class="step done"><span class="step-num">✓</span></div>
+    <span class="step-line"></span>
+    <div class="step active"><span class="step-num">3</span></div>
+    <span class="step-line"></span>
+    <div class="step"><span class="step-num">4</span></div>
+    <span class="step-line"></span>
+    <div class="step"><span class="step-num">5</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">
+        <span class="card-title-icon">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="6" r="2"/>
+            <path d="M3 14a5 5 0 0 1 10 0"/>
+          </svg>
+        </span>
+        <span>Crear cuenta administrador</span>
+      </div>
+      <div class="card-desc" style="margin-top:8px">Esta es la cuenta con acceso completo al sistema. Podrás crear más usuarios después.</div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">
+        <span class="field-label-text">Nombre de usuario<span class="field-label-req">*</span></span>
+      </div>
+      <input class="field-input" type="text" value="" placeholder="ej: admin"/>
+      <div class="field-hint">minúsculas, números y guion bajo · 2-32 caracteres</div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">
+        <span class="field-label-text">Contraseña<span class="field-label-req">*</span></span>
+      </div>
+      <input class="field-input" type="password" value="" placeholder="Mínimo 8 caracteres"/>
+      <div class="pw-strength">
+        <div class="pw-bar"></div>
+        <div class="pw-bar"></div>
+        <div class="pw-bar"></div>
+        <div class="pw-bar"></div>
+      </div>
+      <div class="field-hint">Mínimo 8 · una mayúscula · un número</div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">
+        <span class="field-label-text">Confirmar contraseña<span class="field-label-req">*</span></span>
+      </div>
+      <input class="field-input" type="password" value=""/>
+      <div class="field-hint">Repite la contraseña</div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost">← Atrás</button>
+      <button class="btn btn-primary">
+        Continuar
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="sysinfo">
+    <span>NimOS BETA 8.1 · BUILD 20260520</span>
+    <span>SETUP WIZARD</span>
+  </div>
+
+</div>
+
+</body>
+</html>

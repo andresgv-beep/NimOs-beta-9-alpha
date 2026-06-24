@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>NimOS · AppStore · detalle Plex</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   NimOS · AppStore mockups · shell de ventana real
+   Basado en nimos-window-shell.html — sin inventos
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --nim-green: #00ff9f;
+  --ui-select: #7a9eb1;
+  --ui-select-bg: rgba(122, 158, 177, 0.10);
+  --ui-select-border: rgba(122, 158, 177, 0.35);
+  --st-ok: #00ff9f;
+  --st-warn: #ffc857;
+  --st-crit: #ff5a5a;
+  --st-info: #4db8ff;
+  --bg-window: #16161a;
+  --bg-main: #1a1a1f;
+  --bg-side: #131316;
+  --bg-card: #15151a;
+  --bg-inner: #101015;
+  --fg: #f0f0f0;
+  --fg-2: #d0d0d4;
+  --fg-3: #9c9ca4;
+  --fg-4: #7a7a82;
+  --fg-5: #5a5a62;
+  --bd: rgba(255,255,255,0.04);
+  --bd-2: #20202a;
+  --bd-3: #2a2a32;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0d0d10;
+  padding: 10px;
+  min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--fg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHELL DE VENTANA (igual que nimos-window-shell.html)
+   ═══════════════════════════════════════════════════════════ */
+.r-win {
+  display: grid;
+  grid-template-columns: 172px 1fr;
+  background: var(--bg-window);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--bd);
+  min-height: 620px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.r-win.no-side {
+  grid-template-columns: 1fr;
+}
+
+/* ── SIDEBAR ── */
+.r-side {
+  background: var(--bg-side);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 10px 12px;
+  border-right: 1px solid var(--bd);
+}
+.r-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 16px;
+}
+.r-brand-box {
+  width: 22px; height: 22px;
+  background: var(--nim-green);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bg-window);
+}
+.r-brand-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: 0.6px;
+}
+
+/* Nav del sidebar · categorías */
+.r-nav-section {
+  font-size: 10px;
+  color: var(--fg-5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 12px 8px 6px;
+  font-weight: 600;
+}
+.r-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  margin: 1px 0;
+}
+.r-nav-item:hover {
+  color: var(--fg);
+  background: rgba(255,255,255,0.025);
+}
+.r-nav-item.active {
+  color: var(--ui-select);
+  background: var(--ui-select-bg);
+}
+.r-nav-item .lbl { flex: 1; }
+.r-nav-item .count {
+  font-size: 10px;
+  color: var(--fg-4);
+  font-variant-numeric: tabular-nums;
+}
+.r-nav-item.active .count { color: var(--ui-select); }
+
+/* ── MAIN ── */
+.r-main {
+  background: var(--bg-main);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Titlebar absoluto · LEDs cuadrados 11px */
+.r-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 10;
+}
+.r-ctl {
+  width: 11px; height: 11px;
+  border-radius: 3px;
+  background: #2a2a30;
+  cursor: pointer;
+}
+.r-ctl.c1 { background: var(--st-warn); }
+.r-ctl.c2 { background: var(--st-ok); }
+.r-ctl.c3 { background: var(--st-crit); }
+
+/* Header del main · título de la pantalla */
+.r-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-right: 70px; /* deja espacio para los LEDs */
+  margin-bottom: 18px;
+}
+.r-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.r-subtitle {
+  font-size: 11px;
+  color: var(--fg-4);
+}
+
+/* Search inline · pequeño */
+.r-search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--bd-2);
+  font-size: 11px;
+  width: 200px;
+}
+.r-search svg { width: 10px; height: 10px; color: var(--fg-4); flex-shrink: 0; }
+.r-search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  outline: none;
+  font-family: inherit;
+  font-size: 11px;
+}
+.r-search input::placeholder { color: var(--fg-5); }
+
+/* Body scrollable */
+.r-body {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+</style>
+<style>
+  /* Back button discreto */
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 8px;
+    border-radius: 5px;
+    background: transparent;
+    border: none;
+    color: var(--fg-3);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.12s, background 0.12s;
+    margin-bottom: 14px;
+    margin-top: -4px;
+  }
+  .back-btn:hover {
+    color: var(--fg);
+    background: rgba(255,255,255,0.03);
+  }
+  .back-btn svg { width: 12px; height: 12px; }
+
+  /* ═══ HERO · icono + nombre + acción ═══ */
+  .detail-hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--bd);
+    margin-bottom: 18px;
+  }
+  .detail-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    background: #1a1a1a;
+    color: #e5a00d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .detail-icon svg { width: 44px; height: 44px; }
+
+  .detail-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .detail-name {
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--fg);
+    letter-spacing: -0.3px;
+  }
+  .detail-cat {
+    font-size: 12px;
+    color: var(--fg-4);
+    margin-top: 3px;
+  }
+  .detail-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .tag {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--bd-2);
+    color: var(--fg-3);
+    font-weight: 500;
+  }
+  .tag.port { color: var(--st-info); }
+
+  /* Botón install/instalando/instalada */
+  .detail-action {
+    flex-shrink: 0;
+  }
+  .btn-install {
+    padding: 9px 22px;
+    border-radius: 7px;
+    border: none;
+    background: var(--nim-green);
+    color: var(--bg-window);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: filter 0.12s;
+  }
+  .btn-install:hover { filter: brightness(1.08); }
+
+  /* Estado instalando con spinner */
+  .btn-installing {
+    padding: 9px 22px;
+    border-radius: 7px;
+    border: 1px solid var(--bd-2);
+    background: var(--bg-card);
+    color: var(--fg-3);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .spinner {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.1);
+    border-top-color: var(--st-info);
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ═══ SCREENSHOTS · carrusel horizontal ═══ */
+  .screenshots {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    margin: 0 -8px 22px;
+    padding-left: 8px;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bd-3) transparent;
+  }
+  .screenshots::-webkit-scrollbar {
+    height: 6px;
+  }
+  .screenshots::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .screenshots::-webkit-scrollbar-thumb {
+    background: var(--bd-3);
+    border-radius: 3px;
+  }
+  .shot {
+    flex-shrink: 0;
+    width: 360px;
+    height: 200px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #2c1b3d 50%, #1f1f33 100%);
+    border: 1px solid var(--bd-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg-5);
+    font-size: 11px;
+    position: relative;
+    overflow: hidden;
+  }
+  .shot::before {
+    content: 'screenshot.png';
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    font-family: ui-monospace, monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.15);
+  }
+  .shot.s2 { background: linear-gradient(135deg, #1f1f33 0%, #2a2347 50%, #1a1a2e 100%); }
+  .shot.s3 { background: linear-gradient(135deg, #2c1b3d 0%, #1a1a2e 50%, #1f1f33 100%); }
+
+  /* ═══ DESCRIPCIÓN ═══ */
+  .section-label {
+    font-size: 11px;
+    color: var(--fg-4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .description {
+    font-size: 13px;
+    color: var(--fg-2);
+    line-height: 1.65;
+    margin-bottom: 22px;
+  }
+  .description p + p { margin-top: 10px; }
+
+  /* ═══ INFO TÉCNICA ═══ */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .info-row .k { color: var(--fg-4); }
+  .info-row .v {
+    color: var(--fg);
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+  }
+
+  /* ═══ CREDENCIALES POR DEFECTO ═══ */
+  .creds-block {
+    background: var(--bg-card);
+    border: 1px solid var(--bd-2);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 22px;
+  }
+  .cred-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 5px;
+  }
+  .cred-row + .cred-row {
+    border-top: 1px solid var(--bd);
+    border-radius: 0;
+  }
+  .cred-k {
+    font-size: 11px;
+    color: var(--fg-4);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    width: 90px;
+    flex-shrink: 0;
+  }
+  .cred-v {
+    flex: 1;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--fg);
+    letter-spacing: 0.5px;
+  }
+  .cred-v.masked {
+    color: var(--fg-3);
+    letter-spacing: 2px;
+  }
+  .cred-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--fg-4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    flex-shrink: 0;
+  }
+  .cred-btn svg { width: 12px; height: 12px; }
+  .cred-btn:hover {
+    color: var(--fg);
+    background: rgba(255,255,255,0.04);
+    border-color: var(--bd-2);
+  }
+  .creds-hint {
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    color: var(--fg-4);
+    line-height: 1.5;
+  }
+
+  /* ═══ INSTALL FLOW (estados) ═══ */
+  .install-flow {
+    background: var(--bg-card);
+    border: 1px solid var(--bd-2);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+  }
+  .install-flow-title {
+    font-size: 12px;
+    color: var(--fg);
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .install-flow-title .spinner-sm {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.1);
+    border-top-color: var(--st-info);
+    animation: spin 0.6s linear infinite;
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 12px;
+  }
+  .step-led {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .step.done .step-led {
+    background: var(--st-ok);
+    box-shadow: 0 0 4px rgba(0, 255, 159, 0.4);
+  }
+  .step.active .step-led {
+    background: var(--st-info);
+    box-shadow: 0 0 6px rgba(77, 184, 255, 0.5);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.5; }
+  }
+  .step.pending .step-led {
+    background: var(--bd-3);
+  }
+  .step .label {
+    flex: 1;
+    color: var(--fg-3);
+  }
+  .step.done .label, .step.active .label { color: var(--fg); }
+  .step .timing {
+    font-size: 10px;
+    color: var(--fg-4);
+    font-family: ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+</head>
+<body>
+
+<div class="r-win">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="r-side">
+    <div class="r-brand">
+      <div class="r-brand-box">N</div>
+      <span class="r-brand-name">APPSTORE</span>
+    </div>
+
+    <div class="r-nav-section">Biblioteca</div>
+    <div class="r-nav-item">
+      <span class="lbl">Instaladas</span>
+      <span class="count">6</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Actualizaciones</span>
+      <span class="count">3</span>
+    </div>
+
+    <div class="r-nav-section">Categorías</div>
+    <div class="r-nav-item">
+      <span class="lbl">Todas</span>
+      <span class="count">42</span>
+    </div>
+    <div class="r-nav-item active">
+      <span class="lbl">Media</span>
+      <span class="count">12</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Cloud</span>
+      <span class="count">8</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Productividad</span>
+      <span class="count">9</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Descargas</span>
+      <span class="count">5</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Desarrollo</span>
+      <span class="count">4</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Monitoring</span>
+      <span class="count">4</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Red</span>
+      <span class="count">3</span>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="r-main">
+    <div class="r-titlebar">
+      <span class="r-ctl c1"></span>
+      <span class="r-ctl c2"></span>
+      <span class="r-ctl c3"></span>
+    </div>
+
+    <div class="r-body">
+
+      <!-- Back -->
+      <button class="back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Volver al catálogo
+      </button>
+
+      <!-- HERO -->
+      <div class="detail-hero">
+        <div class="detail-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 2v20l10-10z"/></svg>
+        </div>
+        <div class="detail-info">
+          <div class="detail-name">Plex Media Server</div>
+          <div class="detail-cat">Media · v1.40.2</div>
+          <div class="detail-tags">
+            <span class="tag port">:32400</span>
+            <span class="tag">Docker</span>
+            <span class="tag">Multi-servicio</span>
+          </div>
+        </div>
+        <div class="detail-action">
+          <!-- Estado: instalando -->
+          <button class="btn-installing">
+            <span class="spinner"></span>
+            Instalando…
+          </button>
+        </div>
+      </div>
+
+      <!-- INSTALL FLOW (visible solo mientras instala) -->
+      <div class="install-flow">
+        <div class="install-flow-title">
+          <span class="spinner-sm"></span>
+          Progreso de instalación
+        </div>
+        <div class="steps">
+          <div class="step done">
+            <span class="step-led"></span>
+            <span class="label">Verificar Docker disponible</span>
+            <span class="timing">0.3s</span>
+          </div>
+          <div class="step done">
+            <span class="step-led"></span>
+            <span class="label">Descargar imagen plexinc/pms-docker:latest</span>
+            <span class="timing">12.4s</span>
+          </div>
+          <div class="step done">
+            <span class="step-led"></span>
+            <span class="label">Crear volúmenes y red</span>
+            <span class="timing">0.8s</span>
+          </div>
+          <div class="step active">
+            <span class="step-led"></span>
+            <span class="label">Iniciar contenedor</span>
+            <span class="timing">…</span>
+          </div>
+          <div class="step pending">
+            <span class="step-led"></span>
+            <span class="label">Verificar healthcheck</span>
+            <span class="timing">—</span>
+          </div>
+          <div class="step pending">
+            <span class="step-led"></span>
+            <span class="label">Registrar en sistema</span>
+            <span class="timing">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREENSHOTS -->
+      <div class="section-label">Capturas</div>
+      <div class="screenshots">
+        <div class="shot"></div>
+        <div class="shot s2"></div>
+        <div class="shot s3"></div>
+      </div>
+
+      <!-- DESCRIPCIÓN -->
+      <div class="section-label">Acerca de</div>
+      <div class="description">
+        <p>
+          Plex Media Server organiza tu biblioteca de películas, series, música y fotos
+          en una interfaz unificada accesible desde cualquier dispositivo. Detecta automáticamente
+          los metadatos, descarga carátulas y permite streaming local y remoto.
+        </p>
+        <p>
+          Soporta transcodificación hardware, subtítulos automáticos, y múltiples usuarios con
+          perfiles independientes. La biblioteca se monta desde tus shares de Storage.
+        </p>
+      </div>
+
+      <!-- INFO TÉCNICA -->
+      <div class="section-label">Información técnica</div>
+      <div class="info-grid">
+        <div class="info-row"><span class="k">Imagen Docker</span><span class="v">plexinc/pms-docker</span></div>
+        <div class="info-row"><span class="k">Puerto</span><span class="v">:32400</span></div>
+        <div class="info-row"><span class="k">Volúmenes</span><span class="v">/config · /media</span></div>
+        <div class="info-row"><span class="k">Tamaño imagen</span><span class="v">410 MB</span></div>
+      </div>
+
+      <!-- CREDENCIALES POR DEFECTO -->
+      <div class="section-label">Credenciales por defecto</div>
+      <div class="creds-block">
+        <div class="cred-row">
+          <span class="cred-k">Usuario</span>
+          <span class="cred-v">admin</span>
+          <button class="cred-btn" title="Copiar usuario">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+        </div>
+        <div class="cred-row">
+          <span class="cred-k">Contraseña</span>
+          <span class="cred-v masked">••••••••••••</span>
+          <button class="cred-btn" title="Mostrar contraseña">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+          <button class="cred-btn" title="Copiar contraseña">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+        </div>
+        <div class="creds-hint">
+          Cambia la contraseña tras el primer inicio de sesión por seguridad.
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

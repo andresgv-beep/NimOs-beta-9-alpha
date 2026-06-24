@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NimOS · Files</title>
+<style>
+:root{
+  --nim-green:#00ff9f;
+  --nim-remote:#b48fff;
+  --ui-select:#7a9eb1;--ui-select-bg:rgba(122,158,177,0.10);
+  --st-ok:#00ff9f;--st-warn:#ffc857;--st-crit:#ff5a5a;--st-info:#4db8ff;
+  --bg-window:#16161a;--bg-main:#1a1a1f;--bg-side:#131316;
+  --bg-card:#15151a;--bg-inner:#101015;
+  --fg:#f0f0f0;--fg-2:#d0d0d4;--fg-3:#9c9ca4;--fg-4:#7a7a82;--fg-5:#5a5a62;
+  --bd:rgba(255,255,255,0.04);--bd-2:#20202a;--bd-3:#2a2a32;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0d10;color:var(--fg);font-family:ui-sans-serif,system-ui,sans-serif;padding:10px;min-height:100vh}
+.mono{font-family:ui-monospace,"JetBrains Mono",Menlo,monospace}
+
+/* ===== APP SHELL ===== */
+.app{display:grid;grid-template-columns:148px 1fr;background:var(--bg-window);border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.4),0 0 0 1px var(--bd);min-height:580px}
+
+/* ===== SIDEBAR (apps shell sidebar) ===== */
+.side{background:var(--bg-side);display:flex;flex-direction:column;padding:12px 8px;border-right:1px solid var(--bd)}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 6px 16px}
+.brand-box{width:22px;height:22px;background:var(--nim-green);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--bg-window)}
+.brand-name{font-size:11px;font-weight:600;letter-spacing:0.6px}
+.brand-icon{margin-left:4px;color:var(--st-info)}
+.brand-icon svg{width:13px;height:13px}
+
+.group-lbl{font-size:9px;color:var(--fg-5);font-weight:500;text-transform:uppercase;letter-spacing:0.8px;padding:10px 6px 5px;display:flex;align-items:center;justify-content:space-between}
+.group-lbl .count{font-family:ui-monospace,monospace;color:var(--fg-4)}
+.nav{display:flex;flex-direction:column;gap:1px}
+.nav-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:5px;font-size:11px;color:var(--fg-3);cursor:pointer;position:relative}
+.nav-item-ico{width:10px;height:10px;flex-shrink:0;border-radius:2px}
+.nav-item-ico.local{background:var(--nim-green);box-shadow:0 0 4px rgba(0,255,159,0.4)}
+.nav-item-ico.remote{background:var(--nim-remote);box-shadow:0 0 4px rgba(180,143,255,0.4)}
+.nav-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.nav-meta{font-family:ui-monospace,monospace;font-size:8px;color:var(--fg-5)}
+.nav-item.active{background:var(--ui-select-bg);color:var(--ui-select)}
+.nav-item:hover{background:rgba(255,255,255,0.025)}
+
+/* ===== MAIN ===== */
+.main{background:var(--bg-main);display:flex;flex-direction:column;position:relative;overflow:hidden}
+
+/* AppShell header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--bd-2)}
+.header-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.header-icon{width:24px;height:24px;border-radius:6px;background:var(--bg-inner);display:flex;align-items:center;justify-content:center;color:var(--st-info)}
+.header-icon svg{width:13px;height:13px}
+.header-title{font-size:13px;font-weight:500;letter-spacing:0.2px}
+.header-meta{display:flex;align-items:center;gap:5px;font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-4)}
+.header-meta .origin-dot{width:8px;height:8px;border-radius:2px;background:var(--nim-green);box-shadow:0 0 4px rgba(0,255,159,0.4)}
+.titlebar{display:flex;gap:5px}
+.ctl{width:9px;height:9px;border-radius:3px}
+.ctl.c1{background:var(--st-warn)}.ctl.c2{background:var(--st-ok)}.ctl.c3{background:var(--st-crit)}
+
+/* ===== BREADCRUMB + TOOLBAR ===== */
+.subbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--bd)}
+.crumb{display:flex;align-items:center;gap:5px;font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-3);flex:1;min-width:0;overflow:hidden}
+.crumb-item{padding:2px 5px;border-radius:3px;cursor:pointer;white-space:nowrap}
+.crumb-item:hover{color:var(--fg);background:rgba(255,255,255,0.04)}
+.crumb-item.cur{color:var(--fg);background:rgba(255,255,255,0.05)}
+.crumb-sep{color:var(--fg-5)}
+
+.tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.btn{font-family:ui-monospace,monospace;font-size:9px;padding:5px 9px;background:transparent;color:var(--fg-3);border:1px solid var(--bd-3);border-radius:5px;cursor:pointer;letter-spacing:0.3px;text-transform:uppercase;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{color:var(--fg);border-color:#4a4a52}
+.btn svg{width:11px;height:11px}
+.btn.primary{color:var(--nim-green);border-color:rgba(0,255,159,0.3)}
+.btn.primary:hover{border-color:var(--nim-green);background:rgba(0,255,159,0.06)}
+
+.view-toggle{display:flex;border:1px solid var(--bd-3);border-radius:5px;overflow:hidden}
+.view-toggle .vt-btn{padding:5px 8px;background:transparent;color:var(--fg-4);border:none;cursor:pointer;display:flex;align-items:center}
+.view-toggle .vt-btn svg{width:12px;height:12px}
+.view-toggle .vt-btn.active{background:var(--ui-select-bg);color:var(--ui-select)}
+.view-toggle .vt-btn:not(.active):hover{color:var(--fg-2)}
+
+/* ===== CONTENT AREA ===== */
+.content{flex:1;overflow:auto;padding:0}
+
+/* ===== LIST VIEW ===== */
+.list{display:flex;flex-direction:column}
+.list-head{display:grid;grid-template-columns:20px 1fr 70px 80px 60px;gap:8px;padding:7px 14px;font-size:9px;color:var(--fg-4);letter-spacing:0.6px;text-transform:uppercase;font-weight:500;background:rgba(255,255,255,0.015);border-bottom:1px solid var(--bd-2)}
+.list-row{display:grid;grid-template-columns:20px 1fr 70px 80px 60px;gap:8px;padding:9px 14px;font-size:11px;color:var(--fg-2);border-bottom:1px solid var(--bd);align-items:center;cursor:pointer}
+.list-row:hover{background:rgba(255,255,255,0.025)}
+.list-row:last-child{border-bottom:none}
+.f-ico{width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--fg-3)}
+.f-ico svg{width:14px;height:14px}
+.f-ico.folder{color:var(--st-info)}
+.f-ico.image{color:#ff9c5a}
+.f-ico.video{color:#b48fff}
+.f-ico.doc{color:var(--st-ok)}
+.f-name{display:flex;align-items:center;gap:6px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f-tag{font-family:ui-monospace,monospace;font-size:8px;padding:1px 5px;border-radius:3px;background:var(--bg-inner);color:var(--fg-4)}
+.f-tag.remote{color:var(--nim-remote);border:1px solid rgba(180,143,255,0.2)}
+.f-size{font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-3)}
+.f-date{font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-4)}
+.f-type{font-family:ui-monospace,monospace;font-size:9px;color:var(--fg-5);text-align:right}
+
+/* Reduce on narrow */
+@media (max-width:520px){
+  .list-head,.list-row{grid-template-columns:20px 1fr 60px 60px}
+  .col-type{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-box">N</div>
+      <span class="brand-name">FILES</span>
+      <span class="brand-icon">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 4.5a1 1 0 0 1 1-1h3.5l1.5 1.5h5a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/>
+        </svg>
+      </span>
+    </div>
+
+    <div class="group-lbl">
+      <span>Local</span>
+      <span class="count">4</span>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active">
+        <span class="nav-item-ico local"></span>
+        <span class="nav-name">fotos</span>
+        <span class="nav-meta">12G</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-item-ico local"></span>
+        <span class="nav-name">documentos</span>
+        <span class="nav-meta">3G</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-item-ico local"></span>
+        <span class="nav-name">downloads</span>
+        <span class="nav-meta">28G</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-item-ico local"></span>
+        <span class="nav-name">media</span>
+        <span class="nav-meta">85G</span>
+      </div>
+    </nav>
+
+    <div class="group-lbl">
+      <span>Remoto</span>
+      <span class="count">2</span>
+    </div>
+    <nav class="nav">
+      <div class="nav-item">
+        <span class="nav-item-ico remote"></span>
+        <span class="nav-name">familia@papa</span>
+        <span class="nav-meta">5G</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-item-ico remote"></span>
+        <span class="nav-name">backup@oficina</span>
+        <span class="nav-meta">42G</span>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+
+    <!-- AppShell header -->
+    <div class="header">
+      <div class="header-left">
+        <div class="header-icon">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 4.5a1 1 0 0 1 1-1h3.5l1.5 1.5h5a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/>
+          </svg>
+        </div>
+        <span class="header-title">fotos</span>
+        <span class="header-meta">
+          <span class="origin-dot"></span>
+          <span>LOCAL · data</span>
+        </span>
+      </div>
+      <div class="titlebar">
+        <span class="ctl c1"></span>
+        <span class="ctl c2"></span>
+        <span class="ctl c3"></span>
+      </div>
+    </div>
+
+    <!-- Breadcrumb + toolbar -->
+    <div class="subbar">
+      <div class="crumb mono">
+        <span class="crumb-item">fotos</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-item">2026</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb-item cur">verano</span>
+      </div>
+      <div class="tools">
+        <div class="view-toggle">
+          <button class="vt-btn active" title="Lista">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <line x1="3" y1="4" x2="13" y2="4"/>
+              <line x1="3" y1="8" x2="13" y2="8"/>
+              <line x1="3" y1="12" x2="13" y2="12"/>
+            </svg>
+          </button>
+          <button class="vt-btn" title="Cuadrícula">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="4" height="4" rx="0.5"/>
+              <rect x="9" y="3" width="4" height="4" rx="0.5"/>
+              <rect x="3" y="9" width="4" height="4" rx="0.5"/>
+              <rect x="9" y="9" width="4" height="4" rx="0.5"/>
+            </svg>
+          </button>
+        </div>
+        <button class="btn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 11V3M4.5 6.5L8 3l3.5 3.5M3 13h10"/>
+          </svg>
+          Subir
+        </button>
+        <button class="btn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 5v8M4.5 9.5L8 13l3.5-3.5M3 3h10"/>
+          </svg>
+          Descargar
+        </button>
+      </div>
+    </div>
+
+    <!-- Content list -->
+    <div class="content">
+      <div class="list">
+        <div class="list-head">
+          <span></span>
+          <span>NOMBRE</span>
+          <span>TAMAÑO</span>
+          <span>MODIFICADO</span>
+          <span class="col-type" style="text-align:right">TIPO</span>
+        </div>
+
+        <div class="list-row">
+          <span class="f-ico folder">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 4.5a1 1 0 0 1 1-1h3.5l1.5 1.5h5a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" opacity="0.85"/></svg>
+          </span>
+          <span class="f-name">playa</span>
+          <span class="f-size">—</span>
+          <span class="f-date">14/08/2026</span>
+          <span class="f-type col-type">CARPETA</span>
+        </div>
+
+        <div class="list-row">
+          <span class="f-ico folder">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 4.5a1 1 0 0 1 1-1h3.5l1.5 1.5h5a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" opacity="0.85"/></svg>
+          </span>
+          <span class="f-name">montaña</span>
+          <span class="f-size">—</span>
+          <span class="f-date">22/07/2026</span>
+          <span class="f-type col-type">CARPETA</span>
+        </div>
+
+        <div class="list-row">
+          <span class="f-ico image">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="3" width="12" height="10" rx="1"/>
+              <circle cx="5.5" cy="6.5" r="1"/>
+              <path d="M2 11l4-4 3 3 5-5"/>
+            </svg>
+          </span>
+          <span class="f-name">IMG_4521.HEIC</span>
+          <span class="f-size">3.2 MB</span>
+          <span class="f-date">14/08/2026</span>
+          <span class="f-type col-type">IMAGEN</span>
+        </div>
+
+        <div class="list-row">
+          <span class="f-ico image">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="3" width="12" height="10" rx="1"/>
+              <circle cx="5.5" cy="6.5" r="1"/>
+              <path d="M2 11l4-4 3 3 5-5"/>
+            </svg>
+          </span>
+          <span class="f-name">IMG_4522.HEIC</span>
+          <span class="f-size">2.8 MB</span>
+          <span class="f-date">14/08/2026</span>
+          <span class="f-type col-type">IMAGEN</span>
+        </div>
+
+        <div class="list-row">
+          <span class="f-ico video">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="4" width="12" height="8" rx="1"/>
+              <polygon points="7,7 7,10 10,8.5" fill="currentColor"/>
+            </svg>
+          </span>
+          <span class="f-name">VID_0042.MOV</span>
+          <span class="f-size">128 MB</span>
+          <span class="f-date">14/08/2026</span>
+          <span class="f-type col-type">VÍDEO</span>
+        </div>
+
+        <div class="list-row">
+          <span class="f-ico doc">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/>
+              <path d="M10 2v3h3M5 8h6M5 11h4"/>
+            </svg>
+          </span>
+          <span class="f-name">notas-viaje.md</span>
+          <span class="f-size">14 KB</span>
+          <span class="f-date">12/08/2026</span>
+          <span class="f-type col-type">TEXTO</span>
+        </div>
+
+        <div class="list-row">
+          <span class="f-ico image">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="3" width="12" height="10" rx="1"/>
+              <circle cx="5.5" cy="6.5" r="1"/>
+              <path d="M2 11l4-4 3 3 5-5"/>
+            </svg>
+          </span>
+          <span class="f-name">panoramica.jpg <span class="f-tag remote">REMOTO</span></span>
+          <span class="f-size">12.4 MB</span>
+          <span class="f-date">02/08/2026</span>
+          <span class="f-type col-type">IMAGEN</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

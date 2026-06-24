@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>NimOS · MediaViewer</title>
+<style>
+:root {
+  --nim-green: #00ff9f;
+  --st-ok: #00ff9f;
+  --st-warn: #ffc857;
+  --st-crit: #ff5a5a;
+  --st-info: #4db8ff;
+  --bg-window: #16161a;
+  --bg-card: #15151a;
+  --fg: #f0f0f0;
+  --fg-3: #9c9ca4;
+  --fg-4: #7a7a82;
+  --fg-5: #5a5a62;
+  --bd: rgba(255,255,255,0.04);
+  --bd-2: #20202a;
+  --bd-3: #2a2a32;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #050507;
+  min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--fg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.mono { font-family: ui-monospace, monospace; }
+
+/* Demo controls */
+.demo-controls {
+  display: flex;
+  gap: 6px;
+  background: rgba(20, 20, 24, 0.92);
+  border: 1px solid var(--bd-2);
+  border-radius: 8px;
+  padding: 6px;
+}
+.demo-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--bd-2);
+  border-radius: 5px;
+  color: var(--fg-3);
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+.demo-btn:hover { color: var(--fg); border-color: var(--bd-3); }
+.demo-btn.active {
+  color: var(--nim-green);
+  border-color: rgba(0,255,159,0.4);
+  background: rgba(0,255,159,0.06);
+}
+
+/* ═══ WINDOWFRAME ═══ */
+.win {
+  width: 800px;
+  height: 550px;
+  background: var(--bg-window);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px var(--bd);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.titlebar {
+  height: 36px;
+  background: #1c1c1c;
+  border-bottom: 1px solid var(--bd-2);
+  display: flex;
+  align-items: center;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.tb-left { padding: 0 16px; display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.ink-cube { width: 10px; height: 10px; background: #fff; transform: rotate(45deg); filter: drop-shadow(0 0 5px rgba(220,255,235,0.6)) drop-shadow(0 0 2px rgba(255,255,255,0.7)); flex-shrink: 0; }
+.tb-path { color: var(--fg-3); letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-path .scheme { color: var(--fg-5); }
+.tb-path .host { color: var(--fg); font-weight: 700; }
+.tb-path .sep { color: var(--fg-5); margin: 0 1px; }
+.tb-path .seg { color: var(--fg-3); }
+.tb-path .current { color: var(--fg); font-weight: 500; }
+.wc-bar { display: flex; gap: 10px; padding: 0 16px; }
+.wc-led { width: 10px; height: 10px; border: none; cursor: pointer; padding: 0; border-radius: 3px; }
+.wc-led.min { background: var(--st-warn); }
+.wc-led.max { background: var(--st-ok); }
+.wc-led.close { background: var(--st-crit); }
+
+.body {
+  flex: 1;
+  position: relative;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Info bar arriba · común */
+.viewer-info-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  pointer-events: none;
+  z-index: 5;
+  background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, transparent 100%);
+}
+.viewer-counter { font-family: ui-monospace, monospace; font-size: 11px; color: rgba(255,255,255,0.7); font-variant-numeric: tabular-nums; }
+.viewer-counter .total { color: rgba(255,255,255,0.45); }
+.viewer-filename { margin-left: auto; font-family: ui-monospace, monospace; font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 500; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+
+/* Nav arrows ← → laterales · común */
+.nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 56px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+.nav-arrow:hover { background: rgba(0,0,0,0.55); color: var(--fg); }
+.nav-arrow svg { width: 16px; height: 16px; }
+.nav-arrow.left { left: 14px; }
+.nav-arrow.right { right: 14px; }
+
+/* ═══════════════════════════════════════════════════════════
+   MODO IMAGEN
+═══════════════════════════════════════════════════════════ */
+.mode-image .body { background: #000; }
+.img-content { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.img-placeholder {
+  width: 70%;
+  height: 70%;
+  background: linear-gradient(135deg, #2a3a5a 0%, #3d5a8a 30%, #5a7ab8 50%, #2a3a5a 100%);
+  border-radius: 4px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.img-placeholder::after {
+  content: 'IMAGEN.JPG';
+  color: rgba(255,255,255,0.15);
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  letter-spacing: 4px;
+}
+.img-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  background: rgba(20,20,24,0.85);
+  border: 1px solid var(--bd-2);
+  border-radius: 8px;
+  backdrop-filter: blur(20px);
+}
+.zoom-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: var(--fg-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.zoom-btn:hover { background: rgba(255,255,255,0.04); color: var(--fg); }
+.zoom-btn svg { width: 14px; height: 14px; }
+.zoom-level {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--fg-3);
+  padding: 0 10px;
+  min-width: 50px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODO AUDIO · barras protagonistas
+═══════════════════════════════════════════════════════════ */
+.mode-audio .body {
+  background: linear-gradient(180deg, #1a1a1f 0%, #0d0d10 100%);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 40px 24px;
+}
+
+.bars-stage {
+  width: 100%;
+  max-width: 480px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 22px;
+  padding: 0 20px;
+}
+
+.bar {
+  flex: 1;
+  max-width: 8px;
+  min-width: 4px;
+  background: var(--nim-green);
+  border-radius: 2px;
+  transform-origin: bottom center;
+  opacity: 0.9;
+  box-shadow: 0 0 10px rgba(0, 255, 159, 0.25);
+  animation: dance 1.4s ease-in-out infinite;
+}
+
+.bar:nth-child(1)  { animation-delay: 0.00s; height: 38%; }
+.bar:nth-child(2)  { animation-delay: 0.15s; height: 62%; }
+.bar:nth-child(3)  { animation-delay: 0.32s; height: 25%; }
+.bar:nth-child(4)  { animation-delay: 0.48s; height: 78%; }
+.bar:nth-child(5)  { animation-delay: 0.08s; height: 92%; }
+.bar:nth-child(6)  { animation-delay: 0.55s; height: 45%; }
+.bar:nth-child(7)  { animation-delay: 0.22s; height: 30%; }
+.bar:nth-child(8)  { animation-delay: 0.41s; height: 70%; }
+.bar:nth-child(9)  { animation-delay: 0.05s; height: 85%; }
+.bar:nth-child(10) { animation-delay: 0.62s; height: 52%; }
+.bar:nth-child(11) { animation-delay: 0.18s; height: 100%; }
+.bar:nth-child(12) { animation-delay: 0.36s; height: 35%; }
+.bar:nth-child(13) { animation-delay: 0.45s; height: 65%; }
+.bar:nth-child(14) { animation-delay: 0.12s; height: 88%; }
+.bar:nth-child(15) { animation-delay: 0.58s; height: 42%; }
+.bar:nth-child(16) { animation-delay: 0.28s; height: 75%; }
+.bar:nth-child(17) { animation-delay: 0.50s; height: 28%; }
+.bar:nth-child(18) { animation-delay: 0.03s; height: 95%; }
+.bar:nth-child(19) { animation-delay: 0.38s; height: 55%; }
+.bar:nth-child(20) { animation-delay: 0.20s; height: 72%; }
+.bar:nth-child(21) { animation-delay: 0.65s; height: 40%; }
+.bar:nth-child(22) { animation-delay: 0.10s; height: 85%; }
+.bar:nth-child(23) { animation-delay: 0.42s; height: 32%; }
+.bar:nth-child(24) { animation-delay: 0.25s; height: 68%; }
+.bar:nth-child(25) { animation-delay: 0.52s; height: 90%; }
+.bar:nth-child(26) { animation-delay: 0.15s; height: 45%; }
+.bar:nth-child(27) { animation-delay: 0.33s; height: 78%; }
+.bar:nth-child(28) { animation-delay: 0.58s; height: 25%; }
+.bar:nth-child(29) { animation-delay: 0.07s; height: 88%; }
+.bar:nth-child(30) { animation-delay: 0.46s; height: 50%; }
+.bar:nth-child(31) { animation-delay: 0.18s; height: 65%; }
+.bar:nth-child(32) { animation-delay: 0.60s; height: 38%; }
+.bar:nth-child(33) { animation-delay: 0.30s; height: 82%; }
+.bar:nth-child(34) { animation-delay: 0.12s; height: 95%; }
+.bar:nth-child(35) { animation-delay: 0.48s; height: 30%; }
+.bar:nth-child(36) { animation-delay: 0.25s; height: 70%; }
+.bar:nth-child(37) { animation-delay: 0.55s; height: 45%; }
+.bar:nth-child(38) { animation-delay: 0.05s; height: 88%; }
+.bar:nth-child(39) { animation-delay: 0.38s; height: 60%; }
+.bar:nth-child(40) { animation-delay: 0.20s; height: 35%; }
+
+@keyframes dance {
+  0%   { transform: scaleY(0.3); }
+  25%  { transform: scaleY(0.7); }
+  50%  { transform: scaleY(1.0); }
+  75%  { transform: scaleY(0.5); }
+  100% { transform: scaleY(0.3); }
+}
+
+.body.paused .bar {
+  animation: none;
+  transform: scaleY(0.2);
+  opacity: 0.4;
+  box-shadow: none;
+}
+
+.audio-meta {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.audio-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.2px;
+  margin-bottom: 4px;
+}
+.audio-folder {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--fg-4);
+  letter-spacing: 0.3px;
+}
+
+.audio-scrubber {
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 14px;
+}
+.scrubber-bar { height: 3px; background: var(--bd-2); border-radius: 2px; position: relative; cursor: pointer; margin-bottom: 6px; }
+.scrubber-fill { height: 100%; background: var(--nim-green); border-radius: 2px; width: 38%; position: relative; }
+.scrubber-handle { position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; background: var(--nim-green); border-radius: 2px; box-shadow: 0 0 6px rgba(0,255,159,0.5); }
+.scrubber-times { display: flex; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 10px; color: var(--fg-4); font-variant-numeric: tabular-nums; }
+
+.audio-transport { display: flex; align-items: center; gap: 4px; margin-bottom: 14px; }
+.transport-btn { width: 34px; height: 34px; background: transparent; border: none; border-radius: 6px; color: var(--fg-3); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.transport-btn:hover { background: rgba(255,255,255,0.04); color: var(--fg); }
+.transport-btn svg { width: 14px; height: 14px; }
+.transport-btn.play { width: 44px; height: 44px; background: var(--nim-green); color: var(--bg-window); border-radius: 8px; margin: 0 4px; }
+.transport-btn.play:hover { filter: brightness(1.08); }
+.transport-btn.play svg { width: 16px; height: 16px; }
+
+.audio-volume { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 180px; }
+.audio-volume svg { width: 13px; height: 13px; color: var(--fg-4); }
+.volume-bar { flex: 1; height: 3px; background: var(--bd-2); border-radius: 2px; }
+.volume-fill { height: 100%; background: var(--fg-3); border-radius: 2px; width: 65%; }
+
+/* ═══════════════════════════════════════════════════════════
+   MODO VIDEO
+═══════════════════════════════════════════════════════════ */
+.mode-video .body { background: #000; }
+.video-content { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.video-placeholder {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, #1a2a40 0%, #050a14 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.video-placeholder::after {
+  content: 'VIDEO.MP4';
+  color: rgba(255,255,255,0.10);
+  font-family: ui-monospace, monospace;
+  font-size: 16px;
+  letter-spacing: 6px;
+  position: absolute;
+  bottom: 80px;
+}
+.video-play-big {
+  width: 72px;
+  height: 72px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.85);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+.video-play-big svg { width: 28px; height: 28px; }
+.video-controls { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%); padding: 30px 18px 14px; z-index: 5; }
+.video-scrubber { margin-bottom: 10px; }
+.video-bar { height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; position: relative; cursor: pointer; }
+.video-buffered { position: absolute; top: 0; left: 0; height: 100%; width: 55%; background: rgba(255,255,255,0.25); border-radius: 2px; }
+.video-fill { position: absolute; top: 0; left: 0; height: 100%; width: 32%; background: var(--st-info); border-radius: 2px; }
+.video-handle { position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; background: var(--st-info); border-radius: 2px; box-shadow: 0 0 6px rgba(77,184,255,0.5); }
+.video-controls-row { display: flex; align-items: center; gap: 4px; }
+.video-btn { width: 32px; height: 32px; background: transparent; border: none; border-radius: 5px; color: rgba(255,255,255,0.75); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.video-btn:hover { background: rgba(255,255,255,0.08); color: white; }
+.video-btn svg { width: 14px; height: 14px; }
+.video-times { font-family: ui-monospace, monospace; font-size: 11px; color: rgba(255,255,255,0.75); padding: 0 10px; font-variant-numeric: tabular-nums; }
+.video-times .sep { color: rgba(255,255,255,0.35); margin: 0 4px; }
+.video-spacer { flex: 1; }
+.video-vol-wrap { display: flex; align-items: center; gap: 6px; padding-right: 4px; }
+.video-vol-bar { width: 60px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; position: relative; }
+.video-vol-fill { height: 100%; background: rgba(255,255,255,0.75); width: 65%; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="demo-controls">
+  <button class="demo-btn active" onclick="setMode('image', event)">Imagen</button>
+  <button class="demo-btn" onclick="setMode('audio', event)">Audio</button>
+  <button class="demo-btn" onclick="setMode('video', event)">Vídeo</button>
+</div>
+
+<div class="win mode-image" id="win">
+  <div class="titlebar">
+    <div class="tb-left">
+      <span class="ink-cube"></span>
+      <span class="tb-path" id="path"></span>
+    </div>
+    <div class="wc-bar">
+      <button class="wc-led min"></button>
+      <button class="wc-led max"></button>
+      <button class="wc-led close"></button>
+    </div>
+  </div>
+  <div class="body" id="body"></div>
+</div>
+
+<script>
+const modes = {
+  image: {
+    file: 'playa-2024.jpg',
+    folder: 'multimedia/fotos',
+    counter: '3 / 12',
+    body: () => `
+      <div class="viewer-info-bar">
+        <span class="viewer-counter">3<span class="total"> / 12</span></span>
+        <span class="viewer-filename">playa-2024.jpg</span>
+      </div>
+      <button class="nav-arrow left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="nav-arrow right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <div class="img-content"><div class="img-placeholder"></div></div>
+      <div class="img-controls">
+        <button class="zoom-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+        <button class="zoom-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V5a2 2 0 0 1 2-2h4"/><path d="M21 9V5a2 2 0 0 0-2-2h-4"/><path d="M3 15v4a2 2 0 0 0 2 2h4"/><path d="M21 15v4a2 2 0 0 1-2 2h-4"/></svg></button>
+        <span class="zoom-level">100%</span>
+        <button class="zoom-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></button>
+      </div>
+    `
+  },
+  audio: {
+    file: 'cancion-favorita.mp3',
+    folder: 'multimedia/musica',
+    counter: '7 / 24',
+    body: () => {
+      let bars = '';
+      for (let i = 0; i < 40; i++) bars += '<div class="bar"></div>';
+      return `
+        <div class="viewer-info-bar">
+          <span class="viewer-counter">7<span class="total"> / 24</span></span>
+          <span class="viewer-filename">cancion-favorita.mp3</span>
+        </div>
+        <div class="bars-stage">${bars}</div>
+        <div class="audio-meta">
+          <div class="audio-title">cancion-favorita.mp3</div>
+          <div class="audio-folder">multimedia / musica</div>
+        </div>
+        <div class="audio-scrubber">
+          <div class="scrubber-bar"><div class="scrubber-fill"><div class="scrubber-handle"></div></div></div>
+          <div class="scrubber-times"><span>1:42</span><span>4:28</span></div>
+        </div>
+        <div class="audio-transport">
+          <button class="transport-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg></button>
+          <button class="transport-btn"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+          <button class="transport-btn play"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></button>
+          <button class="transport-btn"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+          <button class="transport-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+        </div>
+        <div class="audio-volume">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <div class="volume-bar"><div class="volume-fill"></div></div>
+        </div>
+      `;
+    }
+  },
+  video: {
+    file: 'vacaciones-grecia.mp4',
+    folder: 'multimedia/videos',
+    counter: '2 / 8',
+    body: () => `
+      <div class="viewer-info-bar">
+        <span class="viewer-counter">2<span class="total"> / 8</span></span>
+        <span class="viewer-filename">vacaciones-grecia.mp4</span>
+      </div>
+      <button class="nav-arrow left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="nav-arrow right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <div class="video-content">
+        <div class="video-placeholder">
+          <button class="video-play-big"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></button>
+        </div>
+        <div class="video-controls">
+          <div class="video-scrubber"><div class="video-bar"><div class="video-buffered"></div><div class="video-fill"><div class="video-handle"></div></div></div></div>
+          <div class="video-controls-row">
+            <button class="video-btn"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></button>
+            <span class="video-times">12:34<span class="sep">/</span>38:42</span>
+            <div class="video-spacer"></div>
+            <div class="video-vol-wrap">
+              <button class="video-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
+              <div class="video-vol-bar"><div class="video-vol-fill"></div></div>
+            </div>
+            <button class="video-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="7" y1="13" x2="9" y2="13"/><line x1="11" y1="13" x2="13" y2="13"/><line x1="15" y1="13" x2="17" y2="13"/><line x1="7" y1="16" x2="13" y2="16"/></svg></button>
+            <button class="video-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V5a2 2 0 0 1 2-2h4"/><path d="M21 9V5a2 2 0 0 0-2-2h-4"/><path d="M3 15v4a2 2 0 0 0 2 2h4"/><path d="M21 15v4a2 2 0 0 1-2 2h-4"/></svg></button>
+          </div>
+        </div>
+      </div>
+    `
+  }
+};
+
+function setMode(mode, e) {
+  const win = document.getElementById('win');
+  const body = document.getElementById('body');
+  const path = document.getElementById('path');
+  const m = modes[mode];
+
+  win.className = 'win mode-' + mode;
+  body.innerHTML = m.body();
+
+  const folderParts = m.folder.split('/');
+  path.innerHTML = `
+    <span class="scheme">nimos://</span><span class="host">nimos</span><span class="sep">/</span><span class="seg">files</span><span class="sep">/</span>${folderParts.map(p => `<span class="seg">${p}</span>`).join('<span class="sep">/</span>')}<span class="sep">/</span><span class="current">${m.file}</span>
+  `;
+
+  if (e) {
+    document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+  }
+}
+
+setMode('image');
+</script>
+</body>
+</html>

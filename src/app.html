@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<script>
+			/* ─── NimOS · Escala de UI · pintura pre-paint ──────────────
+			 * ÚNICA función: aplicar la escala MANUAL persistida antes del
+			 * primer paint, para que la UI no salte de 1.0 al valor del
+			 * usuario cuando theme.js hidrata (sin flash).
+			 *
+			 * NO hay heurística por viewport ni listener de resize. La
+			 * escala es MANUAL y determinista: NO depende del tamaño de
+			 * pantalla, del DPR ni del zoom del navegador. Esos tres mueven
+			 * el mismo número y no se pueden separar con APIs web, así que
+			 * auto-detectar la escala es inestable y pelea contra el usuario
+			 * (lección de Beta 7 y del banding que esto reemplaza, jun 2026).
+			 *
+			 * theme.js → applyToDOM() es el ÚNICO dueño del zoom en runtime.
+			 * Este script solo adelanta el MISMO cálculo para el primer
+			 * frame. CONTRATO: la fórmula (uiScale número → /100, si no 1)
+			 * está duplicada aquí y en theme.js computeUiScale() por
+			 * necesidad (el script inline no puede importar). Si la cambias
+			 * en un sitio, cámbiala en el otro.
+			 * ─────────────────────────────────────────────────────────── */
+			(function () {
+				try {
+					var scale = 1;
+					/* ¿Móvil real? Mismo criterio que viewport.isMobileDevice()
+					 * (copia inline: este script no puede importar). Si cambias
+					 * la lógica allí, cámbiala aquí. Táctil + pantalla física
+					 * pequeña → NO se aplica zoom (descuadra el toque en iOS y
+					 * el móvil tiene su propia UI). Usamos screen.*, no
+					 * innerWidth, para que el zoom de un escritorio no cuente
+					 * como móvil. */
+					var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+					var sw = (window.screen && window.screen.width) || window.innerWidth;
+					var sh = (window.screen && window.screen.height) || window.innerHeight;
+					var isMobile = coarse && Math.min(sw, sh) < 768;
+					if (!isMobile) {
+						var raw = localStorage.getItem('nimos-prefs');
+						if (raw) {
+							var ui = JSON.parse(raw).uiScale;
+							if (typeof ui === 'number' && isFinite(ui)) scale = ui / 100;
+						}
+					}
+					document.documentElement.style.zoom = scale;
+					/* --ui-zoom: lo consume WindowFrame.svelte (ventana
+					 * maximizada usa 100vw, que no respeta zoom). */
+					document.documentElement.style.setProperty('--ui-zoom', String(scale));
+				} catch (e) {
+					/* localStorage bloqueado o JSON corrupto → escala 1, sin drama */
+					document.documentElement.style.zoom = 1;
+					document.documentElement.style.setProperty('--ui-zoom', '1');
+				}
+			})();
+		</script>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

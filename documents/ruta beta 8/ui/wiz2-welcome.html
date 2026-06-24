@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NimOS · Setup · Bienvenida</title>
+<style>
+:root{--nim-green:#00ff9f;--ui-select:#7a9eb1;--ui-select-bg:rgba(122,158,177,0.10);--st-ok:#00ff9f;--st-warn:#ffc857;--st-crit:#ff5a5a;--st-info:#4db8ff;--bg-window:#16161a;--bg-main:#1a1a1f;--bg-side:#131316;--bg-card:#15151a;--bg-inner:#101015;--fg:#f0f0f0;--fg-2:#d0d0d4;--fg-3:#9c9ca4;--fg-4:#7a7a82;--fg-5:#5a5a62;--bd:rgba(255,255,255,0.04);--bd-2:#20202a;--bd-3:#2a2a32}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(ellipse at top, rgba(0,255,159,0.04) 0%, transparent 50%), #0a0a0c;color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden}
+body::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);background-size:40px 40px;pointer-events:none}
+.mono{font-family:ui-monospace,Menlo,monospace}
+
+.corner{position:absolute;font-family:ui-monospace,monospace;font-size:9px;color:var(--fg-5);letter-spacing:0.8px;text-transform:uppercase;z-index:2}
+.corner.tl{top:20px;left:20px;display:flex;align-items:center;gap:8px}
+.corner.tr{top:20px;right:20px}
+.corner.bl{bottom:20px;left:20px}
+.corner.br{bottom:20px;right:20px}
+.corner-led{width:6px;height:6px;border-radius:1.5px;background:var(--st-warn);box-shadow:0 0 5px var(--st-warn);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+.wrap{position:relative;z-index:1;width:100%;max-width:560px;display:flex;flex-direction:column;gap:24px}
+
+.brand{display:flex;flex-direction:column;align-items:center;gap:10px}
+.logo{display:flex;filter:drop-shadow(0 0 6px rgba(220,255,235,0.5)) drop-shadow(0 0 2px rgba(255,255,255,0.6))}
+.cube-1{animation:pulse-cube 3.5s ease-in-out infinite}
+.cube-2{animation:pulse-cube 3.5s ease-in-out infinite 1.2s}
+.cube-3{animation:pulse-cube 3.5s ease-in-out infinite 2.4s}
+@keyframes pulse-cube{0%,100%{opacity:1}50%{opacity:0.5}}
+.brand-text{display:flex;flex-direction:column;align-items:center;gap:4px}
+.brand-name{font-size:18px;font-weight:600}
+.brand-sub{font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-4);letter-spacing:0.4px}
+.brand-sub .accent{color:var(--nim-green)}
+
+.stepper{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0}
+.step{display:flex;align-items:center;gap:6px}
+.step-num{width:20px;height:20px;border-radius:5px;background:var(--bg-card);border:1px solid var(--bd-3);font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-4);display:flex;align-items:center;justify-content:center;font-weight:600}
+.step.active .step-num{background:var(--nim-green);color:var(--bg-window);border-color:var(--nim-green)}
+.step.done .step-num{background:rgba(0,255,159,0.15);color:var(--nim-green);border-color:rgba(0,255,159,0.3)}
+.step-line{width:24px;height:1px;background:var(--bd-3)}
+.step.done + .step-line{background:rgba(0,255,159,0.3)}
+
+.card{background:var(--bg-card);border:1px solid var(--bd-2);border-radius:14px;padding:28px 28px 22px;box-shadow:0 20px 60px rgba(0,0,0,0.4)}
+.card-title{font-size:22px;font-weight:600;color:var(--fg);margin-bottom:8px;letter-spacing:-0.3px}
+.card-title .accent{color:var(--nim-green)}
+.card-desc{font-size:12px;color:var(--fg-3);line-height:1.6;margin-bottom:20px}
+
+.features{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.feat{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;background:var(--bg-inner);border:1px solid var(--bd);border-radius:8px}
+.feat-ico{width:28px;height:28px;border-radius:6px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;color:var(--nim-green);flex-shrink:0}
+.feat-ico svg{width:14px;height:14px}
+.feat-body{display:flex;flex-direction:column;gap:2px;flex:1}
+.feat-name{font-size:12px;color:var(--fg);font-weight:500}
+.feat-desc{font-size:10px;color:var(--fg-4);line-height:1.4}
+
+.system-block{background:var(--bg-inner);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-bottom:18px}
+.system-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-family:ui-monospace,monospace;font-size:10px}
+.system-row + .system-row{border-top:1px solid var(--bd)}
+.system-lbl{color:var(--fg-4);letter-spacing:0.4px;text-transform:uppercase;font-size:9px}
+.system-val{color:var(--fg-2)}
+.system-val.ok{color:var(--st-ok);display:flex;align-items:center;gap:5px}
+.system-val.ok::before{content:'';width:5px;height:5px;background:var(--st-ok);border-radius:1.5px;box-shadow:0 0 3px var(--st-ok)}
+
+.actions{display:flex;gap:10px;padding-top:18px;border-top:1px solid var(--bd-2)}
+.btn{flex:1;padding:11px 14px;border-radius:7px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;cursor:pointer;border:1px solid;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--nim-green);color:var(--bg-window);border-color:var(--nim-green)}
+.btn-primary:hover{background:#00e08b}
+.btn-primary svg{width:13px;height:13px}
+.btn-ghost{background:transparent;color:var(--fg-3);border-color:var(--bd-3)}
+.btn-ghost:hover{color:var(--fg);border-color:#4a4a52}
+.btn-back{flex:0 0 90px}
+
+.sysinfo{display:flex;justify-content:space-between;font-family:ui-monospace,monospace;font-size:9px;color:var(--fg-5);letter-spacing:0.4px;padding:0 4px}
+</style>
+</head>
+<body>
+
+<div class="corner tl"><span class="corner-led"></span><span>FIRST BOOT</span></div>
+<div class="corner tr">v8.1</div>
+<div class="corner bl">nimos-nas.local</div>
+<div class="corner br">STEP 2/5</div>
+
+<div class="wrap">
+
+  <div class="brand">
+    <div class="logo">
+      <svg width="48" height="48" viewBox="-15 0 200 185" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path class="cube-1" d="M 4.22 62.36 L 45.78 38.36 A 16 16 0 0 1 67.64 44.22 L 91.64 85.78 A 16 16 0 0 1 85.78 107.64 L 44.22 131.64 A 16 16 0 0 1 22.36 125.78 L -1.64 84.22 A 16 16 0 0 1 4.22 62.36 Z" fill="#ffffff"/>
+        <rect class="cube-2" x="108" y="12" width="60" height="60" rx="10" fill="#ffffff"/>
+        <rect class="cube-3" x="108" y="98" width="60" height="60" rx="10" fill="#ffffff"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">NimOS</div>
+      <div class="brand-sub">your <span class="accent">NAS</span> for developers</div>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="step done"><span class="step-num">✓</span></div>
+    <span class="step-line"></span>
+    <div class="step active"><span class="step-num">2</span></div>
+    <span class="step-line"></span>
+    <div class="step"><span class="step-num">3</span></div>
+    <span class="step-line"></span>
+    <div class="step"><span class="step-num">4</span></div>
+    <span class="step-line"></span>
+    <div class="step"><span class="step-num">5</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Bienvenido a <span class="accent">NimOS</span></div>
+    <div class="card-desc">El sistema operativo para tu NAS. <strong style="color:var(--fg-2)">Comprende lo que ocurre. Mantén el control.</strong></div>
+
+    <div class="features">
+      <div class="feat">
+        <div class="feat-ico">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 9l3-1 1.5 3 2-6 1.5 4 2-1h2"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <div class="feat-name">NimHealth · Task Manager profesional</div>
+          <div class="feat-desc">Logs por proceso, start/stop/restart granular, gráficos en tiempo real.</div>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-ico">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="8" cy="4" rx="5" ry="1.5"/>
+            <path d="M3 4v8c0 0.8 2.2 1.5 5 1.5s5-0.7 5-1.5V4"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <div class="feat-name">Storage · BTRFS denso con info real</div>
+          <div class="feat-desc">SMART, scrub, snapshots, multi-pool. Todo a la vista, sin abstracciones.</div>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="feat-ico">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 1.5L2.5 4v4c0 3.5 2.5 5.5 5.5 6.5 3-1 5.5-3 5.5-6.5V4z"/>
+          </svg>
+        </div>
+        <div class="feat-body">
+          <div class="feat-name">NimShield · Seguridad transparente</div>
+          <div class="feat-desc">Honeypots, blocklist, detección XSS/SQLi. Auditable, sin firewall opaco.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="system-block">
+      <div class="system-row">
+        <span class="system-lbl">Hardware detectado</span>
+        <span class="system-val ok">2 discos · 4 GB RAM · 4 cores</span>
+      </div>
+      <div class="system-row">
+        <span class="system-lbl">Red</span>
+        <span class="system-val ok">eth0 · IP por DHCP</span>
+      </div>
+      <div class="system-row">
+        <span class="system-lbl">Tiempo del sistema</span>
+        <span class="system-val">sincronizado vía NTP</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost btn-back">← Atrás</button>
+      <button class="btn btn-primary">
+        Comenzar configuración
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="sysinfo">
+    <span>NimOS BETA 8.1 · BUILD 20260520</span>
+    <span>SETUP WIZARD</span>
+  </div>
+
+</div>
+
+</body>
+</html>

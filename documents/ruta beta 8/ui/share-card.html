@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>NimOS · Share Card</title>
+<style>
+:root {
+  --nim-green: #00ff9f;
+  --ui-select: #7a9eb1;
+  --ui-select-bg: rgba(122, 158, 177, 0.10);
+  --ui-select-border: rgba(122, 158, 177, 0.35);
+  --st-ok: #00ff9f;
+  --st-warn: #ffc857;
+  --st-crit: #ff5a5a;
+  --st-info: #4db8ff;
+  --bg-window: #16161a;
+  --bg-main: #1a1a1f;
+  --bg-card: #15151a;
+  --bg-inner: #101015;
+  --fg: #f0f0f0;
+  --fg-2: #d0d0d4;
+  --fg-3: #9c9ca4;
+  --fg-4: #7a7a82;
+  --fg-5: #5a5a62;
+  --bd: rgba(255,255,255,0.04);
+  --bd-2: #20202a;
+  --bd-3: #2a2a32;
+  --nim-folder: #ff9c5a;
+  /* Colores distribución por tipo */
+  --cat-audio: #ffc857;
+  --cat-document: #b07aff;
+  --cat-image: #00ff9f;
+  --cat-video: #4db8ff;
+  --cat-archive: #ff9c5a;
+  --cat-code: #7a9eb1;
+  --cat-other: #5a5a62;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0d0d10;
+  min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--fg);
+  padding: 30px 20px;
+}
+.mono { font-family: ui-monospace, "JetBrains Mono", monospace; }
+
+.stage {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stage-hint {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--fg-5);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+/* ═══ SHARE CARD ═══ */
+.share {
+  background: var(--bg-card);
+  border: 1px solid var(--bd-2);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.share.open {
+  border-color: var(--ui-select-border);
+}
+
+/* ─── Header (siempre visible) ─── */
+.share-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.share-head:hover { background: rgba(255,255,255,0.012); }
+
+.share-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: rgba(77, 184, 255, 0.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--st-info);
+  flex-shrink: 0;
+}
+.share-icon svg { width: 19px; height: 19px; }
+
+.share-id { flex: 1; min-width: 0; }
+.share-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.1px;
+}
+.share-pool {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--fg-4);
+  margin-top: 2px;
+}
+
+.share-protos {
+  display: flex;
+  gap: 5px;
+}
+.proto {
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--bd-2);
+  color: var(--fg-4);
+  letter-spacing: 0.5px;
+  background: var(--bg-inner);
+}
+.proto.on {
+  color: var(--st-info);
+  border-color: rgba(77,184,255,0.3);
+  background: rgba(77,184,255,0.06);
+}
+
+.share-users {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--fg-4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.share-users svg { width: 12px; height: 12px; }
+
+.share-kebab {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--bd-2);
+  background: transparent;
+  color: var(--fg-4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.12s, border-color 0.12s;
+}
+.share-kebab:hover { color: var(--fg); border-color: var(--bd-3); }
+.share-kebab svg { width: 14px; height: 14px; }
+
+.share-chevron {
+  color: var(--fg-5);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.share-chevron svg { width: 14px; height: 14px; display: block; }
+.share.open .share-chevron { transform: rotate(180deg); }
+
+/* ─── Panel desplegable ─── */
+.share-panel {
+  display: none;
+  border-top: 1px solid var(--bd-2);
+  background: var(--bg-window);
+}
+.share.open .share-panel { display: block; animation: expand 0.25s ease; }
+@keyframes expand {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.panel-top {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 0;
+}
+
+/* Anillo de uso */
+.usage-ring {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--bd-2);
+  gap: 4px;
+}
+.ring-wrap {
+  position: relative;
+  width: 110px;
+  height: 110px;
+}
+.ring-wrap svg { transform: rotate(-90deg); }
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ring-pct {
+  font-family: ui-monospace, monospace;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.5px;
+}
+.ring-lbl {
+  font-size: 10px;
+  color: var(--fg-5);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.usage-detail {
+  text-align: center;
+  margin-top: 6px;
+}
+.usage-used {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.usage-free {
+  font-size: 10px;
+  color: var(--fg-4);
+  margin-top: 2px;
+  font-family: ui-monospace, monospace;
+}
+
+/* Metadatos */
+.panel-meta {
+  padding: 18px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+  align-content: start;
+}
+.meta-item.full { grid-column: 1 / -1; }
+.meta-k {
+  font-size: 9px;
+  color: var(--fg-5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.meta-v {
+  font-size: 13px;
+  color: var(--fg);
+  font-weight: 500;
+}
+.meta-v.mono { font-family: ui-monospace, monospace; font-size: 12px; }
+.meta-v.path { font-family: ui-monospace, monospace; font-size: 11px; color: var(--fg-2); word-break: break-all; }
+
+/* Meta toggle (papelera accionable) */
+.meta-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: 1px;
+}
+.mt-switch {
+  width: 30px; height: 17px;
+  background: var(--bd-3);
+  border-radius: 4px;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.mt-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 13px; height: 13px;
+  background: var(--fg-4);
+  border-radius: 3px;
+  transition: left 0.15s, background 0.15s;
+}
+.meta-toggle.sel .mt-switch { background: var(--nim-green); }
+.meta-toggle.sel .mt-switch::after { left: 15px; background: var(--bg-window); }
+.mt-lbl {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--fg-4);
+}
+.meta-toggle.sel .mt-lbl { color: var(--fg); }
+
+/* Distribución por tipo */
+.dist {
+  padding: 0 20px 18px;
+}
+.dist-lbl {
+  font-size: 9px;
+  color: var(--fg-5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.dist-bar {
+  height: 8px;
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  gap: 1px;
+  background: var(--bg-inner);
+  margin-bottom: 10px;
+}
+.dist-seg { height: 100%; }
+.dist-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.dist-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--fg-3);
+}
+.dist-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.dist-item .v { color: var(--fg-4); font-family: ui-monospace, monospace; }
+
+/* Usuarios con permisos */
+.panel-users {
+  padding: 16px 20px;
+  border-top: 1px solid var(--bd-2);
+}
+.pu-lbl {
+  font-size: 9px;
+  color: var(--fg-5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.pu-list { display: flex; flex-direction: column; gap: 4px; }
+.pu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  background: var(--bg-card);
+  border-radius: 6px;
+}
+.pu-avatar {
+  width: 24px; height: 24px;
+  border-radius: 5px;
+  background: var(--bg-inner);
+  border: 1px solid var(--bd-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ui-select);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.pu-name { flex: 1; font-size: 12px; color: var(--fg-2); }
+.pu-perm {
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pu-perm.rw { color: var(--nim-green); background: rgba(0,255,159,0.10); }
+.pu-perm.ro { color: var(--st-info); background: rgba(77,184,255,0.10); }
+.pu-perm.owner { color: var(--nim-green); background: rgba(0,255,159,0.10); border: 1px solid rgba(0,255,159,0.25); }
+
+/* Acciones */
+.panel-actions {
+  padding: 14px 20px;
+  border-top: 1px solid var(--bd-2);
+  display: flex;
+  gap: 6px;
+}
+.pa-btn {
+  padding: 7px 13px;
+  border-radius: 6px;
+  border: 1px solid var(--bd-2);
+  background: transparent;
+  color: var(--fg-3);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  transition: color 0.12s, border-color 0.12s;
+}
+.pa-btn:hover { color: var(--fg); border-color: var(--bd-3); }
+.pa-btn svg { width: 12px; height: 12px; }
+.pa-btn.danger:hover { color: var(--st-crit); border-color: rgba(255,90,90,0.3); }
+.pa-spacer { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div class="stage-hint">click en el header para desplegar</div>
+
+  <!-- ═══ CARD DESPLEGADO ═══ -->
+  <div class="share open" id="s1">
+    <div class="share-head" onclick="toggle('s1')">
+      <div class="share-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        </svg>
+      </div>
+      <div class="share-id">
+        <div class="share-name">proyectos</div>
+        <div class="share-pool">data3</div>
+      </div>
+      <div class="share-protos">
+        <span class="proto on">SMB</span>
+        <span class="proto on">NFS</span>
+        <span class="proto">FTP</span>
+      </div>
+      <div class="share-users">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        3 usuarios
+      </div>
+      <button class="share-kebab" onclick="event.stopPropagation()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+      </button>
+      <span class="share-chevron">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
+    </div>
+
+    <div class="share-panel">
+
+      <!-- Anillo + metadatos -->
+      <div class="panel-top">
+        <div class="usage-ring">
+          <div class="ring-wrap">
+            <svg width="110" height="110" viewBox="0 0 110 110">
+              <circle cx="55" cy="55" r="48" fill="none" stroke="#20202a" stroke-width="8"/>
+              <circle cx="55" cy="55" r="48" fill="none" stroke="var(--nim-green)" stroke-width="8"
+                stroke-linecap="round"
+                stroke-dasharray="301.6"
+                stroke-dashoffset="265.4"/>
+            </svg>
+            <div class="ring-center">
+              <span class="ring-pct">12%</span>
+              <span class="ring-lbl">usado</span>
+            </div>
+          </div>
+          <div class="usage-detail">
+            <div class="usage-used">62 GB usados</div>
+            <div class="usage-free">500 GB cuota · 438 GB libres</div>
+          </div>
+        </div>
+
+        <div class="panel-meta">
+          <div class="meta-item">
+            <div class="meta-k">Pool</div>
+            <div class="meta-v">data3</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-k">Tipo</div>
+            <div class="meta-v mono">BTRFS · raid1</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-k">Cuota</div>
+            <div class="meta-v mono">500 GB</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-k">Papelera</div>
+            <div class="meta-toggle sel" onclick="event.stopPropagation(); this.classList.toggle('sel')">
+              <span class="mt-switch"></span>
+              <span class="mt-lbl">activada</span>
+            </div>
+          </div>
+          <div class="meta-item full">
+            <div class="meta-k">Montaje</div>
+            <div class="meta-v path">/nimbus/pools/data3/shares/proyectos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribución por tipo -->
+      <div class="dist">
+        <div class="dist-lbl">Distribución por tipo</div>
+        <div class="dist-bar">
+          <div class="dist-seg" style="width:38%; background: var(--cat-video)"></div>
+          <div class="dist-seg" style="width:24%; background: var(--cat-code)"></div>
+          <div class="dist-seg" style="width:18%; background: var(--cat-document)"></div>
+          <div class="dist-seg" style="width:12%; background: var(--cat-image)"></div>
+          <div class="dist-seg" style="width:8%; background: var(--cat-other)"></div>
+        </div>
+        <div class="dist-legend">
+          <div class="dist-item"><span class="dist-dot" style="background:var(--cat-video)"></span>Vídeo <span class="v">· 23.6 GB</span></div>
+          <div class="dist-item"><span class="dist-dot" style="background:var(--cat-code)"></span>Código <span class="v">· 14.9 GB</span></div>
+          <div class="dist-item"><span class="dist-dot" style="background:var(--cat-document)"></span>Documento <span class="v">· 11.2 GB</span></div>
+          <div class="dist-item"><span class="dist-dot" style="background:var(--cat-image)"></span>Imagen <span class="v">· 7.4 GB</span></div>
+          <div class="dist-item"><span class="dist-dot" style="background:var(--cat-other)"></span>Otros <span class="v">· 4.9 GB</span></div>
+        </div>
+      </div>
+
+      <!-- Usuarios con permisos -->
+      <div class="panel-users">
+        <div class="pu-lbl">Acceso de usuarios</div>
+        <div class="pu-list">
+          <div class="pu-row">
+            <span class="pu-avatar">A</span>
+            <span class="pu-name">andres</span>
+            <span class="pu-perm owner">owner</span>
+          </div>
+          <div class="pu-row">
+            <span class="pu-avatar">M</span>
+            <span class="pu-name">maria</span>
+            <span class="pu-perm ro">ro</span>
+          </div>
+          <div class="pu-row">
+            <span class="pu-avatar">P</span>
+            <span class="pu-name">pau</span>
+            <span class="pu-perm rw">rw</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="panel-actions">
+        <button class="pa-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+          Editar
+        </button>
+        <button class="pa-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Snapshot
+        </button>
+        <button class="pa-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          Abrir en Files
+        </button>
+        <div class="pa-spacer"></div>
+        <button class="pa-btn danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Eliminar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ CARD COLAPSADO (sin cuota) ═══ -->
+  <div class="share" id="s2">
+    <div class="share-head" onclick="toggle('s2')">
+      <div class="share-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        </svg>
+      </div>
+      <div class="share-id">
+        <div class="share-name">Docker Apps</div>
+        <div class="share-pool">data3</div>
+      </div>
+      <div class="share-protos">
+        <span class="proto on">SMB</span>
+        <span class="proto on">NFS</span>
+        <span class="proto">FTP</span>
+      </div>
+      <div class="share-users">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+        </svg>
+        1 usuario
+      </div>
+      <button class="share-kebab" onclick="event.stopPropagation()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+      </button>
+      <span class="share-chevron">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </span>
+    </div>
+
+    <div class="share-panel">
+      <div class="panel-top">
+        <div class="usage-ring">
+          <div class="ring-wrap">
+            <svg width="110" height="110" viewBox="0 0 110 110">
+              <circle cx="55" cy="55" r="48" fill="none" stroke="#20202a" stroke-width="8"/>
+              <circle cx="55" cy="55" r="48" fill="none" stroke="var(--st-info)" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="301.6" stroke-dashoffset="295"/>
+            </svg>
+            <div class="ring-center">
+              <span class="ring-pct">2%</span>
+              <span class="ring-lbl">usado</span>
+            </div>
+          </div>
+          <div class="usage-detail">
+            <div class="usage-used">1.2 GB usados</div>
+            <div class="usage-free">sin límite · 3.9 TB libres</div>
+          </div>
+        </div>
+
+        <div class="panel-meta">
+          <div class="meta-item">
+            <div class="meta-k">Pool</div>
+            <div class="meta-v">data3</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-k">Tipo</div>
+            <div class="meta-v mono">BTRFS · raid1</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-k">Cuota</div>
+            <div class="meta-v mono">sin límite</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-k">Papelera</div>
+            <div class="meta-toggle" onclick="event.stopPropagation(); this.classList.toggle('sel')">
+              <span class="mt-switch"></span>
+              <span class="mt-lbl">desactivada</span>
+            </div>
+          </div>
+          <div class="meta-item full">
+            <div class="meta-k">Montaje</div>
+            <div class="meta-v path">/nimbus/pools/data3/shares/docker-apps</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dist">
+        <div class="dist-lbl">Distribución por tipo</div>
+        <div class="dist-bar">
+          <div class="dist-seg" style="width:70%; background: var(--cat-other)"></div>
+          <div class="dist-seg" style="width:20%; background: var(--cat-code)"></div>
+          <div class="dist-seg" style="width:10%; background: var(--cat-document)"></div>
+        </div>
+        <div class="dist-legend">
+          <div class="dist-item"><span class="dist-dot" style="background:var(--cat-other)"></span>Otros <span class="v">· 843 MB</span></div>
+          <div class="dist-item"><span class="dist-dot" style="background:var(--cat-code)"></span>Código <span class="v">· 240 MB</span></div>
+          <div class="dist-item"><span class="dist-dot" style="background:var(--cat-document)"></span>Documento <span class="v">· 120 MB</span></div>
+        </div>
+      </div>
+
+      <div class="panel-users">
+        <div class="pu-lbl">Acceso de usuarios</div>
+        <div class="pu-list">
+          <div class="pu-row">
+            <span class="pu-avatar">A</span>
+            <span class="pu-name">andres</span>
+            <span class="pu-perm owner">owner</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-actions">
+        <button class="pa-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+          Editar
+        </button>
+        <button class="pa-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Snapshot
+        </button>
+        <button class="pa-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          Abrir en Files
+        </button>
+        <div class="pa-spacer"></div>
+        <button class="pa-btn danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggle(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+// Actualizar label del toggle papelera al click
+document.querySelectorAll('.meta-toggle').forEach(t => {
+  t.addEventListener('click', () => {
+    const lbl = t.querySelector('.mt-lbl');
+    lbl.textContent = t.classList.contains('sel') ? 'activada' : 'desactivada';
+  });
+});
+</script>
+</body>
+</html>

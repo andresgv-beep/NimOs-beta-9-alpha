@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>NimOS · AppStore · catálogo</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   NimOS · AppStore mockups · shell de ventana real
+   Basado en nimos-window-shell.html — sin inventos
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --nim-green: #00ff9f;
+  --ui-select: #7a9eb1;
+  --ui-select-bg: rgba(122, 158, 177, 0.10);
+  --ui-select-border: rgba(122, 158, 177, 0.35);
+  --st-ok: #00ff9f;
+  --st-warn: #ffc857;
+  --st-crit: #ff5a5a;
+  --st-info: #4db8ff;
+  --bg-window: #16161a;
+  --bg-main: #1a1a1f;
+  --bg-side: #131316;
+  --bg-card: #15151a;
+  --bg-inner: #101015;
+  --fg: #f0f0f0;
+  --fg-2: #d0d0d4;
+  --fg-3: #9c9ca4;
+  --fg-4: #7a7a82;
+  --fg-5: #5a5a62;
+  --bd: rgba(255,255,255,0.04);
+  --bd-2: #20202a;
+  --bd-3: #2a2a32;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0d0d10;
+  padding: 10px;
+  min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: var(--fg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHELL DE VENTANA (igual que nimos-window-shell.html)
+   ═══════════════════════════════════════════════════════════ */
+.r-win {
+  display: grid;
+  grid-template-columns: 172px 1fr;
+  background: var(--bg-window);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--bd);
+  min-height: 620px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.r-win.no-side {
+  grid-template-columns: 1fr;
+}
+
+/* ── SIDEBAR ── */
+.r-side {
+  background: var(--bg-side);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 10px 12px;
+  border-right: 1px solid var(--bd);
+}
+.r-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 16px;
+}
+.r-brand-box {
+  width: 22px; height: 22px;
+  background: var(--nim-green);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bg-window);
+}
+.r-brand-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: 0.6px;
+}
+
+/* Nav del sidebar · categorías */
+.r-nav-section {
+  font-size: 10px;
+  color: var(--fg-5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 12px 8px 6px;
+  font-weight: 600;
+}
+.r-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  margin: 1px 0;
+}
+.r-nav-item:hover {
+  color: var(--fg);
+  background: rgba(255,255,255,0.025);
+}
+.r-nav-item.active {
+  color: var(--ui-select);
+  background: var(--ui-select-bg);
+}
+.r-nav-item .lbl { flex: 1; }
+.r-nav-item .count {
+  font-size: 10px;
+  color: var(--fg-4);
+  font-variant-numeric: tabular-nums;
+}
+.r-nav-item.active .count { color: var(--ui-select); }
+
+/* ── MAIN ── */
+.r-main {
+  background: var(--bg-main);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Titlebar absoluto · LEDs cuadrados 11px */
+.r-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 10;
+}
+.r-ctl {
+  width: 11px; height: 11px;
+  border-radius: 3px;
+  background: #2a2a30;
+  cursor: pointer;
+}
+.r-ctl.c1 { background: var(--st-warn); }
+.r-ctl.c2 { background: var(--st-ok); }
+.r-ctl.c3 { background: var(--st-crit); }
+
+/* Header del main · título de la pantalla */
+.r-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-right: 70px; /* deja espacio para los LEDs */
+  margin-bottom: 18px;
+}
+.r-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.r-subtitle {
+  font-size: 11px;
+  color: var(--fg-4);
+}
+
+/* Search inline · pequeño */
+.r-search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--bd-2);
+  font-size: 11px;
+  width: 200px;
+}
+.r-search svg { width: 10px; height: 10px; color: var(--fg-4); flex-shrink: 0; }
+.r-search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--fg);
+  outline: none;
+  font-family: inherit;
+  font-size: 11px;
+}
+.r-search input::placeholder { color: var(--fg-5); }
+
+/* Body scrollable */
+.r-body {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+</style>
+<style>
+  /* ═══ GRID DE APPS ═══ */
+  .apps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    padding: 2px 0 20px;
+  }
+
+  .app-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bd-2);
+    border-radius: 10px;
+    padding: 16px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s, background 0.15s;
+  }
+  .app-card:hover {
+    border-color: var(--bd-3);
+    background: rgba(255, 255, 255, 0.012);
+    transform: translateY(-1px);
+  }
+
+  /* Icono real · circulo / cuadrado grande con color de marca */
+  .app-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .app-icon svg, .app-icon img {
+    width: 32px;
+    height: 32px;
+  }
+  /* Colores de marca aproximados — en producción será <img src={app.icon}> */
+  .app-icon.plex       { background: #1a1a1a; color: #e5a00d; }
+  .app-icon.jellyfin   { background: linear-gradient(135deg, #00a4dc, #aa5cc3); color: white; }
+  .app-icon.nextcloud  { background: #0082c9; color: white; }
+  .app-icon.vaultwarden{ background: #175ddc; color: white; }
+  .app-icon.portainer  { background: #13bef9; color: white; }
+  .app-icon.ha         { background: #18bcf2; color: white; }
+  .app-icon.qbit       { background: #2a2a2a; color: #7dc3ff; }
+  .app-icon.gitea      { background: #609926; color: white; }
+  .app-icon.uptimekuma { background: #5cdd8b; color: #0a3520; }
+  .app-icon.adguard    { background: #68bc71; color: white; }
+  .app-icon.sonarr     { background: #2596d3; color: white; }
+  .app-icon.radarr     { background: #ffd400; color: #2a2a2a; }
+
+  /* Indicador de instalada · pill superior derecha de la card */
+  .app-installed {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--st-ok);
+    box-shadow: 0 0 5px rgba(0, 255, 159, 0.5);
+  }
+
+  .app-name {
+    font-size: 13px;
+    color: var(--fg);
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 2px;
+  }
+  .app-category {
+    font-size: 11px;
+    color: var(--fg-4);
+    line-height: 1.3;
+  }
+</style>
+</head>
+<body>
+
+<div class="r-win">
+
+  <!-- ═══ SIDEBAR · categorías ═══ -->
+  <aside class="r-side">
+    <div class="r-brand">
+      <div class="r-brand-box">N</div>
+      <span class="r-brand-name">APPSTORE</span>
+    </div>
+
+    <div class="r-nav-section">Biblioteca</div>
+    <div class="r-nav-item">
+      <span class="lbl">Instaladas</span>
+      <span class="count">6</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Actualizaciones</span>
+      <span class="count">3</span>
+    </div>
+
+    <div class="r-nav-section">Categorías</div>
+    <div class="r-nav-item active">
+      <span class="lbl">Todas</span>
+      <span class="count">42</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Media</span>
+      <span class="count">12</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Cloud</span>
+      <span class="count">8</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Productividad</span>
+      <span class="count">9</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Descargas</span>
+      <span class="count">5</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Desarrollo</span>
+      <span class="count">4</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Monitoring</span>
+      <span class="count">4</span>
+    </div>
+    <div class="r-nav-item">
+      <span class="lbl">Red</span>
+      <span class="count">3</span>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="r-main">
+    <div class="r-titlebar">
+      <span class="r-ctl c1"></span>
+      <span class="r-ctl c2"></span>
+      <span class="r-ctl c3"></span>
+    </div>
+
+    <div class="r-head">
+      <div class="r-title">Todas las apps</div>
+      <div class="r-subtitle">42 disponibles · 6 instaladas</div>
+      <div class="r-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Buscar…">
+      </div>
+    </div>
+
+    <div class="r-body">
+      <div class="apps-grid">
+
+        <!-- Plex · instalada -->
+        <div class="app-card">
+          <div class="app-icon plex">
+            <span class="app-installed"></span>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 2v20l10-10z"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Plex</div>
+            <div class="app-category">Media</div>
+          </div>
+        </div>
+
+        <!-- Jellyfin -->
+        <div class="app-card">
+          <div class="app-icon jellyfin">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .03c-1.42 0-7.95 11.41-7.27 12.59.68 1.19 13.86 1.19 14.54 0 .68-1.18-5.85-12.59-7.27-12.59zm-7.21 14.5c-1.05 0-4.79 6.85-4.27 7.74.52.89 8.42.89 8.95 0 .52-.89-3.62-7.74-4.68-7.74zm14.42 0c-1.05 0-5.2 6.85-4.68 7.74.52.89 8.43.89 8.95 0 .53-.89-3.21-7.74-4.27-7.74z"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Jellyfin</div>
+            <div class="app-category">Media</div>
+          </div>
+        </div>
+
+        <!-- Nextcloud · instalada -->
+        <div class="app-card">
+          <div class="app-icon nextcloud">
+            <span class="app-installed"></span>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.018 6.537c-2.5 0-4.6 1.712-5.241 4.015-.56-1.232-1.793-2.105-3.234-2.105C1.59 8.447 0 10.038 0 11.99c0 1.953 1.59 3.544 3.543 3.544 1.44 0 2.674-.873 3.234-2.105.64 2.302 2.74 4.014 5.24 4.014 2.486 0 4.576-1.693 5.232-3.977.569 1.21 1.79 2.068 3.21 2.068 1.953 0 3.541-1.591 3.541-3.544 0-1.952-1.588-3.543-3.541-3.543-1.42 0-2.641.858-3.21 2.068-.656-2.285-2.746-3.978-5.231-3.978z"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Nextcloud</div>
+            <div class="app-category">Cloud</div>
+          </div>
+        </div>
+
+        <!-- Vaultwarden -->
+        <div class="app-card">
+          <div class="app-icon vaultwarden">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0L1.604 4.62v6.937c0 6.32 4.51 12.16 10.396 12.443 5.886-.283 10.396-6.123 10.396-12.443V4.62L12 0z"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Vaultwarden</div>
+            <div class="app-category">Productividad</div>
+          </div>
+        </div>
+
+        <!-- Portainer -->
+        <div class="app-card">
+          <div class="app-icon portainer">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="3" width="9" height="9"/><rect x="13" y="3" width="9" height="9"/><rect x="2" y="14" width="9" height="9"/><rect x="13" y="14" width="9" height="9"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Portainer</div>
+            <div class="app-category">Desarrollo</div>
+          </div>
+        </div>
+
+        <!-- Home Assistant · instalada -->
+        <div class="app-card">
+          <div class="app-icon ha">
+            <span class="app-installed"></span>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L4 9v12h5v-7h6v7h5V9z"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Home Assistant</div>
+            <div class="app-category">Monitoring</div>
+          </div>
+        </div>
+
+        <!-- qBittorrent -->
+        <div class="app-card">
+          <div class="app-icon qbit">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7v10l10 5 10-5V7z" opacity="0.3"/><path d="M12 2L2 7l10 5 10-5z"/></svg>
+          </div>
+          <div>
+            <div class="app-name">qBittorrent</div>
+            <div class="app-category">Descargas</div>
+          </div>
+        </div>
+
+        <!-- Gitea -->
+        <div class="app-card">
+          <div class="app-icon gitea">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Gitea</div>
+            <div class="app-category">Desarrollo</div>
+          </div>
+        </div>
+
+        <!-- Uptime Kuma · instalada -->
+        <div class="app-card">
+          <div class="app-icon uptimekuma">
+            <span class="app-installed"></span>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 12l4 4 14-14 2 2L7 20l-6-6z"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Uptime Kuma</div>
+            <div class="app-category">Monitoring</div>
+          </div>
+        </div>
+
+        <!-- AdGuard -->
+        <div class="app-card">
+          <div class="app-icon adguard">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/></svg>
+          </div>
+          <div>
+            <div class="app-name">AdGuard Home</div>
+            <div class="app-category">Red</div>
+          </div>
+        </div>
+
+        <!-- Sonarr · instalada -->
+        <div class="app-card">
+          <div class="app-icon sonarr">
+            <span class="app-installed"></span>
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="6" width="20" height="14" rx="2"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Sonarr</div>
+            <div class="app-category">Media</div>
+          </div>
+        </div>
+
+        <!-- Radarr -->
+        <div class="app-card">
+          <div class="app-icon radarr">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9"/></svg>
+          </div>
+          <div>
+            <div class="app-name">Radarr</div>
+            <div class="app-category">Media</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

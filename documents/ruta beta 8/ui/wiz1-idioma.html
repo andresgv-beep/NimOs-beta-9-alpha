@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NimOS · Setup · Idioma</title>
+<style>
+:root{--nim-green:#00ff9f;--ui-select:#7a9eb1;--ui-select-bg:rgba(122,158,177,0.10);--st-ok:#00ff9f;--st-warn:#ffc857;--st-crit:#ff5a5a;--st-info:#4db8ff;--bg-window:#16161a;--bg-main:#1a1a1f;--bg-side:#131316;--bg-card:#15151a;--bg-inner:#101015;--fg:#f0f0f0;--fg-2:#d0d0d4;--fg-3:#9c9ca4;--fg-4:#7a7a82;--fg-5:#5a5a62;--bd:rgba(255,255,255,0.04);--bd-2:#20202a;--bd-3:#2a2a32}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:radial-gradient(ellipse at top, rgba(0,255,159,0.04) 0%, transparent 50%), #0a0a0c;color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden}
+body::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);background-size:40px 40px;pointer-events:none}
+.mono{font-family:ui-monospace,Menlo,monospace}
+
+/* Corner labels */
+.corner{position:absolute;font-family:ui-monospace,monospace;font-size:9px;color:var(--fg-5);letter-spacing:0.8px;text-transform:uppercase;z-index:2}
+.corner.tl{top:20px;left:20px;display:flex;align-items:center;gap:8px}
+.corner.tr{top:20px;right:20px}
+.corner.bl{bottom:20px;left:20px}
+.corner.br{bottom:20px;right:20px}
+.corner-led{width:6px;height:6px;border-radius:1.5px;background:var(--st-warn);box-shadow:0 0 5px var(--st-warn);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+/* Wrap */
+.wrap{position:relative;z-index:1;width:100%;max-width:520px;display:flex;flex-direction:column;gap:24px}
+
+/* Logo + brand */
+.brand{display:flex;flex-direction:column;align-items:center;gap:10px}
+.logo{display:flex;filter:drop-shadow(0 0 6px rgba(220,255,235,0.5)) drop-shadow(0 0 2px rgba(255,255,255,0.6))}
+.logo svg{display:block}
+.cube-1{animation:pulse-cube 3.5s ease-in-out infinite}
+.cube-2{animation:pulse-cube 3.5s ease-in-out infinite 1.2s}
+.cube-3{animation:pulse-cube 3.5s ease-in-out infinite 2.4s}
+@keyframes pulse-cube{0%,100%{opacity:1}50%{opacity:0.5}}
+.brand-text{display:flex;flex-direction:column;align-items:center;gap:4px}
+.brand-name{font-size:18px;font-weight:600;letter-spacing:-0.2px}
+.brand-sub{font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-4);letter-spacing:0.4px}
+.brand-sub .accent{color:var(--nim-green)}
+
+/* Stepper */
+.stepper{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0}
+.step{display:flex;align-items:center;gap:6px}
+.step-num{width:20px;height:20px;border-radius:5px;background:var(--bg-card);border:1px solid var(--bd-3);font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-4);display:flex;align-items:center;justify-content:center;font-weight:600}
+.step.active .step-num{background:var(--nim-green);color:var(--bg-window);border-color:var(--nim-green)}
+.step.done .step-num{background:rgba(0,255,159,0.15);color:var(--nim-green);border-color:rgba(0,255,159,0.3)}
+.step-line{width:24px;height:1px;background:var(--bd-3)}
+.step.done + .step .step-line,.step.done + .step-line{background:rgba(0,255,159,0.3)}
+
+/* Card */
+.card{background:var(--bg-card);border:1px solid var(--bd-2);border-radius:14px;padding:26px 26px 22px;box-shadow:0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px var(--bd)}
+.card-head{margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--bd-2)}
+.card-title{font-size:16px;font-weight:500;color:var(--fg);margin-bottom:4px}
+.card-desc{font-size:11px;color:var(--fg-4);line-height:1.5}
+
+/* Language list */
+.lang-list{display:flex;flex-direction:column;gap:6px}
+.lang{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg-inner);border:1px solid var(--bd-3);border-radius:8px;cursor:pointer;transition:border-color 0.15s,background 0.15s}
+.lang:hover{border-color:#4a4a52}
+.lang.active{border-color:var(--nim-green);background:rgba(0,255,159,0.04)}
+.lang-code-box{width:38px;height:38px;border-radius:6px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--fg-3);flex-shrink:0;border:1px solid var(--bd-2);letter-spacing:0.4px}
+.lang.active .lang-code-box{color:var(--nim-green);border-color:rgba(0,255,159,0.25);background:rgba(0,255,159,0.04)}
+.lang-body{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.lang-name{font-size:13px;color:var(--fg);font-weight:500}
+.lang-meta{font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-5);letter-spacing:0.3px}
+.lang-check{width:16px;height:16px;border-radius:4px;border:1px solid var(--bd-3);background:var(--bg-card);display:flex;align-items:center;justify-content:center;color:var(--bg-window);flex-shrink:0}
+.lang.active .lang-check{background:var(--nim-green);border-color:var(--nim-green)}
+.lang.active .lang-check::after{content:'✓';font-size:10px;font-weight:700}
+.lang.soon{opacity:0.5;cursor:not-allowed}
+.lang.soon:hover{border-color:var(--bd-3)}
+.lang-soon-badge{font-family:ui-monospace,monospace;font-size:8px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--st-info);border:1px solid rgba(77,184,255,0.3);border-radius:3px;padding:2px 5px;flex-shrink:0}
+
+/* i18n hint footer */
+.i18n-hint{margin-top:14px;padding:10px 12px;background:var(--bg-inner);border:1px dashed var(--bd-3);border-radius:6px;display:flex;align-items:flex-start;gap:9px}
+.i18n-hint-ico{flex-shrink:0;color:var(--st-info);width:14px;height:14px;margin-top:1px}
+.i18n-hint-text{font-size:10px;color:var(--fg-4);line-height:1.5}
+.i18n-hint-text .accent{color:var(--fg-2)}
+.i18n-hint-text .link{color:var(--ui-select);cursor:pointer}
+
+/* Actions */
+.actions{display:flex;gap:10px;margin-top:18px;padding-top:18px;border-top:1px solid var(--bd-2)}
+.btn{flex:1;padding:11px 14px;border-radius:7px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;cursor:pointer;border:1px solid;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--nim-green);color:var(--bg-window);border-color:var(--nim-green)}
+.btn-primary:hover{background:#00e08b}
+.btn-primary svg{width:13px;height:13px}
+.btn-ghost{background:transparent;color:var(--fg-3);border-color:var(--bd-3)}
+.btn-ghost:hover{color:var(--fg);border-color:#4a4a52}
+
+/* System info */
+.sysinfo{display:flex;justify-content:space-between;font-family:ui-monospace,monospace;font-size:9px;color:var(--fg-5);letter-spacing:0.4px;padding:0 4px}
+</style>
+</head>
+<body>
+
+<div class="corner tl"><span class="corner-led"></span><span>FIRST BOOT</span></div>
+<div class="corner tr">v8.1</div>
+<div class="corner bl">nimos-nas.local</div>
+<div class="corner br">STEP 1/5</div>
+
+<div class="wrap">
+
+  <div class="brand">
+    <div class="logo">
+      <svg width="48" height="48" viewBox="-15 0 200 185" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path class="cube-1" d="M 4.22 62.36 L 45.78 38.36 A 16 16 0 0 1 67.64 44.22 L 91.64 85.78 A 16 16 0 0 1 85.78 107.64 L 44.22 131.64 A 16 16 0 0 1 22.36 125.78 L -1.64 84.22 A 16 16 0 0 1 4.22 62.36 Z" fill="#ffffff"/>
+        <rect class="cube-2" x="108" y="12" width="60" height="60" rx="10" fill="#ffffff"/>
+        <rect class="cube-3" x="108" y="98" width="60" height="60" rx="10" fill="#ffffff"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">NimOS</div>
+      <div class="brand-sub">your <span class="accent">NAS</span> for developers</div>
+    </div>
+  </div>
+
+  <div class="stepper">
+    <div class="step active"><span class="step-num">1</span></div>
+    <span class="step-line"></span>
+    <div class="step"><span class="step-num">2</span></div>
+    <span class="step-line"></span>
+    <div class="step"><span class="step-num">3</span></div>
+    <span class="step-line"></span>
+    <div class="step"><span class="step-num">4</span></div>
+    <span class="step-line"></span>
+    <div class="step"><span class="step-num">5</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Choose your language · Elige tu idioma</div>
+      <div class="card-desc">Select the language for NimOS interface. You can change it later in Settings.</div>
+    </div>
+
+    <div class="lang-list">
+      <div class="lang active">
+        <div class="lang-code-box">ES</div>
+        <div class="lang-body">
+          <span class="lang-name">Español</span>
+          <span class="lang-meta">es_ES · idioma del sistema</span>
+        </div>
+        <div class="lang-check"></div>
+      </div>
+      <div class="lang soon">
+        <div class="lang-code-box">EN</div>
+        <div class="lang-body">
+          <span class="lang-name">English</span>
+          <span class="lang-meta">en_US · system language</span>
+        </div>
+        <span class="lang-soon-badge">beta 9</span>
+      </div>
+    </div>
+
+    <div class="i18n-hint">
+      <svg class="i18n-hint-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="8" r="6"/>
+        <path d="M8 5v3M8 11h0.01"/>
+      </svg>
+      <span class="i18n-hint-text">
+        Beta 8.1 está disponible en <span class="accent">español</span>.
+        El <span class="accent">inglés</span> y más idiomas llegarán vía contribuciones de la comunidad.
+      </span>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary">
+        Continuar
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="sysinfo">
+    <span>NimOS BETA 8.1 · BUILD 20260520</span>
+    <span>SETUP WIZARD</span>
+  </div>
+
+</div>
+
+</body>
+</html>

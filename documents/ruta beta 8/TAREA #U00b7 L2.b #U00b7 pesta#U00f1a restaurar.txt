@@ -1,0 +1,77 @@
+TAREA · L2.b · Eliminar pestaña Restaurar de StorageApp.svelte
+================================================================
+
+CONTEXTO TÉCNICO (CRÍTICO para no romper nada):
+
+Backend cambiado en este chat (Sesión 1 · L2.a):
+  · Endpoint /api/storage/restorable          → ELIMINADO (era stub que devolvía [])
+  · Endpoint /api/storage/pool/restore        → ELIMINADO (era stub que devolvía error)
+  · Endpoint /api/storage/v2/restorable       → ELIMINADO
+  · Endpoint /api/storage/v2/pool/restore     → ELIMINADO
+  · Funciones backend scanForRestorablePoolsGo y restorePoolFromIdentity → BORRADAS
+
+Endpoints VIVOS que siguen funcionando (los usa la sección Observados en Resumen):
+  · GET  /api/storage/observed          → snapshot pools huérfanos (Bloque C1)
+  · POST /api/storage/pool/import       → importar huérfano (Bloque C3.1)
+  · POST /api/storage/wipe              → destruir huérfano
+
+EFECTO ACTUAL en producción tras deploy del backend:
+  · La pestaña "Restaurar" del sidebar SIGUE EXISTIENDO en la UI
+  · Pero su fetch a /api/storage/restorable devolverá 404
+  · La sección "Observados" en Resumen sigue funcionando normal
+
+
+CAMBIOS NECESARIOS en src/lib/apps/StorageApp.svelte:
+
+1. SIDEBAR — borrar entrada de la pestaña:
+   { id: 'restore', label: 'Restaurar', keyHint: '4',
+     badge: restorablePools.length > 0 ? restorablePools.length : null,
+     badgeVariant: 'warn' }
+
+2. COMENTARIO TIPOS — quitar 'restore' del listado de valores de `active`:
+   let active = 'overview'; // 'overview' | 'disks' | 'snapshots' | 'restore' | ...
+
+3. OBJETO tabs — quitar entrada:
+   restore: { title: 'Restaurar', desc: 'importar pools existentes' }
+
+4. SECCIÓN MARKUP — borrar bloque entero {#if active === 'restore'} con todo
+   su contenido (la vista de la pestaña vieja).
+
+5. BANNER — borrar bloque {#if showRestoreBanner && active !== 'restore'}
+   con el aviso "X pools sin montar encontrados".
+
+6. VARIABLES — borrar:
+   · restorablePools (array)
+   · restoreMsg (string)
+   · restoreMsgError (boolean)
+   · hasRestorable (reactive)
+   · showRestoreBanner (reactive)
+   · cualquier restoreInFlight / restoreLoading si existe
+
+7. FUNCIÓN — borrar:
+   · async function restorePool(restorable) { ... }
+
+8. loadAll() — quitar del Promise.all:
+   · fetch('/api/storage/restorable', { headers: hdrs() })
+   · El return restorableRes
+   · El unwrap: const restorableData = await unwrapV2(restorableRes, 'restorable')
+   · La asignación: restorablePools = restorableData?.pools || []
+
+9. ROUTING/HASH (si existe) — si el componente lee location.hash o
+   pathSegments para inferir `active`, asegurarse de que si el usuario
+   tiene guardado #restore en URL, se redirige a #overview o default.
+
+LO QUE NO HAY QUE TOCAR:
+  · La sección "OBSERVADOS · NO GESTIONADOS" en Resumen — sigue viva tal cual
+  · Las variables observedPools, observedData, etc. — siguen vivas
+  · Los fetches a /observed, /pool/import, /wipe — siguen vivos
+  · CreatePoolWizard, DestroyPoolWizard, ExportPoolWizard — sin cambios
+
+
+VERIFICACIÓN tras aplicar:
+  · npm run build (Vite) — no errores de Svelte ni JS
+  · npm run dev — sidebar sin pestaña Restaurar, Resumen sin cambios visibles
+  · Test E2E: desmontar pool → debe aparecer en sección Observados de Resumen
+  · Network tab: 0 llamadas a /api/storage/restorable ni /pool/restore
+
+ESTIMACIÓN: ~30-45 min · riesgo BAJO (solo borrar, no modificar lógica viva)

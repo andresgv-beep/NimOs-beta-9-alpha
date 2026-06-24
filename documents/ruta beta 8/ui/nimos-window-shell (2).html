@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NimOS · Window Shell</title>
+<style>
+:root {
+  --nim-green: #00ff9f;
+  --ui-select: #7a9eb1;
+  --ui-select-bg: rgba(122, 158, 177, 0.10);
+  --ui-select-border: rgba(122, 158, 177, 0.35);
+  --st-ok: #00ff9f;
+  --st-warn: #ffc857;
+  --st-crit: #ff5a5a;
+  --st-info: #4db8ff;
+  --bg-window: #16161a;
+  --bg-main: #1a1a1f;
+  --bg-side: #131316;
+  --bg-card: #15151a;
+  --bg-inner: #101015;
+  --fg: #f0f0f0;
+  --fg-2: #d0d0d4;
+  --fg-3: #9c9ca4;
+  --fg-4: #7a7a82;
+  --fg-5: #5a5a62;
+  --bd: rgba(255,255,255,0.04);
+  --bd-2: #20202a;
+  --bd-3: #2a2a32;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0d10;padding:10px;min-height:100vh;font-family:ui-sans-serif,system-ui,sans-serif}
+.r-stage{padding:0;background:transparent;border-radius:8px}
+
+/* === SHELL DE VENTANA NimOS === */
+.r-win {
+  display: grid;
+  grid-template-columns: 172px 1fr;
+  background: var(--bg-window);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--bd);
+  color: var(--fg);
+  min-height: 580px;
+}
+
+/* === SIDEBAR === */
+.r-side {
+  background: var(--bg-side);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 10px 12px;
+  border-right: 1px solid var(--bd);
+}
+.r-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 16px;
+}
+.r-brand-box {
+  width: 22px; height: 22px;
+  background: var(--nim-green);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bg-window);
+}
+.r-brand-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: 0.6px;
+}
+
+/* === MAIN === */
+.r-main {
+  background: var(--bg-main);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* === WINDOW CONTROLS === */
+.r-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  top: 12px;
+  right: 14px;
+}
+.r-ctl {
+  width: 11px; height: 11px;
+  border-radius: 3px;
+  background: #2a2a30;
+  cursor: pointer;
+}
+.r-ctl.c1 { background: var(--st-warn); }
+.r-ctl.c2 { background: var(--st-ok); }
+.r-ctl.c3 { background: var(--st-crit); }
+</style>
+</head>
+<body>
+<div class="r-stage">
+  <div class="r-win">
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="r-side">
+      <div class="r-brand">
+        <div class="r-brand-box">N</div>
+        <span class="r-brand-name">APP</span>
+      </div>
+      <!-- Aquí va el nav de la app -->
+    </aside>
+
+    <!-- ═══ MAIN ═══ -->
+    <main class="r-main">
+      <div class="r-titlebar">
+        <span class="r-ctl c1"></span>
+        <span class="r-ctl c2"></span>
+        <span class="r-ctl c3"></span>
+      </div>
+      <!-- Aquí va el contenido de la app -->
+    </main>
+
+  </div>
+</div>
+</body>
+</html>

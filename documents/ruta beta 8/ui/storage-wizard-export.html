@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>NimOS · Wizard Desmontar pool</title>
+<style>
+  /* ─── Tokens NimOS Beta 8.1 ─── */
+  :root {
+    --ink:           #f2f2f5;
+    --ink-dim:       #c8c8cf;
+    --ink-mute:      #9a9aa3;
+    --ink-trace:     #44444a;
+    --bg-window:     #16161a;
+    --bg-main:       #1a1a1f;
+    --bg-card:       #15151a;
+    --bg-inner:      #101015;
+    --line:          rgba(255, 255, 255, 0.08);
+    --side-hover:    rgba(255, 255, 255, 0.04);
+    --side-active-bg:rgba(122, 158, 177, 0.10);
+    --signal:        #00ff9f;
+    --signal-glow:   rgba(0, 255, 159, 0.45);
+    --warn:          #fbbf24;
+    --warn-glow:     rgba(251, 191, 36, 0.45);
+    --crit:          #f87171;
+    --nim-folder:    #ff9c5a;
+
+    --font-sans:     'Inter', -apple-system, sans-serif;
+    --font-mono:     'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-sans);
+    background:
+      linear-gradient(rgba(0, 255, 159, 0.012) 1px, transparent 1px) 0 0 / 12px 12px,
+      linear-gradient(90deg, rgba(0, 255, 159, 0.012) 1px, transparent 1px) 0 0 / 12px 12px,
+      #050505;
+    min-height: 100vh;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+
+  /* ═══ BACKDROP · sólido oscuro sin blur ═══ */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 100;
+  }
+
+  /* ═══ WIZARD FRAME · IDÉNTICO al de Create ═══ */
+  .wiz {
+    position: relative;
+    z-index: 101;
+    width: 560px;
+    background: var(--bg-window);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 80px);
+    overflow: hidden;
+    animation: wizIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes wizIn {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ─── HEAD · título + stepper + close ─── */
+  .wiz-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .wiz-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.1px;
+  }
+  .wiz-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--warn);
+    margin-left: 4px;
+    font-weight: 500;
+  }
+  .wiz-step {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--ink-mute);
+    letter-spacing: 0.5px;
+  }
+  .wiz-step .cur { color: var(--ink); font-weight: 600; }
+  .wiz-close {
+    width: 22px;
+    height: 22px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--ink-mute);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s;
+    padding: 0;
+  }
+  .wiz-close svg { width: 12px; height: 12px; }
+  .wiz-close:hover { background: var(--side-hover); color: var(--ink); }
+
+  /* ─── PROGRESS BAR ─── */
+  .wiz-progress {
+    height: 2px;
+    background: var(--line);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .wiz-progress-bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: var(--warn);
+    box-shadow: 0 0 6px var(--warn-glow);
+    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* ─── BODY ─── */
+  .wiz-body {
+    padding: 20px 22px;
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg-main);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ─── FOOT ─── */
+  .wiz-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+    flex-shrink: 0;
+    background: var(--bg-window);
+  }
+  .wiz-spacer { flex: 1; }
+
+  /* ═══ BOTONES · mismo patrón que FileManager ═══ */
+  .btn-secondary {
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--bg-card);
+    color: var(--ink-dim);
+    font-size: 11px;
+    font-weight: 500;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .btn-secondary:hover:not(:disabled) {
+    color: var(--ink);
+    background: var(--side-hover);
+  }
+  .btn-secondary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-warn {
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: none;
+    background: var(--warn);
+    color: var(--bg-window);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: filter 0.12s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-warn:hover:not(:disabled) { filter: brightness(1.1); }
+
+  /* ═══ CONTENIDO ESPECÍFICO ═══ */
+  .step-label {
+    font-size: 10px;
+    color: var(--ink-trace);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .step-desc {
+    font-size: 12px;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+  .step-desc b {
+    color: var(--ink);
+    font-weight: 600;
+    font-family: var(--font-mono);
+  }
+
+  /* Lista de servicios en uso */
+  .svc-list {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .svc-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+  }
+  .svc-row:last-child { border-bottom: none; }
+  .svc-led {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .svc-led.running {
+    background: var(--signal);
+    box-shadow: 0 0 6px var(--signal-glow);
+  }
+  .svc-led.stopped {
+    background: var(--ink-trace);
+  }
+  .svc-name {
+    flex: 1;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .svc-state {
+    color: var(--ink-mute);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .svc-state.running { color: var(--signal); }
+
+  .notice {
+    background: rgba(251, 191, 36, 0.06);
+    border-left: 3px solid var(--warn);
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--ink-dim);
+    line-height: 1.5;
+  }
+  .notice b { color: var(--warn); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="backdrop"></div>
+
+<div class="wiz">
+
+  <!-- HEAD -->
+  <div class="wiz-head">
+    <div class="wiz-title">
+      Desmontar pool
+      <span class="wiz-tag">"multimedia"</span>
+    </div>
+    <div class="wiz-step">Paso <span class="cur">2</span>/3</div>
+    <button class="wiz-close" title="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="wiz-progress">
+    <div class="wiz-progress-bar" style="width: 66%"></div>
+  </div>
+
+  <!-- BODY · paso 2: servicios en uso -->
+  <div class="wiz-body">
+
+    <div class="step-label">Servicios en uso</div>
+    <p class="step-desc">
+      Detén los servicios que están usando este pool antes de desmontarlo.
+      Si hay procesos activos, el desmontaje fallará.
+    </p>
+
+    <div class="svc-list">
+      <div class="svc-row">
+        <span class="svc-led running"></span>
+        <span class="svc-name">smb · familia</span>
+        <span class="svc-state running">running</span>
+      </div>
+      <div class="svc-row">
+        <span class="svc-led running"></span>
+        <span class="svc-name">nfs · backups</span>
+        <span class="svc-state running">running</span>
+      </div>
+      <div class="svc-row">
+        <span class="svc-led stopped"></span>
+        <span class="svc-name">torrent · descargas</span>
+        <span class="svc-state">stopped</span>
+      </div>
+    </div>
+
+    <div class="notice">
+      Quedan <b>2 servicios activos</b>. Detenlos manualmente desde Settings antes
+      de continuar.
+    </div>
+  </div>
+
+  <!-- FOOT -->
+  <div class="wiz-foot">
+    <button class="btn-secondary">← Atrás</button>
+    <button class="btn-secondary">Cancelar</button>
+    <div class="wiz-spacer"></div>
+    <button class="btn-warn">Continuar →</button>
+  </div>
+
+</div>
+
+</body>
+</html>

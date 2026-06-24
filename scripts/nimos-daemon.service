@@ -1,0 +1,79 @@
+[Unit]
+Description=NimOS Daemon
+Documentation=https://github.com/andresgv-beep/NimOs-beta-9
+After=local-fs.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile=-/etc/nimos/nimos.env
+ExecStart=/opt/nimos/daemon/nimos-daemon
+Restart=always
+RestartSec=3
+TimeoutStartSec=120
+
+# ─── Security hardening (A3) ────────────────────────────────────────────────
+# Reduces the blast radius of any RCE: a compromise becomes partial, not total.
+# The daemon still needs mount/mkfs.btrfs/wipefs/chgrp + user management, so we
+# bound capabilities instead of dropping root entirely, and whitelist the paths
+# it must write. VALIDATE ON HARDWARE: if storage/shares/backup break, the most
+# likely cause is a missing ReadWritePaths entry or a capability removed below.
+# IMPORTANTE: /nimos es la raíz donde se montan los pools (/nimos/pools/...) y
+# todo el árbol de Docker que vive dentro. Sin ella, el daemon ve los pools como
+# read-only desde dentro del sandbox → el health los marca 'critical' aunque el
+# pool esté sano. Si cambias la ruta de montaje de pools, actualízala aquí.
+# /etc/docker, /etc/containerd: configs de sistema que el daemon gestiona al
+# instalar Docker. /etc/fstab: persistencia de montajes (ver nota sobre escritura
+# in-place en storage_common.go — se escribe sin rename para no requerir /etc
+# entero escribible). Lista cerrada: el daemon NO escribe en ningún otro sitio de
+# /etc. Los DATOS (apps, torrents, VMs) van al POOL, nunca al sistema.
+NoNewPrivileges=true
+# ─────────────────────────────────────────────────────────────────────────────
+# AISLAMIENTO DE MONTAJES DESACTIVADO — confirmado en hardware (prueba A/B,
+# 13/06/2026). Las directivas Protect*/Private* de systemd meten al daemon en un
+# namespace de montajes PRIVADO. Para un daemon cuyo trabajo ES montar/gestionar
+# el storage del host, eso es fatal: los pools que monta NO se propagan al host
+# (Samba/Docker/usuario no los ven), no ve montajes del host, no escribe fstab,
+# y `btrfs` falla con "not a btrfs filesystem" sobre pools montados en otra
+# burbuja. Causó que los datos cayeran al DISCO DE SISTEMA. 3 días de depuración.
+# Se probó: con TODO el aislamiento en 'no' + MountFlags=shared, el daemon
+# comparte el árbol de montajes con el host (PID 1) y el storage funciona.
+# PENDIENTE (no urgente): afinar qué directiva concreta basta desactivar para
+# conservar el máximo hardening. PrivateMounts=no por sí solo NO basta (probado).
+# NO reintroducir Protect*/Private* sin verificar que los namespaces de montaje
+# de PID1 y del daemon siguen siendo IGUALES (ls -l /proc/1/ns/mnt vs daemon).
+ProtectSystem=no
+ProtectHome=no
+PrivateTmp=no
+PrivateMounts=no
+PrivateDevices=no
+ProtectKernelTunables=no
+ProtectControlGroups=no
+ProtectKernelModules=no
+RestrictNamespaces=no
+MountFlags=shared
+# MountFlags=shared: propaga los montajes del daemon al host y viceversa, para
+# que el árbol de montajes sea único (ver bloque de arriba sobre el aislamiento).
+#
+# Hardening que NO crea namespace de montajes (compatible con el storage):
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+# Capabilities required: mount (CAP_SYS_ADMIN), ownership changes (CAP_CHOWN,
+# CAP_DAC_OVERRIDE, CAP_FOWNER), user/identity management (CAP_SETUID, CAP_SETGID),
+# binding privileged ports if ever needed (CAP_NET_BIND_SERVICE), y lectura SMART
+# de discos vía smartctl (CAP_SYS_RAWIO — ioctl de bajo nivel al dispositivo de
+# bloque). Sin CAP_SYS_RAWIO, smartctl falla con "Operation not permitted" bajo
+# el sandbox y el monitor de salud no puede leer el estado de los discos →
+# verificado en hardware: un disco con sectores dañados se mostraba sano.
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER CAP_SETUID CAP_SETGID CAP_NET_BIND_SERVICE CAP_SYS_RAWIO
+AmbientCapabilities=CAP_SYS_ADMIN CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER CAP_SETUID CAP_SETGID CAP_NET_BIND_SERVICE CAP_SYS_RAWIO
+
+# Logging
+StandardOutput=append:/var/log/nimos/daemon.log
+StandardError=append:/var/log/nimos/daemon-error.log
+
+[Install]
+WantedBy=multi-user.target

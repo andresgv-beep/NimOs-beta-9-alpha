@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NimOS · NimHealth</title>
+<style>
+:root{
+  --nim-green:#00ff9f;
+  --ui-select:#7a9eb1;--ui-select-bg:rgba(122,158,177,0.10);
+  --st-ok:#00ff9f;--st-warn:#ffc857;--st-crit:#ff5a5a;--st-info:#4db8ff;
+  --bg-window:#16161a;--bg-main:#1a1a1f;--bg-side:#131316;
+  --bg-card:#15151a;--bg-inner:#101015;
+  --fg:#f0f0f0;--fg-2:#d0d0d4;--fg-3:#9c9ca4;--fg-4:#7a7a82;--fg-5:#5a5a62;
+  --bd:rgba(255,255,255,0.04);--bd-2:#20202a;--bd-3:#2a2a32;
+  --bracket-accent:var(--nim-green);
+  --bracket-warn:var(--st-warn);
+  --bracket-crit:var(--st-crit);
+  --bracket-info:var(--st-info);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0d10;color:var(--fg);font-family:ui-sans-serif,system-ui,sans-serif;padding:10px;min-height:100vh}
+.mono{font-family:ui-monospace,"JetBrains Mono",Menlo,monospace}
+
+/* ===== APP SHELL ===== */
+.app{display:grid;grid-template-columns:148px 1fr;background:var(--bg-window);border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.4),0 0 0 1px var(--bd);min-height:580px}
+
+/* ===== SIDEBAR ===== */
+.side{background:var(--bg-side);display:flex;flex-direction:column;padding:12px 8px;border-right:1px solid var(--bd)}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 6px 16px}
+.brand-box{width:22px;height:22px;background:var(--nim-green);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--bg-window)}
+.brand-name{font-size:11px;font-weight:600;letter-spacing:0.6px}
+.brand-icon{font-size:13px;color:var(--st-crit);margin-left:4px}
+.group-lbl{font-size:9px;color:var(--fg-5);font-weight:500;text-transform:uppercase;letter-spacing:0.8px;padding:10px 6px 5px}
+.nav{display:flex;flex-direction:column;gap:1px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:11px;color:var(--fg-3);cursor:pointer;justify-content:space-between}
+.nav-item-left{display:flex;align-items:center;gap:8px}
+.nav-item-keyhint{font-family:ui-monospace,monospace;font-size:8px;color:var(--fg-5);background:var(--bg-inner);padding:1px 4px;border-radius:3px;border:1px solid var(--bd-3)}
+.nav-item.active{background:var(--ui-select-bg);color:var(--ui-select)}
+.nav-item.active .nav-item-keyhint{color:var(--ui-select);border-color:var(--ui-select-bg)}
+.nav-badge{font-family:ui-monospace,monospace;font-size:8px;padding:1px 5px;border-radius:3px;background:var(--bg-inner);color:var(--fg-3);min-width:18px;text-align:center}
+
+/* ===== MAIN ===== */
+.main{background:var(--bg-main);padding:14px 14px 16px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+
+/* AppShell header */
+.header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--bd-2);margin-bottom:14px}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-icon{width:24px;height:24px;border-radius:6px;background:var(--bg-inner);display:flex;align-items:center;justify-content:center;color:var(--st-crit);font-size:13px}
+.header-title{font-size:13px;font-weight:500;letter-spacing:0.2px}
+.header-path{display:flex;align-items:center;gap:6px;font-family:ui-monospace,monospace;font-size:10px;color:var(--fg-4)}
+.header-path .sep{color:var(--fg-5)}
+.header-path .cur{color:var(--fg-2)}
+.titlebar{display:flex;gap:5px}
+.ctl{width:9px;height:9px;border-radius:3px}
+.ctl.c1{background:var(--st-warn)}.ctl.c2{background:var(--st-ok)}.ctl.c3{background:var(--st-crit)}
+
+/* ===== KPI CARDS (con corner brackets + sparkline) ===== */
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.kpi{
+  background:var(--bg-card);
+  border-radius:8px;
+  padding:11px 12px 10px;
+  position:relative;
+  --bracket-color:var(--bracket-accent);
+}
+.kpi.kpi-warn{--bracket-color:var(--bracket-warn)}
+.kpi.kpi-crit{--bracket-color:var(--bracket-crit)}
+.kpi.kpi-info{--bracket-color:var(--bracket-info)}
+/* CORNER BRACKETS — 4 esquinas (técnico, brand) */
+.kpi::before,.kpi::after,
+.kpi .br-tl,.kpi .br-tr,.kpi .br-bl,.kpi .br-br{
+  content:'';position:absolute;width:8px;height:8px;
+  border-color:var(--bracket-color);
+  border-style:solid;
+  opacity:0.7;
+}
+.kpi .br-tl{top:4px;left:4px;border-width:1.2px 0 0 1.2px}
+.kpi .br-tr{top:4px;right:4px;border-width:1.2px 1.2px 0 0}
+.kpi .br-bl{bottom:4px;left:4px;border-width:0 0 1.2px 1.2px}
+.kpi .br-br{bottom:4px;right:4px;border-width:0 1.2px 1.2px 0}
+.kpi::before,.kpi::after{display:none}
+
+.kpi-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.kpi-label{font-size:9px;color:var(--fg-4);font-weight:500;letter-spacing:0.6px;text-transform:uppercase}
+.kpi-state{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--fg-3)}
+.led{width:6px;height:6px;border-radius:1.5px;display:inline-block}
+.led.ok{background:var(--st-ok);box-shadow:0 0 4px var(--st-ok)}
+.led.warn{background:var(--st-warn);box-shadow:0 0 4px var(--st-warn)}
+.led.crit{background:var(--st-crit);box-shadow:0 0 4px var(--st-crit)}
+.led.off{background:var(--fg-5)}
+
+.kpi-row{display:flex;align-items:baseline;gap:5px;margin-bottom:5px}
+.kpi-value{font-family:ui-monospace,monospace;font-size:22px;font-weight:600;line-height:1;color:var(--fg);letter-spacing:-0.4px}
+.kpi-value.accent{color:var(--nim-green)}
+.kpi-value.warn{color:var(--st-warn)}
+.kpi-value.crit{color:var(--st-crit)}
+.kpi-value.info{color:var(--st-info)}
+.kpi-unit{font-size:9px;color:var(--fg-4);font-family:ui-monospace,monospace}
+
+/* Sparkline */
+.spark{height:18px;display:flex;align-items:flex-end;gap:1px;margin-top:4px}
+.spark-bar{flex:1;border-radius:0.5px;min-height:1px}
+.spark.accent .spark-bar{background:rgba(0,255,159,0.55)}
+.spark.warn .spark-bar{background:rgba(255,200,87,0.55)}
+.spark.crit .spark-bar{background:rgba(255,90,90,0.55)}
+.spark.info .spark-bar{background:rgba(77,184,255,0.55)}
+.spark.dim .spark-bar{background:rgba(255,255,255,0.12)}
+
+/* ===== TOOLBAR (tabs filtros + search) ===== */
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.tabs{display:flex;gap:4px}
+.tab{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:5px;border:1px solid var(--bd-3);background:transparent;color:var(--fg-3);font-size:10px;font-family:ui-monospace,monospace;cursor:pointer;letter-spacing:0.3px}
+.tab.active{background:var(--ui-select-bg);color:var(--ui-select);border-color:var(--ui-select-bg)}
+.tab.has-error{border-color:rgba(255,90,90,0.3)}
+.badge{font-family:ui-monospace,monospace;font-size:8px;padding:1px 5px;border-radius:3px;background:var(--bg-inner);color:var(--fg-3);min-width:16px;text-align:center}
+.badge.accent{color:var(--nim-green);background:rgba(0,255,159,0.08)}
+.badge.crit{color:var(--st-crit);background:rgba(255,90,90,0.08)}
+
+.search{position:relative}
+.search input{background:var(--bg-inner);border:1px solid var(--bd-3);border-radius:5px;color:var(--fg);padding:5px 8px 5px 24px;font-size:10px;font-family:inherit;width:170px;outline:none}
+.search input::placeholder{color:var(--fg-5)}
+.search .ico{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--fg-4);font-size:11px}
+.search .keyhint{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-family:ui-monospace,monospace;font-size:8px;color:var(--fg-5);background:var(--bg-window);padding:1px 4px;border-radius:3px;border:1px solid var(--bd-3)}
+
+/* ===== DENSE TABLE ===== */
+.table{background:var(--bg-card);border-radius:8px;overflow:hidden}
+.table-row{display:grid;grid-template-columns:14px 1fr 56px 60px 70px;gap:8px;padding:8px 12px;align-items:center;font-size:11px;border-bottom:1px solid var(--bd);cursor:pointer}
+.table-row:last-child{border-bottom:none}
+.table-row.head{padding:6px 12px;background:rgba(255,255,255,0.015);font-size:9px;color:var(--fg-4);letter-spacing:0.6px;text-transform:uppercase;font-weight:500;cursor:default}
+.table-row:hover:not(.head){background:rgba(255,255,255,0.025)}
+.row-name{color:var(--fg-2);font-weight:500}
+.row-name.child{padding-left:14px;color:var(--fg-3);position:relative}
+.row-name.child::before{content:'';position:absolute;left:4px;top:50%;width:5px;height:5px;border-left:1px solid var(--fg-5);border-bottom:1px solid var(--fg-5);transform:translateY(-50%) rotate(0deg)}
+.row-val{font-family:ui-monospace,monospace;color:var(--fg-3);font-size:10px}
+.row-val.warn{color:var(--st-warn)}
+.row-action{display:flex;justify-content:flex-end;gap:4px}
+.icon-btn{width:22px;height:22px;border-radius:4px;border:1px solid var(--bd-3);background:transparent;color:var(--fg-3);font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.icon-btn:hover{color:var(--fg);border-color:#4a4a52}
+.icon-btn.danger:hover{color:var(--st-crit);border-color:rgba(255,90,90,0.3)}
+
+/* Reduce columns on narrow */
+@media (max-width:520px){
+  .kpis{grid-template-columns:1fr}
+  .table-row{grid-template-columns:14px 1fr 56px 60px}
+  .col-hide{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-box">N</div>
+      <span class="brand-name">HEALTH</span>
+      <span class="brand-icon">♥</span>
+    </div>
+
+    <div class="group-lbl">Monitor</div>
+    <nav class="nav">
+      <div class="nav-item active">
+        <div class="nav-item-left">
+          <span class="nav-item-keyhint">T</span>
+          <span>Task Manager</span>
+        </div>
+        <span class="nav-badge">12</span>
+      </div>
+      <div class="nav-item">
+        <div class="nav-item-left">
+          <span class="nav-item-keyhint">S</span>
+          <span>Sistema</span>
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+
+    <!-- AppShell header -->
+    <div class="header">
+      <div class="header-left">
+        <div class="header-icon">♥</div>
+        <span class="header-title">NimHealth</span>
+      </div>
+      <div class="header-path mono">
+        <span>health</span>
+        <span class="sep">›</span>
+        <span class="cur">tasks</span>
+      </div>
+      <div class="titlebar">
+        <span class="ctl c1"></span>
+        <span class="ctl c2"></span>
+        <span class="ctl c3"></span>
+      </div>
+    </div>
+
+    <!-- KPI ROW con corner brackets + sparkline -->
+    <div class="kpis">
+      <div class="kpi">
+        <span class="br-tl"></span><span class="br-tr"></span>
+        <span class="br-bl"></span><span class="br-br"></span>
+        <div class="kpi-head">
+          <span class="kpi-label">CPU</span>
+          <span class="kpi-state">
+            <span class="led ok"></span>
+            <span>nominal</span>
+          </span>
+        </div>
+        <div class="kpi-row">
+          <span class="kpi-value accent mono">23</span>
+          <span class="kpi-unit">% · 4c · load 0.42</span>
+        </div>
+        <div class="spark accent">
+          <div class="spark-bar" style="height:30%"></div>
+          <div class="spark-bar" style="height:45%"></div>
+          <div class="spark-bar" style="height:60%"></div>
+          <div class="spark-bar" style="height:35%"></div>
+          <div class="spark-bar" style="height:55%"></div>
+          <div class="spark-bar" style="height:70%"></div>
+          <div class="spark-bar" style="height:45%"></div>
+          <div class="spark-bar" style="height:50%"></div>
+          <div class="spark-bar" style="height:40%"></div>
+          <div class="spark-bar" style="height:35%"></div>
+          <div class="spark-bar" style="height:55%"></div>
+          <div class="spark-bar" style="height:42%"></div>
+          <div class="spark-bar" style="height:48%"></div>
+          <div class="spark-bar" style="height:35%"></div>
+          <div class="spark-bar" style="height:40%"></div>
+          <div class="spark-bar" style="height:48%"></div>
+        </div>
+      </div>
+
+      <div class="kpi kpi-info">
+        <span class="br-tl"></span><span class="br-tr"></span>
+        <span class="br-bl"></span><span class="br-br"></span>
+        <div class="kpi-head">
+          <span class="kpi-label">Memoria</span>
+          <span class="kpi-state">
+            <span class="led ok"></span>
+            <span>ok</span>
+          </span>
+        </div>
+        <div class="kpi-row">
+          <span class="kpi-value mono">6.5</span>
+          <span class="kpi-unit">GiB / 16 GiB · 41%</span>
+        </div>
+        <div class="spark info">
+          <div class="spark-bar" style="height:38%"></div>
+          <div class="spark-bar" style="height:40%"></div>
+          <div class="spark-bar" style="height:39%"></div>
+          <div class="spark-bar" style="height:42%"></div>
+          <div class="spark-bar" style="height:41%"></div>
+          <div class="spark-bar" style="height:43%"></div>
+          <div class="spark-bar" style="height:40%"></div>
+          <div class="spark-bar" style="height:41%"></div>
+          <div class="spark-bar" style="height:42%"></div>
+          <div class="spark-bar" style="height:41%"></div>
+          <div class="spark-bar" style="height:43%"></div>
+          <div class="spark-bar" style="height:42%"></div>
+          <div class="spark-bar" style="height:41%"></div>
+          <div class="spark-bar" style="height:42%"></div>
+          <div class="spark-bar" style="height:41%"></div>
+          <div class="spark-bar" style="height:41%"></div>
+        </div>
+      </div>
+
+      <div class="kpi kpi-warn">
+        <span class="br-tl"></span><span class="br-tr"></span>
+        <span class="br-bl"></span><span class="br-br"></span>
+        <div class="kpi-head">
+          <span class="kpi-label">Disco I/O</span>
+          <span class="kpi-state">
+            <span class="led warn"></span>
+            <span>active</span>
+          </span>
+        </div>
+        <div class="kpi-row">
+          <span class="kpi-value warn mono">12.4</span>
+          <span class="kpi-unit">MB/s · ↓8.2 ↑4.2</span>
+        </div>
+        <div class="spark warn">
+          <div class="spark-bar" style="height:25%"></div>
+          <div class="spark-bar" style="height:60%"></div>
+          <div class="spark-bar" style="height:80%"></div>
+          <div class="spark-bar" style="height:45%"></div>
+          <div class="spark-bar" style="height:55%"></div>
+          <div class="spark-bar" style="height:90%"></div>
+          <div class="spark-bar" style="height:70%"></div>
+          <div class="spark-bar" style="height:35%"></div>
+          <div class="spark-bar" style="height:50%"></div>
+          <div class="spark-bar" style="height:75%"></div>
+          <div class="spark-bar" style="height:60%"></div>
+          <div class="spark-bar" style="height:42%"></div>
+          <div class="spark-bar" style="height:55%"></div>
+          <div class="spark-bar" style="height:65%"></div>
+          <div class="spark-bar" style="height:50%"></div>
+          <div class="spark-bar" style="height:48%"></div>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <span class="br-tl"></span><span class="br-tr"></span>
+        <span class="br-bl"></span><span class="br-br"></span>
+        <div class="kpi-head">
+          <span class="kpi-label">Red</span>
+          <span class="kpi-state">
+            <span class="led ok"></span>
+            <span>online</span>
+          </span>
+        </div>
+        <div class="kpi-row">
+          <span class="kpi-value mono">847</span>
+          <span class="kpi-unit">KB/s · ↓620 ↑227</span>
+        </div>
+        <div class="spark dim">
+          <div class="spark-bar" style="height:30%"></div>
+          <div class="spark-bar" style="height:50%"></div>
+          <div class="spark-bar" style="height:35%"></div>
+          <div class="spark-bar" style="height:65%"></div>
+          <div class="spark-bar" style="height:45%"></div>
+          <div class="spark-bar" style="height:55%"></div>
+          <div class="spark-bar" style="height:40%"></div>
+          <div class="spark-bar" style="height:60%"></div>
+          <div class="spark-bar" style="height:48%"></div>
+          <div class="spark-bar" style="height:38%"></div>
+          <div class="spark-bar" style="height:52%"></div>
+          <div class="spark-bar" style="height:42%"></div>
+          <div class="spark-bar" style="height:55%"></div>
+          <div class="spark-bar" style="height:48%"></div>
+          <div class="spark-bar" style="height:42%"></div>
+          <div class="spark-bar" style="height:50%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="tabs">
+        <button class="tab">Todos <span class="badge">12</span></button>
+        <button class="tab active">Activos <span class="badge accent">8</span></button>
+        <button class="tab">Detenidos <span class="badge">3</span></button>
+        <button class="tab has-error">Errores <span class="badge crit">1</span></button>
+      </div>
+      <div class="search">
+        <span class="ico">⌕</span>
+        <input type="text" placeholder="Buscar..."/>
+        <span class="keyhint">/</span>
+      </div>
+    </div>
+
+    <!-- Dense table -->
+    <div class="table">
+      <div class="table-row head">
+        <span></span>
+        <span>SERVICIO</span>
+        <span>CPU</span>
+        <span>MEM</span>
+        <span style="text-align:right">ACCIONES</span>
+      </div>
+      <div class="table-row">
+        <span class="led ok"></span>
+        <span class="row-name">nimos-daemon</span>
+        <span class="row-val">12.4%</span>
+        <span class="row-val">218M</span>
+        <span class="row-action">
+          <button class="icon-btn">⏸</button>
+          <button class="icon-btn">↻</button>
+        </span>
+      </div>
+      <div class="table-row">
+        <span class="led ok"></span>
+        <span class="row-name">docker</span>
+        <span class="row-val">5.8%</span>
+        <span class="row-val">95M</span>
+        <span class="row-action">
+          <button class="icon-btn">⏸</button>
+          <button class="icon-btn">↻</button>
+        </span>
+      </div>
+      <div class="table-row">
+        <span></span>
+        <span class="row-name child">transmission</span>
+        <span class="row-val">3.1%</span>
+        <span class="row-val">52M</span>
+        <span class="row-action">
+          <button class="icon-btn">⏸</button>
+          <button class="icon-btn">↻</button>
+        </span>
+      </div>
+      <div class="table-row">
+        <span></span>
+        <span class="row-name child">jellyfin</span>
+        <span class="row-val">2.7%</span>
+        <span class="row-val">43M</span>
+        <span class="row-action">
+          <button class="icon-btn">⏸</button>
+          <button class="icon-btn">↻</button>
+        </span>
+      </div>
+      <div class="table-row">
+        <span class="led warn"></span>
+        <span class="row-name">btrfs-scrub</span>
+        <span class="row-val warn">3.2%</span>
+        <span class="row-val">42M</span>
+        <span class="row-action">
+          <button class="icon-btn">⏸</button>
+          <button class="icon-btn">↻</button>
+        </span>
+      </div>
+      <div class="table-row">
+        <span class="led ok"></span>
+        <span class="row-name">smartd</span>
+        <span class="row-val">0.8%</span>
+        <span class="row-val">18M</span>
+        <span class="row-action">
+          <button class="icon-btn">⏸</button>
+          <button class="icon-btn">↻</button>
+        </span>
+      </div>
+      <div class="table-row">
+        <span class="led crit"></span>
+        <span class="row-name" style="color:var(--st-crit)">backup-daemon</span>
+        <span class="row-val">—</span>
+        <span class="row-val">—</span>
+        <span class="row-action">
+          <button class="icon-btn">▶</button>
+          <button class="icon-btn danger">×</button>
+        </span>
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

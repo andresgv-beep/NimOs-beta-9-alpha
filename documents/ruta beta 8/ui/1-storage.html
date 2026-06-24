@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NimOS · Storage</title>
+<style>
+:root {
+  --nim-green: #00ff9f;
+  --ui-select: #7a9eb1;
+  --ui-select-bg: rgba(122, 158, 177, 0.10);
+  --ui-select-border: rgba(122, 158, 177, 0.35);
+  --st-ok: #00ff9f;
+  --st-warn: #ffc857;
+  --st-crit: #ff5a5a;
+  --st-info: #4db8ff;
+  --bg-window: #16161a;
+  --bg-main: #1a1a1f;
+  --bg-side: #131316;
+  --bg-card: #15151a;
+  --bg-inner: #101015;
+  --fg: #f0f0f0;
+  --fg-2: #d0d0d4;
+  --fg-3: #9c9ca4;
+  --fg-4: #7a7a82;
+  --fg-5: #5a5a62;
+  --bd: rgba(255,255,255,0.04);
+  --bd-2: #20202a;
+  --bd-3: #2a2a32;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0d10;padding:10px;min-height:100vh;font-family:ui-sans-serif,system-ui,sans-serif}
+.r-stage{padding:0;background:transparent;border-radius:8px}
+.r-win{display:grid;grid-template-columns:172px 1fr;background:var(--bg-window);border-radius:14px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.4),0 0 0 1px var(--bd);color:var(--fg);min-height:580px}
+.mono{font-family:ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace}
+.r-side{background:var(--bg-side);display:flex;flex-direction:column;padding:14px 10px 12px;border-right:1px solid var(--bd)}
+.r-brand{display:flex;align-items:center;gap:10px;padding:4px 6px 16px}
+.r-brand-box{width:22px;height:22px;background:var(--nim-green);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--bg-window)}
+.r-brand-name{font-size:12px;font-weight:600;color:var(--fg);letter-spacing:0.6px}
+.r-group-lbl{font-size:10px;color:var(--fg-5);font-weight:500;text-transform:uppercase;letter-spacing:0.8px;padding:8px 8px 6px}
+.r-nav{display:flex;flex-direction:column;gap:1px}
+.r-nav-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;font-size:12px;color:var(--fg-3);cursor:pointer}
+.r-nav-ico{width:14px;height:14px;flex-shrink:0;opacity:0.85}
+.r-nav-item:hover{background:rgba(255,255,255,0.025);color:var(--fg-2)}
+.r-nav-item.active{background:var(--ui-select-bg);color:var(--ui-select)}
+.r-nav-name{flex:1}
+.r-main{background:var(--bg-main);padding:22px 24px 22px;display:flex;flex-direction:column;position:relative}
+.r-titlebar{display:flex;align-items:center;gap:6px;position:absolute;top:12px;right:14px}
+.r-ctl{width:11px;height:11px;border-radius:3px;background:#2a2a30;cursor:pointer}
+.r-ctl.c1{background:var(--st-warn)}
+.r-ctl.c2{background:var(--st-ok)}
+.r-ctl.c3{background:var(--st-crit)}
+.r-h1{font-size:18px;font-weight:500;color:#f4f4f6;letter-spacing:-0.1px;margin:0;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.r-h1-sub{font-size:12px;color:var(--fg-4);font-weight:400}
+.r-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:18px}
+@media (min-width:600px){.r-stats{grid-template-columns:repeat(4,1fr)}}
+.r-stat{background:var(--bg-card);border-radius:8px;padding:12px 12px 11px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.r-stat::before{content:'';position:absolute;top:0;left:0;width:2px;height:100%;background:var(--stat-edge,transparent);opacity:0.7}
+.r-stat.ok{--stat-edge:var(--st-ok)}
+.r-stat.info{--stat-edge:var(--st-info)}
+.r-stat.warn{--stat-edge:var(--st-warn)}
+.r-stat-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.r-stat-lbl{font-size:10px;color:var(--fg-4);font-weight:500;letter-spacing:0.6px}
+.r-stat-tag{font-size:9px;color:var(--fg-4);display:flex;align-items:center;gap:4px}
+.r-stat-tag .d{width:5px;height:5px;border-radius:1.5px;background:var(--fg-4)}
+.r-stat-tag.ok{color:var(--st-ok)}
+.r-stat-tag.ok .d{background:var(--st-ok)}
+.r-stat-tag.info{color:var(--st-info)}
+.r-stat-tag.info .d{background:var(--st-info)}
+.r-stat-tag.muted{color:var(--fg-4)}
+.r-stat-val{font-size:22px;font-weight:500;color:var(--fg);line-height:1;letter-spacing:-0.4px}
+.r-stat-val .unit{font-size:11px;color:var(--fg-4);margin-left:4px;font-weight:400}
+.r-stat-val.ok{color:var(--st-ok)}
+.r-sec{display:flex;align-items:center;justify-content:space-between;margin-top:24px;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.r-sec-lbl{font-size:11px;color:var(--fg-4);font-weight:500;letter-spacing:0.6px}
+.r-sec-lbl .ac{color:var(--fg-2);margin-left:4px}
+.r-sec-btns{display:flex;gap:6px}
+.r-btn{font-family:ui-monospace,monospace;font-size:10px;padding:4px 9px;background:transparent;color:var(--fg-3);border:1px solid var(--bd-3);border-radius:4px;cursor:pointer;letter-spacing:0.3px;text-transform:uppercase}
+.r-btn:hover{border-color:#4a4a52;color:var(--fg-2)}
+.r-btn.primary{color:var(--nim-green);border-color:rgba(0,255,159,0.3);font-weight:500}
+.r-btn.primary:hover{border-color:var(--nim-green);background:rgba(0,255,159,0.06)}
+.r-vol{background:var(--bg-card);border-radius:10px;padding:14px 16px}
+.r-vol-head{display:grid;grid-template-columns:14px 1fr auto auto auto auto;gap:12px;align-items:center}
+.r-vol-mark{width:9px;height:9px;background:var(--nim-green);transform:rotate(45deg)}
+.r-vol-name{font-size:14px;color:var(--fg);font-weight:500}
+.r-vol-meta{font-size:11px;color:var(--fg-4);margin-top:2px;font-family:ui-monospace,monospace}
+.r-vol-bar{width:140px;height:4px;background:var(--bd-2);border-radius:1px;position:relative;overflow:hidden}
+.r-vol-bar-fill{position:absolute;top:0;left:0;height:100%;background:var(--nim-green);width:1%}
+.r-vol-cap{font-size:12px;color:var(--fg-2);font-family:ui-monospace,monospace}
+.r-vol-dot{width:7px;height:7px;background:var(--st-ok);border-radius:1.5px}
+.r-vol-kebab{color:var(--fg-4);font-size:13px;cursor:pointer;padding:0 4px}
+.r-actions{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd-2);flex-wrap:wrap}
+.r-act{font-family:ui-monospace,monospace;font-size:10px;padding:5px 9px;background:transparent;color:var(--fg-3);border:1px solid var(--bd-3);border-radius:5px;cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:0.3px}
+.r-act .num{color:var(--fg-4);font-weight:500}
+.r-vol-stats{margin-top:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:0;background:var(--bg-inner);border-radius:6px;overflow:hidden}
+@media (min-width:600px){.r-vol-stats{grid-template-columns:repeat(6,1fr)}}
+.r-vol-stat{padding:10px 12px;border-right:1px solid #1a1a20;border-bottom:1px solid #1a1a20}
+.r-vol-stat:last-child{border-right:none;border-bottom:none}
+.r-vol-stat-lbl{font-size:9px;color:var(--fg-4);font-weight:500;letter-spacing:0.6px}
+.r-vol-stat-val{font-size:13px;color:var(--fg);font-weight:500;margin-top:4px}
+.r-vol-stat-val.dim{color:var(--fg-2)}
+.r-vol-stat-val.ok{color:var(--st-ok);display:flex;align-items:center;gap:5px}
+.r-vol-stat-val.ok::before{content:'';width:5px;height:5px;background:var(--st-ok);border-radius:1.5px}
+.r-vol-stat-val.path{font-size:10px;font-family:ui-monospace,monospace;color:var(--fg-2)}
+.r-disks{margin-top:12px}
+.r-disks-lbl{font-size:10px;color:var(--fg-4);font-weight:500;letter-spacing:0.6px;padding:0 4px 8px}
+.r-disks-lbl .ac{color:var(--fg-2);margin-left:3px}
+.r-disks-table{display:grid;grid-template-columns:28px 1fr 90px 70px 60px 50px;font-size:11px}
+.r-disks-th{font-size:9px;color:var(--fg-4);font-weight:500;letter-spacing:0.6px;padding:6px 6px;border-bottom:1px solid var(--bd-2)}
+.r-disks-td{padding:9px 6px;border-bottom:1px solid #1a1a20;color:var(--fg-2);display:flex;align-items:center}
+.r-disks-td.dnum{color:var(--fg-3);font-weight:500}
+.r-disks-td.dev{font-family:ui-monospace,monospace;color:var(--fg-3);font-size:10px}
+.r-disks-td.chip{padding-left:0}
+.r-chip{font-family:ui-monospace,monospace;font-size:9px;color:var(--fg-2);border:1px solid var(--bd-3);padding:1px 5px;border-radius:3px;letter-spacing:0.4px}
+.r-disks-td.smart{color:var(--st-ok);gap:5px;font-family:ui-monospace,monospace;font-size:10px}
+.r-disks-td.smart::before{content:'';width:5px;height:5px;background:var(--st-ok);border-radius:1.5px}
+</style>
+</head>
+<body>
+<div class="r-stage">
+  <div class="r-win">
+    <aside class="r-side">
+      <div class="r-brand">
+        <div class="r-brand-box">N</div>
+        <span class="r-brand-name">STORAGE</span>
+      </div>
+      <div class="r-group-lbl">Volúmenes</div>
+      <nav class="r-nav">
+        <div class="r-nav-item active">
+          <svg class="r-nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="12" height="3" rx="1"/>
+            <rect x="2" y="6.5" width="12" height="3" rx="1"/>
+            <rect x="2" y="10" width="12" height="3" rx="1"/>
+          </svg>
+          <span class="r-nav-name">Resumen</span>
+        </div>
+        <div class="r-nav-item">
+          <svg class="r-nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="8" cy="4" rx="5" ry="1.5"/>
+            <path d="M3 4v8c0 0.8 2.2 1.5 5 1.5s5-0.7 5-1.5V4"/>
+          </svg>
+          <span class="r-nav-name">Discos</span>
+        </div>
+        <div class="r-nav-item">
+          <svg class="r-nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="8" r="6"/>
+            <path d="M8 4v4l2.5 1.5"/>
+          </svg>
+          <span class="r-nav-name">Snapshots</span>
+        </div>
+      </nav>
+      <div class="r-group-lbl">Herramientas</div>
+      <nav class="r-nav">
+        <div class="r-nav-item">
+          <svg class="r-nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.5 8a5.5 5.5 0 0 1 9.5-3.8"/>
+            <path d="M13.5 8a5.5 5.5 0 0 1-9.5 3.8"/>
+          </svg>
+          <span class="r-nav-name">Scrub</span>
+        </div>
+        <div class="r-nav-item">
+          <svg class="r-nav-ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 9l3-1 1.5 3 2-6 1.5 4 2-1h2"/>
+          </svg>
+          <span class="r-nav-name">SMART</span>
+        </div>
+      </nav>
+    </aside>
+    <main class="r-main">
+      <div class="r-titlebar">
+        <span class="r-ctl c1"></span>
+        <span class="r-ctl c2"></span>
+        <span class="r-ctl c3"></span>
+      </div>
+      <h1 class="r-h1">Resumen<span class="r-h1-sub">· volúmenes activos del sistema</span></h1>
+      <div class="r-stats">
+        <div class="r-stat ok">
+          <div class="r-stat-head"><span class="r-stat-lbl">Volúmenes</span><span class="r-stat-tag ok"><span class="d"></span>online</span></div>
+          <div class="r-stat-val mono">1</div>
+        </div>
+        <div class="r-stat">
+          <div class="r-stat-head"><span class="r-stat-lbl">Discos</span><span class="r-stat-tag muted">2 / 0 libres</span></div>
+          <div class="r-stat-val mono">2</div>
+        </div>
+        <div class="r-stat">
+          <div class="r-stat-head"><span class="r-stat-lbl">Capacidad</span><span class="r-stat-tag muted">0% usado</span></div>
+          <div class="r-stat-val mono">118.9<span class="unit">GB</span></div>
+        </div>
+        <div class="r-stat ok">
+          <div class="r-stat-head"><span class="r-stat-lbl">Salud</span><span class="r-stat-tag ok"><span class="d"></span>sin incidencias</span></div>
+          <div class="r-stat-val ok mono">OK</div>
+        </div>
+      </div>
+      <div class="r-sec">
+        <span class="r-sec-lbl mono">VOLÚMENES<span class="ac">· 1 ACTIVO</span></span>
+        <div class="r-sec-btns">
+          <button class="r-btn">↻ ESCANEAR</button>
+          <button class="r-btn primary">+ NUEVO VOLUMEN</button>
+        </div>
+      </div>
+      <div class="r-vol">
+        <div class="r-vol-head">
+          <span class="r-vol-mark"></span>
+          <div>
+            <div class="r-vol-name">data</div>
+            <div class="r-vol-meta">BTRFS · raid1 · 2 discos · 1 MB usados</div>
+          </div>
+          <div class="r-vol-bar"><div class="r-vol-bar-fill"></div></div>
+          <span class="r-vol-cap">118.9 GB</span>
+          <span class="r-vol-dot"></span>
+          <span class="r-vol-kebab">⋯</span>
+        </div>
+        <div class="r-actions">
+          <button class="r-act"><span class="num">01</span>Snapshot</button>
+          <button class="r-act"><span class="num">02</span>Verificar</button>
+          <button class="r-act"><span class="num">03</span>Desmontar</button>
+        </div>
+        <div class="r-vol-stats">
+          <div class="r-vol-stat"><div class="r-vol-stat-lbl">TOTAL</div><div class="r-vol-stat-val mono">118.9 GB</div></div>
+          <div class="r-vol-stat"><div class="r-vol-stat-lbl">USADO</div><div class="r-vol-stat-val dim mono">1 MB</div></div>
+          <div class="r-vol-stat"><div class="r-vol-stat-lbl">LIBRE</div><div class="r-vol-stat-val mono">118.9 GB</div></div>
+          <div class="r-vol-stat"><div class="r-vol-stat-lbl">USO</div><div class="r-vol-stat-val mono">0%</div></div>
+          <div class="r-vol-stat"><div class="r-vol-stat-lbl">HEALTH</div><div class="r-vol-stat-val ok">healthy</div></div>
+          <div class="r-vol-stat"><div class="r-vol-stat-lbl">MOUNT</div><div class="r-vol-stat-val path">/nimos/pools/data</div></div>
+        </div>
+        <div class="r-disks">
+          <div class="r-disks-lbl mono">DISCOS DEL VOLUMEN<span class="ac">· 2</span></div>
+          <div class="r-disks-table">
+            <div class="r-disks-th"></div>
+            <div class="r-disks-th">MODELO</div>
+            <div class="r-disks-th">DISP</div>
+            <div class="r-disks-th">CAP</div>
+            <div class="r-disks-th">ROL</div>
+            <div class="r-disks-th">SMART</div>
+            <div class="r-disks-row" style="display:contents;">
+              <div class="r-disks-td dnum mono">D1</div>
+              <div class="r-disks-td">Patriot Burst Elite</div>
+              <div class="r-disks-td dev">/dev/sda</div>
+              <div class="r-disks-td mono">120 GB</div>
+              <div class="r-disks-td chip"><span class="r-chip">data</span></div>
+              <div class="r-disks-td smart">ok</div>
+            </div>
+            <div class="r-disks-row" style="display:contents;">
+              <div class="r-disks-td dnum mono">D2</div>
+              <div class="r-disks-td">ST320LT020</div>
+              <div class="r-disks-td dev">/dev/sdb</div>
+              <div class="r-disks-td mono">320 GB</div>
+              <div class="r-disks-td chip"><span class="r-chip">data</span></div>
+              <div class="r-disks-td smart">ok</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

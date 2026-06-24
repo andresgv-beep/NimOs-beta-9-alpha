@@ -1,0 +1,217 @@
+/* ═══════════════════════════════════════════════════════════════
+   NimOS · Sidebar Tokens v2
+   ═══════════════════════════════════════════════════════════════
+   Fuente de verdad para la tipografía y espaciado del sidebar.
+   Todos los valores están sincronizados con AppShell.svelte.
+
+   USO:
+     Cualquier app que monte su propio sidebar (en vez de usar
+     AppShell) DEBE respetar estos valores para que todas las
+     ventanas se vean idénticas.
+
+   Los colores se resuelven contra los tokens del tema activo
+   en app.css (midnight / dark / light), así que el sidebar
+   se adapta automáticamente.
+
+   APPS QUE DEBEN MIGRAR a estos tokens:
+     FileManager, Settings, NetworkApp, NimTorrent,
+     AppStore, NimHealth, NimBackup, MediaPlayer
+
+   APPS QUE YA LOS USAN (vía AppShell):
+     StorageApp
+
+   APPS SIN SIDEBAR (no necesitan esto):
+     Notes, TransferManager, WebApp
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Layout ── */
+:root {
+  --sb-width:         240px;
+  --sb-padding:       18px 14px;
+  --sb-gap:           3px;
+  --sb-bg:            var(--bg-elev-1);
+  --sb-border:        var(--glass-border);
+}
+
+/* ── App header (icono + título) ── */
+:root {
+  --sb-header-padding:     4px 12px 16px;
+  --sb-header-gap:         12px;
+  --sb-header-icon-size:   22px;
+  --sb-header-icon-stroke: 1.5;
+  --sb-header-title-size:  16px;
+  --sb-header-title-weight: 700;
+  --sb-header-title-color: var(--text-primary);
+  --sb-header-title-ls:    -0.3px;
+}
+
+/* ── Search bar ── */
+:root {
+  --sb-search-padding:  8px 12px;
+  --sb-search-radius:   8px;
+  --sb-search-bg:       var(--bg-elev-2);
+  --sb-search-border:   var(--glass-border);
+  --sb-search-font:     12px;
+  --sb-search-color:    var(--text-muted);
+  --sb-search-mb:       10px;
+}
+
+/* ── Section label (ALMACENAMIENTO, SISTEMA...) ── */
+:root {
+  --sb-section-size:    10px;
+  --sb-section-weight:  500;
+  --sb-section-color:   var(--text-muted);
+  --sb-section-ls:      1.2px;
+  --sb-section-padding: 14px 12px 6px;
+  --sb-section-transform: uppercase;
+}
+
+/* ── Sidebar item (Resumen, Discos, etc.) ── */
+:root {
+  --sb-item-size:       13px;
+  --sb-item-weight:     500;
+  --sb-item-padding:    9px 12px;
+  --sb-item-radius:     8px;
+  --sb-item-gap:        12px;
+  --sb-item-color:      var(--text-secondary);
+  --sb-item-color-hover: var(--text-primary);
+  --sb-item-bg-hover:   var(--bg-elev-2);
+  --sb-item-color-active: var(--accent);
+  --sb-item-bg-active:  var(--accent-dim);
+}
+
+/* ── Item icon ── */
+:root {
+  --sb-icon-size:       16px;
+  --sb-icon-stroke:     1.5;
+  --sb-icon-fill-opacity: 0.12;
+  --sb-icon-fill-opacity-active: 0.2;
+  --sb-icon-dot-opacity: 0.45;
+  --sb-icon-dot-opacity-active: 0.7;
+}
+
+/* ── User card (footer) ── */
+:root {
+  --sb-user-gap:        10px;
+  --sb-user-padding:    10px 12px;
+  --sb-avatar-size:     30px;
+  --sb-avatar-radius:   8px;
+  --sb-avatar-bg:       var(--accent);
+  --sb-avatar-font:     12px;
+  --sb-name-size:       12px;
+  --sb-name-weight:     600;
+  --sb-name-color:      var(--text-primary);
+  --sb-role-size:       9.5px;
+  --sb-role-weight:     500;
+  --sb-role-color:      var(--text-muted);
+  --sb-role-ls:         0.5px;
+  --sb-role-transform:  uppercase;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   CLASES BASE
+   ═══════════════════════════════════════════════════════════════
+   Para apps que no usan AppShell pero quieren sidebar idéntico.
+   Copiar estas clases al <style> del componente, o migrar a
+   AppShell directamente (recomendado).
+   ═══════════════════════════════════════════════════════════════ */
+
+/*
+.sidebar {
+  width: var(--sb-width);
+  padding: var(--sb-padding);
+  display: flex; flex-direction: column; gap: var(--sb-gap);
+  background: var(--sb-bg);
+  border-right: 1px solid var(--sb-border);
+  overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
+
+.sb-header {
+  display: flex; align-items: center; gap: var(--sb-header-gap);
+  padding: var(--sb-header-padding);
+}
+.sb-app-icon {
+  width: var(--sb-header-icon-size); height: var(--sb-header-icon-size);
+  flex-shrink: 0; stroke: var(--sb-header-title-color); fill: none;
+  stroke-width: var(--sb-header-icon-stroke);
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.sb-app-title {
+  font-size: var(--sb-header-title-size);
+  font-weight: var(--sb-header-title-weight);
+  color: var(--sb-header-title-color);
+  letter-spacing: var(--sb-header-title-ls);
+}
+
+.sb-search {
+  display: flex; align-items: center; gap: 6px;
+  padding: var(--sb-search-padding); border-radius: var(--sb-search-radius);
+  border: 1px solid var(--sb-search-border); background: var(--sb-search-bg);
+  font-size: var(--sb-search-font); color: var(--sb-search-color);
+  margin-bottom: var(--sb-search-mb); cursor: text;
+}
+
+.sb-section {
+  font-size: var(--sb-section-size);
+  font-weight: var(--sb-section-weight);
+  color: var(--sb-section-color);
+  text-transform: var(--sb-section-transform);
+  letter-spacing: var(--sb-section-ls);
+  padding: var(--sb-section-padding);
+}
+.sb-section:first-child { padding-top: 4px; }
+
+.sb-item {
+  display: flex; align-items: center; gap: var(--sb-item-gap);
+  padding: var(--sb-item-padding); border-radius: var(--sb-item-radius);
+  font-size: var(--sb-item-size); font-weight: var(--sb-item-weight);
+  color: var(--sb-item-color);
+  cursor: pointer; transition: all 0.15s;
+}
+.sb-item:hover {
+  background: var(--sb-item-bg-hover);
+  color: var(--sb-item-color-hover);
+}
+.sb-item.active {
+  background: var(--sb-item-bg-active);
+  color: var(--sb-item-color-active);
+}
+
+.sb-icon {
+  width: var(--sb-icon-size); height: var(--sb-icon-size);
+  flex-shrink: 0; stroke: currentColor; fill: none;
+  stroke-width: var(--sb-icon-stroke);
+  stroke-linecap: round; stroke-linejoin: round;
+}
+
+.sb-bottom {
+  margin-top: auto;
+  border-top: 1px solid var(--sb-border);
+  padding-top: 10px;
+}
+.sb-user-card {
+  display: flex; align-items: center;
+  gap: var(--sb-user-gap); padding: var(--sb-user-padding);
+}
+.sb-avatar {
+  width: var(--sb-avatar-size); height: var(--sb-avatar-size);
+  border-radius: var(--sb-avatar-radius);
+  background: var(--sb-avatar-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--sb-avatar-font); font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+.sb-user-name {
+  font-size: var(--sb-name-size); font-weight: var(--sb-name-weight);
+  color: var(--sb-name-color);
+}
+.sb-user-role {
+  font-size: var(--sb-role-size); font-weight: var(--sb-role-weight);
+  color: var(--sb-role-color);
+  text-transform: var(--sb-role-transform);
+  letter-spacing: var(--sb-role-ls);
+}
+*/

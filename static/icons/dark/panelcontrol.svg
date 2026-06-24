@@ -1,0 +1,18 @@
+<svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="72" height="72" rx="16" fill="#4b5563"/>
+  <!-- toggle 1 ON verde -->
+  <rect x="8" y="12" width="30" height="12" rx="6" fill="#22c55e"/>
+  <circle cx="32" cy="18" r="5" fill="white"/>
+  <rect x="42" y="13" width="22" height="4" rx="2" fill="#6b7280"/>
+  <rect x="42" y="19" width="16" height="3" rx="1.5" fill="#4b5563"/>
+  <!-- toggle 2 OFF -->
+  <rect x="8" y="30" width="30" height="12" rx="6" fill="#6b7280"/>
+  <circle cx="14" cy="36" r="5" fill="#9ca3af"/>
+  <rect x="42" y="31" width="22" height="4" rx="2" fill="#6b7280"/>
+  <rect x="42" y="37" width="18" height="3" rx="1.5" fill="#4b5563"/>
+  <!-- toggle 3 ON azul -->
+  <rect x="8" y="48" width="30" height="12" rx="6" fill="#3b82f6"/>
+  <circle cx="32" cy="54" r="5" fill="white"/>
+  <rect x="42" y="49" width="22" height="4" rx="2" fill="#6b7280"/>
+  <rect x="42" y="55" width="14" height="3" rx="1.5" fill="#4b5563"/>
+</svg>
