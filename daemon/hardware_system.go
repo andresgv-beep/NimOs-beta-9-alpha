@@ -289,7 +289,7 @@ func handleUpdateCheck(w http.ResponseWriter) {
 		}
 	}
 	latestVersion := "0.0.0"
-	if out, ok := runSafe("curl", "-fsSL", "https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9/main/package.json"); ok {
+	if out, ok := runSafe("curl", "-fsSL", "https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9-alpha/main/package.json"); ok {
 		var pkg map[string]interface{}
 		if json.Unmarshal([]byte(out), &pkg) == nil {
 			if v, ok := pkg["version"].(string); ok {
