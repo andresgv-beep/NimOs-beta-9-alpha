@@ -9,30 +9,32 @@
 			 * primer paint, para que la UI no salte de 1.0 al valor del
 			 * usuario cuando theme.js hidrata (sin flash).
 			 *
-			 * NO hay heurística por viewport ni listener de resize. La
-			 * escala es MANUAL y determinista: NO depende del tamaño de
-			 * pantalla, del DPR ni del zoom del navegador. Esos tres mueven
-			 * el mismo número y no se pueden separar con APIs web, así que
-			 * auto-detectar la escala es inestable y pelea contra el usuario
-			 * (lección de Beta 7 y del banding que esto reemplaza, jun 2026).
+			 * MODELO (Beta 9): la escala es el font-size raíz vía
+			 * --ui-scale (ver app.css `html { font-size: calc(16px *
+			 * var(--ui-scale)) }`). YA NO se usa `zoom`: corrompía el
+			 * espacio de coordenadas y rompía la maqueta medida en JS
+			 * (ventanas, grid) en pantallas distintas. Con font-size las
+			 * coordenadas son honestas en todas las pantallas.
 			 *
-			 * theme.js → applyToDOM() es el ÚNICO dueño del zoom en runtime.
-			 * Este script solo adelanta el MISMO cálculo para el primer
-			 * frame. CONTRATO: la fórmula (uiScale número → /100, si no 1)
-			 * está duplicada aquí y en theme.js computeUiScale() por
-			 * necesidad (el script inline no puede importar). Si la cambias
-			 * en un sitio, cámbiala en el otro.
+			 * NO hay heurística por viewport. La escala es MANUAL y
+			 * determinista: no depende del tamaño de pantalla, DPR ni zoom
+			 * del navegador (los tres mueven el mismo número y no se separan
+			 * con APIs web — auto-detectar es inestable, lección de Beta 7).
+			 *
+			 * theme.js → applyToDOM() es el ÚNICO dueño de --ui-scale en
+			 * runtime. Este script solo adelanta el MISMO cálculo para el
+			 * primer frame. CONTRATO: la fórmula (uiScale número → /100, si
+			 * no 1) está duplicada aquí y en theme.js computeUiScale() por
+			 * necesidad (el inline no puede importar). Cámbiala en ambos.
 			 * ─────────────────────────────────────────────────────────── */
 			(function () {
 				try {
 					var scale = 1;
 					/* ¿Móvil real? Mismo criterio que viewport.isMobileDevice()
-					 * (copia inline: este script no puede importar). Si cambias
-					 * la lógica allí, cámbiala aquí. Táctil + pantalla física
-					 * pequeña → NO se aplica zoom (descuadra el toque en iOS y
-					 * el móvil tiene su propia UI). Usamos screen.*, no
-					 * innerWidth, para que el zoom de un escritorio no cuente
-					 * como móvil. */
+					 * (copia inline: este script no puede importar). Táctil +
+					 * pantalla física pequeña → escala 1 (el móvil tiene su
+					 * propia UI). Usamos screen.*, no innerWidth, para que el
+					 * zoom de un escritorio no cuente como móvil. */
 					var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 					var sw = (window.screen && window.screen.width) || window.innerWidth;
 					var sh = (window.screen && window.screen.height) || window.innerHeight;
@@ -44,14 +46,10 @@
 							if (typeof ui === 'number' && isFinite(ui)) scale = ui / 100;
 						}
 					}
-					document.documentElement.style.zoom = scale;
-					/* --ui-zoom: lo consume WindowFrame.svelte (ventana
-					 * maximizada usa 100vw, que no respeta zoom). */
-					document.documentElement.style.setProperty('--ui-zoom', String(scale));
+					document.documentElement.style.setProperty('--ui-scale', String(scale));
 				} catch (e) {
 					/* localStorage bloqueado o JSON corrupto → escala 1, sin drama */
-					document.documentElement.style.zoom = 1;
-					document.documentElement.style.setProperty('--ui-zoom', '1');
+					document.documentElement.style.setProperty('--ui-scale', '1');
 				}
 			})();
 		</script>

@@ -339,14 +339,16 @@
     opacity: 0.92;
   }
 
-  /* Ventana maximizada · sin border-radius, ocupa todo */
+  /* Ventana maximizada · sin border-radius, ocupa todo.
+     Sin `zoom` el espacio de coordenadas es honesto: 100vw/100vh ya
+     son píxeles reales, no hace falta dividir por --ui-zoom. */
   .window.maximized {
     border-radius: 0 !important;
     box-shadow: none !important;
     left: 0 !important;
     top: 0 !important;
-    width: calc(100vw / var(--ui-zoom, 1)) !important;
-    height: calc((100vh - var(--taskbar-height, 52px)) / var(--ui-zoom, 1)) !important;
+    width: 100vw !important;
+    height: calc(100vh - var(--taskbar-height, 3.25rem)) !important;
   }
 
   .drag-zone {

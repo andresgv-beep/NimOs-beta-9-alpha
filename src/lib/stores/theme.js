@@ -206,24 +206,23 @@ function applyToDOM(p) {
     root.style.setProperty('--accent-glow', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`);
   }
 
-  // ─── Taskbar height ───
+  // ─── Taskbar height (rem · escala con --ui-scale) ───
   const tbH = p.taskbarSize === 'small' ? 44
             : p.taskbarSize === 'large' ? 60
             : 52;
-  root.style.setProperty('--taskbar-height', tbH + 'px');
+  root.style.setProperty('--taskbar-height', (tbH / 16) + 'rem');
 
   // ─── Text / UI scale ───
   root.style.setProperty('--text-scale', (p.textScale / 100).toString());
   root.style.setProperty('--glow-intensity', '0.5');
 
-  const scale = computeUiScale(p.uiScale);
+  // Escala de UI: el ÚNICO mando es --ui-scale, que app.css aplica al
+  // font-size raíz (1rem = 16px · --ui-scale). Ya NO usamos `zoom`:
+  // corrompía el espacio de coordenadas y rompía la maqueta medida en JS
+  // (ventanas, grid) en pantallas distintas. En móvil la escala queda en
+  // 1 — el móvil tiene su propia UI y el escalado manual es de escritorio.
+  const scale = isMobileDevice() ? 1 : computeUiScale(p.uiScale);
   root.style.setProperty('--ui-scale', scale.toString());
-  root.style.setProperty('--ui-zoom', scale.toString());
-  // En móvil NO aplicar `zoom`: descuadra el hit-testing táctil en iOS
-  // Safari (toque desviado), especialmente como PWA. Usamos el detector
-  // centralizado (touch + tamaño físico), no innerWidth, para que hacer
-  // zoom en un escritorio no cuente como móvil ni suprima la escala.
-  root.style.zoom = isMobileDevice() ? 1 : scale;
 
   // ─── CRT overlay ───
   root.classList.toggle('crt-overlay', !!p.crtOverlay);
