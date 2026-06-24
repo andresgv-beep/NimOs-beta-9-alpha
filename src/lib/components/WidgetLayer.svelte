@@ -193,7 +193,9 @@
   // ─── Drag con snap a celda ───
   let drag = null; // { id, def, originX, originY, startCX, startCY, zoom, moving, ghostX, ghostY, target }
 
-  // Ratio coordenadas visuales/layout · maneja root.style.zoom (uiScale)
+  // Ratio coords visuales/layout. Mide (rect/offsetWidth), no lee
+  // style.zoom: sin `zoom` (Beta 9) da 1, pero seguimos midiendo por si
+  // un transform escalara la capa en el futuro — robusto por construcción.
   function zoomRatio() {
     if (!layerEl) return 1;
     const r = layerEl.getBoundingClientRect().width / layerEl.offsetWidth;

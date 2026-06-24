@@ -197,24 +197,22 @@
     ctxMenu = { x: p.x, y: p.y, file, idx };
   }
 
-  function getZoom() { return parseFloat(document.documentElement.style.zoom) || 1; }
-
   /**
    * v3.1 fix: el ctx-menu se posiciona con position:absolute relative
    * al .window ancestro (WindowFrame tiene will-change:transform, lo que
    * crea un contenedor positional para sus descendientes). Restamos el
    * rect del .window para convertir clientX/Y (coords del viewport) a
-   * coords locales del WindowFrame. Luego dividimos por zoom para CSS units.
+   * coords locales del WindowFrame. Sin `zoom` (Beta 9) las coords ya son
+   * píxeles reales: no hay que dividir por nada.
    */
   function calcMenuPos(e, menuW = 200, menuH = 290) {
-    const z = getZoom();
     const win = e.target.closest('.window');
     if (!win) return { x: 0, y: 0 };
     const rect = win.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / z;
-    const y = (e.clientY - rect.top) / z;
-    const maxX = rect.width  / z - menuW - 8;
-    const maxY = rect.height / z - menuH - 8;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const maxX = rect.width  - menuW - 8;
+    const maxY = rect.height - menuH - 8;
     return {
       x: Math.max(0, Math.min(x, maxX)),
       y: Math.max(0, Math.min(y, maxY)),

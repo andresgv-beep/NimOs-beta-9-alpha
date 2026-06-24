@@ -37,6 +37,27 @@ function detect() {
   return isMobileDevice();
 }
 
+// Resuelve una CSS var de longitud a PÍXELES REALES · jun 2026
+// ───────────────────────────────────────────────────────────
+// getComputedStyle sobre una custom property devuelve el TOKEN tal cual
+// ("3.25rem"), sin resolver la unidad — `parseInt` daría 3, no 52. Desde
+// que la escala vive en el font-size raíz (Beta 9), --taskbar-height está
+// en rem, así que el JS que la lee (windows.js) necesita convertirla a px
+// multiplicando por el font-size raíz. Acepta rem o px.
+export function cssVarPx(name, fallback = 0) {
+  if (typeof document === 'undefined') return fallback;
+  const root = document.documentElement;
+  const raw = getComputedStyle(root).getPropertyValue(name).trim();
+  if (!raw) return fallback;
+  const n = parseFloat(raw);
+  if (Number.isNaN(n)) return fallback;
+  if (raw.endsWith('rem')) {
+    const rootPx = parseFloat(getComputedStyle(root).fontSize) || 16;
+    return n * rootPx;
+  }
+  return n; // px (o sin unidad → asumimos px)
+}
+
 // Store reactivo: se actualiza al rotar/redimensionar.
 export const isMobile = readable(detect(), (set) => {
   if (typeof window === 'undefined') return;

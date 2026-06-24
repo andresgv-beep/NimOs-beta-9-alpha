@@ -1,4 +1,5 @@
 import { writable, derived } from 'svelte/store';
+import { cssVarPx } from './viewport.js';
 
 let nextZ = 100;
 let counter = 0;
@@ -8,20 +9,20 @@ export const windows = writable({});
 
 export const windowList = derived(windows, $w => Object.values($w));
 
-// ─── Geometría de viewport · ÚNICO sitio que lee zoom/taskbar ───
+// ─── Geometría de viewport · ÚNICO sitio que lee taskbar/viewport ───
 // maximizeWindow y refitWindow comparten esta verdad (no más copias
-// divergentes de innerWidth/zoom/taskbar). openWindow conserva su
-// propia mate de centrado inicial a propósito (cascada al abrir).
-// Coordenadas LÓGICAS (post-zoom): innerWidth/zoom.
+// divergentes de innerWidth/taskbar). openWindow conserva su propia
+// mate de centrado inicial a propósito (cascada al abrir).
+// Sin `zoom` (Beta 9): innerWidth/Height son píxeles reales y honestos.
+// --taskbar-height está en rem → cssVarPx la resuelve a px de verdad.
 function viewport() {
   const tbPos = document.documentElement.getAttribute('data-taskbar-pos') || 'bottom';
-  const tbH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--taskbar-height')) || 48;
-  const zoom = parseFloat(document.documentElement.style.zoom) || 1;
-  const vpW = window.innerWidth / zoom;
-  const vpH = window.innerHeight / zoom;
+  const tbH = cssVarPx('--taskbar-height', 48);
+  const vpW = window.innerWidth;
+  const vpH = window.innerHeight;
   const offsetLeft = tbPos === 'left' ? tbH : 0;
   const offsetTop = tbPos === 'top' ? tbH : 0;
-  return { tbPos, tbH, zoom, vpW, vpH, offsetLeft, offsetTop };
+  return { tbPos, tbH, vpW, vpH, offsetLeft, offsetTop };
 }
 
 // Rect de una ventana maximizada para el viewport actual (misma mate
@@ -66,20 +67,19 @@ export function openWindow(appId, options = {}, webAppData = null) {
   const { width: reqW = 800, height: reqH = 520 } = options;
 
   const tbPos = document.documentElement.getAttribute('data-taskbar-pos') || 'bottom';
-  const tbH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--taskbar-height')) || 48;
-  const zoom = parseFloat(document.documentElement.style.zoom) || 1;
+  const tbH = cssVarPx('--taskbar-height', 48);
   const offsetLeft = tbPos === 'left' ? tbH : 0;
   const offsetTop = tbPos === 'top' ? tbH : 0;
 
-  // Use zoomed viewport dimensions (CSS zoom adjusts innerWidth/Height automatically)
-  const availW = (window.innerWidth / zoom) - offsetLeft;
-  const availH = ((window.innerHeight / zoom) - (tbPos !== 'left' ? tbH : 0));
+  // Sin `zoom`: innerWidth/Height ya son píxeles reales.
+  const availW = window.innerWidth - offsetLeft;
+  const availH = window.innerHeight - (tbPos !== 'left' ? tbH : 0);
   const width = Math.min(reqW, availW - 40);
   const height = Math.min(reqH, availH - 40);
 
   const offset = (counter % 6) * 30;
-  const vpW = window.innerWidth / zoom;
-  const vpH = window.innerHeight / zoom;
+  const vpW = window.innerWidth;
+  const vpH = window.innerHeight;
   const x = Math.max(offsetLeft + 20, Math.min((vpW - width) / 2 + offset, vpW - width - 10));
   const y = Math.max(offsetTop + 20, Math.min((vpH - height) / 2 - 40 + offset, vpH - height - tbH - 10));
   const zIndex = nextZ++;

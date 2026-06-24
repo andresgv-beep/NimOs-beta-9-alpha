@@ -86,10 +86,6 @@
   let dragging = false;
   let dragOffset = { x: 0, y: 0 };
 
-  function getZoom() {
-    return parseFloat(document.documentElement.style.zoom) || 1;
-  }
-
   function onTitleMouseDown(e) {
     if (e.target.closest('.wc-ctl') || e.target.closest('.wc-bar')) return;
     // v3.1 fix: cubre cualquier hijo del slot titlebar-actions
@@ -98,17 +94,15 @@
     if (win.maximized) return;
     focusWindow(win.id);
     dragging = true;
-    const z = getZoom();
-    dragOffset = { x: e.clientX / z - x, y: e.clientY / z - y };
+    dragOffset = { x: e.clientX - x, y: e.clientY - y };
     window.addEventListener('mousemove', onDrag);
     window.addEventListener('mouseup', onDragEnd);
   }
 
   function onDrag(e) {
     if (!dragging) return;
-    const z = getZoom();
-    x = e.clientX / z - dragOffset.x;
-    y = Math.max(0, e.clientY / z - dragOffset.y);
+    x = e.clientX - dragOffset.x;
+    y = Math.max(0, e.clientY - dragOffset.y);
     updateWindowPos(win.id, { x, y });
   }
 
@@ -126,17 +120,15 @@
     if (win.maximized) return;
     e.stopPropagation();
     resizing = true;
-    const z = getZoom();
-    resizeStart = { mx: e.clientX / z, my: e.clientY / z, w, h };
+    resizeStart = { mx: e.clientX, my: e.clientY, w, h };
     window.addEventListener('mousemove', onResize);
     window.addEventListener('mouseup', onResizeEnd);
   }
 
   function onResize(e) {
     if (!resizing) return;
-    const z = getZoom();
-    w = Math.max(400, resizeStart.w + (e.clientX / z - resizeStart.mx));
-    h = Math.max(300, resizeStart.h + (e.clientY / z - resizeStart.my));
+    w = Math.max(400, resizeStart.w + (e.clientX - resizeStart.mx));
+    h = Math.max(300, resizeStart.h + (e.clientY - resizeStart.my));
     updateWindowPos(win.id, { width: w, height: h });
   }
 
