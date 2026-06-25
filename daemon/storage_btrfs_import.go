@@ -106,15 +106,31 @@ func importPoolBtrfs(body map[string]interface{}) map[string]interface{} {
 		}
 	}
 
-	// ── Validar devices completos ──
-	if target.DevicesOnline < target.DevicesExpected {
+	// ── Validar devices ──
+	// ANTES: un filesystem incompleto (le faltan discos) se RECHAZABA aquí
+	// con "Cannot import". Eso creaba un bucle sin salida: Observados ofrecía
+	// "Importar" pero siempre fallaba, y el usuario no podía montar el pool
+	// degradado para recuperarlo NI repararlo (meter disco nuevo) desde la UI.
+	// La única salida era "Destruir" → perder los datos de un raid1 al que solo
+	// le falta un disco. Eso anula el propósito del raid1.
+	//
+	// AHORA: un filesystem incompleto SÍ se importa, en modo degradado,ro (más
+	// abajo). El usuario recupera sus datos y puede reparar el pool añadiendo
+	// el disco nuevo. Solo bloqueamos si NO hay NINGÚN disco online (no hay nada
+	// que montar).
+	fsDegraded := target.DevicesOnline < target.DevicesExpected
+	if target.DevicesOnline == 0 {
 		return map[string]interface{}{
-			"error": fmt.Sprintf("filesystem incomplete: %d of %d devices online. Cannot import.",
-				target.DevicesOnline, target.DevicesExpected),
-			"code":            "FS_INCOMPLETE",
-			"devices_online":  target.DevicesOnline,
+			"error": fmt.Sprintf("filesystem no importable: 0 de %d discos online. No hay nada que montar.",
+				target.DevicesExpected),
+			"code":             "FS_NO_DEVICES",
+			"devices_online":   target.DevicesOnline,
 			"devices_expected": target.DevicesExpected,
 		}
+	}
+	if fsDegraded {
+		logMsg("importPoolBtrfs: filesystem DEGRADADO (%d/%d discos) — se importará en modo solo-lectura para permitir recuperación y reparación",
+			target.DevicesOnline, target.DevicesExpected)
 	}
 
 	// ── Tomar el lock global ──
@@ -170,10 +186,25 @@ func importPoolBtrfs(body map[string]interface{}) map[string]interface{} {
 		runCmd("btrfs", []string{"device", "scan"}, opts)
 		time.Sleep(500 * time.Millisecond)
 
+		// ── Detectar si el filesystem está INCOMPLETO (faltan discos) ──────
+		// Un raid1 (u otro perfil multi-disco) al que le falta un miembro NO
+		// se monta sin la opción `degraded` — btrfs se niega por seguridad.
+		// Ese era el bucle: "Importar" fallaba al montar un pool degradado y
+		// el usuario no tenía forma de importarlo/repararlo desde la UI.
+		// Si faltan discos: añadimos `degraded` Y montamos READ-ONLY (`ro`):
+		// escribir en un raid degradado crea bloques sin redundancia, peligroso.
+		// Read-only permite VER/recuperar datos y luego reparar (añadir disco).
+		mountOpts := "noatime,compress=zstd"
+		if fsDegraded {
+			mountOpts = "degraded,ro,noatime"
+			logMsg("importPoolBtrfs: filesystem INCOMPLETO (%d/%d discos) → montando degraded,ro para permitir recuperación/reparación",
+				target.DevicesOnline, target.DevicesExpected)
+		}
+
 		// Montar vía UUID (estable, independiente de paths de /dev)
 		_, err := runCmd("mount", []string{
 			"-t", "btrfs",
-			"-o", "noatime,compress=zstd",
+			"-o", mountOpts,
 			"UUID=" + uuid,
 			mountPoint,
 		}, opts)

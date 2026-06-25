@@ -146,13 +146,18 @@ func TestImportPoolBtrfs_AlreadyManaged(t *testing.T) {
 // ─── FS incompleto ─────────────────────────────────────────────────────────
 
 func TestImportPoolBtrfs_FSIncomplete(t *testing.T) {
+	// Un filesystem DEGRADADO (1/2 discos) ahora SÍ se importa (en modo
+	// degradado,ro) para permitir recuperación y reparación. Antes se
+	// rechazaba con FS_INCOMPLETE, creando un bucle sin salida. El test del
+	// montaje real degradado se hace en hardware; aquí validamos que NO se
+	// rechaza con el código viejo.
 	cleanup := setupImportTest(t, []ObservedBtrfs{
 		{
-			UUID:             "incomplete-uuid",
-			DevicesExpected:  2,
-			DevicesOnline:    1,
-			DevicesMissing:   1,
-			IsManaged:        false,
+			UUID:            "incomplete-uuid",
+			DevicesExpected: 2,
+			DevicesOnline:   1,
+			DevicesMissing:  1,
+			IsManaged:       false,
 		},
 	})
 	defer cleanup()
@@ -161,8 +166,31 @@ func TestImportPoolBtrfs_FSIncomplete(t *testing.T) {
 		"uuid": "incomplete-uuid",
 		"name": "test",
 	})
-	if result["code"] != "FS_INCOMPLETE" {
-		t.Errorf("expected FS_INCOMPLETE code, got %v", result["code"])
+	// Ya NO debe rechazarse con FS_INCOMPLETE (eso era el bucle).
+	if result["code"] == "FS_INCOMPLETE" {
+		t.Errorf("un FS degradado (1/2) ya NO debe rechazarse con FS_INCOMPLETE — debe importarse degradado")
+	}
+}
+
+func TestImportPoolBtrfs_NoDevicesOnline(t *testing.T) {
+	// Con 0 discos online NO hay nada que montar → sí se rechaza.
+	cleanup := setupImportTest(t, []ObservedBtrfs{
+		{
+			UUID:            "dead-uuid",
+			DevicesExpected: 2,
+			DevicesOnline:   0,
+			DevicesMissing:  2,
+			IsManaged:       false,
+		},
+	})
+	defer cleanup()
+
+	result := importPoolBtrfs(map[string]interface{}{
+		"uuid": "dead-uuid",
+		"name": "test",
+	})
+	if result["code"] != "FS_NO_DEVICES" {
+		t.Errorf("0 discos online debe rechazarse con FS_NO_DEVICES, got %v", result["code"])
 	}
 }
 
