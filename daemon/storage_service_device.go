@@ -409,6 +409,24 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 			fmt.Sprintf("another layout operation is in progress on pool %s", pool.ID))
 	}
 
+	// ── Asegurar que el pool es ESCRIBIBLE antes del replace ───────────────
+	// Un raid degradado lo montamos en `degraded,ro` por seguridad (no escribir
+	// sin redundancia). Pero `btrfs replace` NECESITA escribir (copia los datos
+	// al disco nuevo), y falla con "Never started" sobre un FS read-only.
+	// Por eso, justo para la reparación, remontamos `degraded,rw`. Es un riesgo
+	// calculado y consciente: durante el replace se escribe sin redundancia,
+	// pero es la ÚNICA forma de reconstruirla. Al terminar, el pool queda
+	// completo y se puede remontar rw normal.
+	if poolMountIsReadOnly(pool.MountPoint) {
+		logMsg("ReplaceDevice: pool %s está en read-only; remontando degraded,rw para permitir la reparación", pool.MountPoint)
+		if err := remountPoolReadWriteDegraded(pool.MountPoint); err != nil {
+			s.markOperationFailed(ctx, op.ID,
+				fmt.Sprintf("no se pudo poner el pool en modo escritura para repararlo: %v", err),
+				ErrCodeBtrfsCommandFailed)
+			return s.repo.GetOperation(ctx, op.ID)
+		}
+	}
+
 	// Ejecutar btrfs replace (incluye wipefs seguro del old)
 	// Regla 16 · SOT-04: ambos paths verificados. El NEW debe existir sí o sí
 	// (es el disco que entra); el OLD puede estar muerto (justamente por eso
@@ -536,5 +554,30 @@ func (s *StorageService) resolveFreeDeviceByPathOrSerial(ctx context.Context, re
 			return d
 		}
 	}
+	return nil
+}
+
+// remountPoolReadWriteDegraded remonta un pool que está en read-only a
+// `degraded,rw`, SIN desmontarlo (mount -o remount). Necesario para reparar:
+// btrfs replace requiere escritura, pero un raid degradado lo montamos ro por
+// seguridad. Este remonta in-situ para permitir la reparación.
+//
+// Usa `remount` (no umount+mount) porque:
+//   - No interrumpe procesos con el pool abierto.
+//   - Es atómico desde el punto de vista del usuario.
+//   - Conserva el resto de opciones de montaje.
+//
+// Inyectable para tests.
+var remountPoolReadWriteDegraded = func(mountPoint string) error {
+	// remount,rw,degraded: quita el ro, mantiene degraded (falta un disco).
+	out, ok := runSafe("mount", "-o", "remount,rw,degraded", mountPoint)
+	if !ok {
+		return fmt.Errorf("mount remount rw degraded falló en %s: %s", mountPoint, strings.TrimSpace(out))
+	}
+	// Verificar que de verdad quedó en rw (la realidad manda).
+	if poolMountIsReadOnly(mountPoint) {
+		return fmt.Errorf("el pool %s sigue en read-only tras el remount", mountPoint)
+	}
+	logMsg("remountPoolReadWriteDegraded: %s remontado en degraded,rw para reparación", mountPoint)
 	return nil
 }

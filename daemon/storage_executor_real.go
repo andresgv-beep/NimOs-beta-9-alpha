@@ -278,20 +278,62 @@ func (e *RealBtrfsExecutor) RemoveDevice(ctx context.Context, mountPoint, byIDPa
 func (e *RealBtrfsExecutor) ReplaceDevice(ctx context.Context, mountPoint, oldByIDPath, newByIDPath string) error {
 	// btrfs replace start <old> <new> <mountpoint>
 	// El nuevo device se sincroniza desde los demás miembros del pool.
+	//
+	// IMPORTANTE para discos MISSING: si el disco viejo ya no existe físicamente
+	// (caso típico de reparación), su by-id/path NO resuelve y btrfs falla con
+	// "Never started". En ese caso btrfs exige el DEVID (número) del disco que
+	// falta. Detectamos esto: si oldByIDPath no es un path existente, intentamos
+	// resolver el devid del disco missing desde `btrfs filesystem show`.
+	oldRef := oldByIDPath
+	if !devicePathExists(oldByIDPath) {
+		if devid := missingDevidForPool(mountPoint); devid != "" {
+			logMsg("ReplaceDevice: old device no existe (%s); usando devid=%s del disco missing", oldByIDPath, devid)
+			oldRef = devid
+		}
+	}
+
+	// El nuevo device se sincroniza desde los demás miembros del pool.
 	// Tras esto el old queda fuera del pool y se le hace wipefs SEGURO.
-	_, err := e.runCommand(ctx, "btrfs", "replace", "start", "-f", oldByIDPath, newByIDPath, mountPoint)
+	_, err := e.runCommand(ctx, "btrfs", "replace", "start", "-f", oldRef, newByIDPath, mountPoint)
 	if err != nil {
 		return fmt.Errorf("ReplaceDevice: replace start: %w", err)
 	}
 
-	// Wipefs SEGURO del old (NO a ciegas — usa nuestro WipeDevice con guards)
-	// see docs/storage_invariants.md#4
-	if err := e.WipeDevice(ctx, oldByIDPath); err != nil {
-		// Esto no debe abortar el replace (el filesystem ya tiene el new),
-		// pero loggeamos.
-		logMsg("ReplaceDevice: warning, wipe of old device %s failed: %v", oldByIDPath, err)
+	// Wipefs SEGURO del old SOLO si existe físicamente (un disco missing no se
+	// puede ni se debe wipear — ya no está).
+	if devicePathExists(oldByIDPath) {
+		if err := e.WipeDevice(ctx, oldByIDPath); err != nil {
+			logMsg("ReplaceDevice: warning, wipe of old device %s failed: %v", oldByIDPath, err)
+		}
 	}
 	return nil
+}
+
+// missingDevidForPool devuelve el devid (como string) del disco que falta en un
+// pool degradado, leyéndolo de `btrfs filesystem show <mountpoint>`. Devuelve ""
+// si no hay disco missing o no se puede determinar.
+//
+// Salida típica:
+//   devid    1 size 111.79GiB used 44.03GiB path /dev/sda
+//   devid    2 size 0 used 0 path <missing disk> MISSING
+func missingDevidForPool(mountPoint string) string {
+	out, ok := runSafe("btrfs", "filesystem", "show", mountPoint)
+	if !ok {
+		return ""
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if !strings.Contains(line, "MISSING") && !strings.Contains(line, "missing") {
+			continue
+		}
+		// Buscar "devid N"
+		fields := strings.Fields(line)
+		for i, f := range fields {
+			if f == "devid" && i+1 < len(fields) {
+				return fields[i+1]
+			}
+		}
+	}
+	return ""
 }
 
 // ConvertProfile cambia el profile de un pool ejecutando btrfs balance
