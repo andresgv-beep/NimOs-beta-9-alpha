@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 // deviceIsAssigned devuelve true si el device está asignado a algún pool.
@@ -354,10 +355,19 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 			fmt.Sprintf("old device %q is not part of pool %s", req.OldDeviceID, pool.ID))
 	}
 
-	// New debe existir y NO estar en otro pool
+	// New debe existir y NO estar en otro pool. Puede venir identificado por:
+	//   - id de BD (storage_devices) — si ya estaba registrado, o
+	//   - path (/dev/sdX) o serial — si es un disco LIBRE recién insertado que
+	//     aún no tiene fila en storage_devices (caso típico de reparación: metes
+	//     un disco nuevo y lo reemplazas sin haberlo "asignado" antes).
 	newDev, err := s.repo.GetDevice(ctx, req.NewDeviceID)
 	if err != nil {
 		return nil, err
+	}
+	if newDev == nil {
+		// No está por id → intentar resolver por serial y por path desde el
+		// escaneo en vivo del sistema (la realidad del kernel).
+		newDev = s.resolveFreeDeviceByPathOrSerial(ctx, req.NewDeviceID)
 	}
 	if newDev == nil {
 		return nil, errFromCode(ErrCodeDeviceNotFound,
@@ -480,5 +490,51 @@ func (s *StorageService) checkDevicesAvailable(ctx context.Context, devices []*D
 // Producción NUNCA debe usar esto — es solo para inyectar en tests
 // vía service.deviceChecker = noopDeviceChecker.
 func noopDeviceChecker(devices []*Device) error {
+	return nil
+}
+
+// resolveFreeDeviceByPathOrSerial intenta encontrar un device por su path
+// (/dev/sdX) o serial cuando NO se encontró por id de BD. Caso de uso: reparar
+// un pool metiendo un disco LIBRE recién insertado que aún no tiene fila propia
+// en storage_devices (o que el frontend referenció por path).
+//
+// Estrategia (Regla 16, el kernel manda):
+//   1. Forzar un ScanDevices → registra/actualiza los discos presentes.
+//   2. Buscar en la lista actualizada por CurrentPath exacto o por Serial.
+//
+// Devuelve nil si no se encuentra ningún disco presente con ese path/serial.
+func (s *StorageService) resolveFreeDeviceByPathOrSerial(ctx context.Context, ref string) *Device {
+	if ref == "" {
+		return nil
+	}
+	// 1. Refrescar el inventario con la realidad del sistema.
+	if _, err := s.ScanDevices(ctx); err != nil {
+		logMsg("resolveFreeDeviceByPathOrSerial: ScanDevices falló: %v", err)
+		// seguimos: puede que ya esté en BD de un scan previo
+	}
+
+	devices, err := s.repo.ListDevices(ctx)
+	if err != nil {
+		logMsg("resolveFreeDeviceByPathOrSerial: ListDevices falló: %v", err)
+		return nil
+	}
+
+	// Normalizar: aceptar "/dev/sdb" o "sdb".
+	refPath := ref
+	if !strings.HasPrefix(refPath, "/dev/") {
+		refPath = "/dev/" + refPath
+	}
+
+	for _, d := range devices {
+		if d.CurrentPath == refPath || d.CurrentPath == ref {
+			return d
+		}
+		if d.Serial != "" && d.Serial == ref {
+			return d
+		}
+		if d.ByIDPath != "" && d.ByIDPath == ref {
+			return d
+		}
+	}
 	return nil
 }
