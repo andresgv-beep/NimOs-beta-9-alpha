@@ -29,7 +29,7 @@ import (
 // docker.go (que ya no existe tras el sprint post-cierre).
 const dockerConfigFile = "/var/lib/nimos/config/docker.json"
 
-func getDockerConfigGo() map[string]interface{} {
+var getDockerConfigGo = func() map[string]interface{} {
 	data, err := os.ReadFile(dockerConfigFile)
 	if err != nil {
 		return map[string]interface{}{"installed": false, "path": nil, "permissions": []interface{}{}, "appPermissions": map[string]interface{}{}, "installedAt": nil, "containers": []interface{}{}}

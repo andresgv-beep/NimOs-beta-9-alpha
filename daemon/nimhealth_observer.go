@@ -120,7 +120,22 @@ func (o *NimHealthObserver) Reconcile(ctx context.Context) error {
 	//    mantiene compatible para no romper callers existentes.
 	reconcileServices()
 
-	// 3. Refresh de cache Docker (lo lee el handler /api/services)
+	// 3. NORMA 1 de Docker · reconciliar su seguridad cada ciclo.
+	//    - Si el pool de Docker NO está montado → detener Docker (no escribir
+	//      en el disco de sistema).
+	//    - Si el pool VOLVIÓ a estar disponible y Docker está parado →
+	//      rearrancarlo. Esto es lo que hace que, tras corregir el pool, Docker
+	//      "vuelva a encenderse" solo sin intervención manual.
+	if isDockerInstalledGo() {
+		if !ensureDockerSafeOrStop() {
+			// No es seguro: ya se detuvo. Nada más que hacer este ciclo.
+		} else {
+			// Es seguro. Si Docker estaba parado (lo paramos antes), arrancarlo.
+			ensureDockerStartedIfSafe()
+		}
+	}
+
+	// 4. Refresh de cache Docker (lo lee el handler /api/services)
 	refreshDockerCache(ctx)
 
 	return nil

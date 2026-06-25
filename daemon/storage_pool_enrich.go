@@ -122,7 +122,7 @@ func btrfsVdevTypeForProfile(profile string) string {
 
 // isPoolMounted comprueba si mountPoint tiene un filesystem montado
 // distinto del root (cubre el caso edge de mountPoint=/ que sería un bug).
-func isPoolMounted(mountPoint string) bool {
+var isPoolMounted = func(mountPoint string) bool {
 	if mountPoint == "" || mountPoint == "/" {
 		return false
 	}

@@ -260,6 +260,17 @@ func bootStorage() {
 // bootServices arranca todos los schedulers de fondo. Requiere bootStorage
 // (varios leen pools montados) y bootHTTP (NimShield protege ese servidor).
 func bootServices() {
+	// ── NORMA 1 de Docker · su data-root manda ─────────────────────────────
+	// Antes de dejar que Docker opere: si su data-root apunta a un pool que NO
+	// está montado, Docker escribiría en el disco de sistema (catastrófico en
+	// Pi: llena la SD y tumba el SO). Lo detenemos hasta que el usuario corrija
+	// el pool. NimHealth lo rearrancará cuando el pool vuelva (ver más abajo).
+	if isDockerInstalledGo() {
+		if !ensureDockerSafeOrStop() {
+			logMsg("bootServices: Docker en pausa de seguridad — su pool no está montado. Se rearrancará cuando el pool esté disponible.")
+		}
+	}
+
 	// Start backup scheduler
 	startBackupScheduler()
 	startAutoDiscovery()
