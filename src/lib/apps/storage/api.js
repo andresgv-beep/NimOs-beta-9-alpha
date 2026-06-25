@@ -122,6 +122,24 @@ export async function importPool({ uuid, name }) {
 }
 
 /**
+ * replaceDevice — reemplaza un disco de un pool por otro (reparación).
+ * Usa `btrfs replace` en el backend. Pensado para reparar un pool degradado:
+ * sustituye el disco que falta/falla (oldDeviceId) por uno libre (newDeviceId).
+ *   POST /pools/{poolId}/devices/{oldDeviceId}/replace  { new_device_id }
+ */
+export async function replaceDevice(poolId, oldDeviceId, newDeviceId) {
+  const res = await fetch(
+    `${BASE}/pools/${encodeURIComponent(poolId)}/devices/${encodeURIComponent(oldDeviceId)}/replace`,
+    {
+      method: 'POST',
+      headers: jsonHdrs(),
+      body: JSON.stringify({ new_device_id: newDeviceId }),
+    }
+  );
+  return unwrap(res, 'replace device');
+}
+
+/**
  * wipeDisk — borra el contenido de un disco.
  * `force=true` permite wipe sobre disco con BTRFS huérfano. Sin force,
  * el preflight aborta si detecta filesystem.

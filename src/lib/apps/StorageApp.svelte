@@ -57,6 +57,7 @@
   import StorageKPIs from './storage/StorageKPIs.svelte';
   import StorageOverview from './storage/StorageOverview.svelte';
   import * as api from './storage/api.js';
+  import { fmtBytes } from './storage/formatters.js';
   import './storage/views-styles.css';
 
   // ─── State ───
@@ -363,6 +364,44 @@
     wipeError = '';
   }
 
+  // ─── Reemplazar disco (reparación de pool) ───
+  let replacePool = null;       // pool cuyo disco se reemplaza
+  let replaceOldDisk = null;    // disco a reemplazar (el que falta/falla)
+  let replaceNewDeviceId = '';  // disco libre elegido
+  let replaceProcessing = false;
+  let replaceError = '';
+
+  function openReplaceDialog(pool, disk) {
+    replacePool = pool;
+    replaceOldDisk = disk;
+    replaceNewDeviceId = '';
+    replaceError = '';
+  }
+
+  function closeReplaceDialog() {
+    replacePool = null;
+    replaceOldDisk = null;
+    replaceNewDeviceId = '';
+    replaceError = '';
+  }
+
+  async function confirmReplace() {
+    if (!replacePool || !replaceOldDisk || !replaceNewDeviceId || replaceProcessing) return;
+    replaceProcessing = true;
+    replaceError = '';
+    try {
+      const oldId = replaceOldDisk.id || replaceOldDisk.device_id || replaceOldDisk.serial;
+      await api.replaceDevice(replacePool.id || replacePool.name, oldId, replaceNewDeviceId);
+      replaceProcessing = false;
+      closeReplaceDialog();
+      await loadAll();
+    } catch (err) {
+      console.error('replace error:', err);
+      replaceError = err.message || 'Error al reemplazar el disco';
+      replaceProcessing = false;
+    }
+  }
+
   async function confirmWipe() {
     if (!wipeDisk || wipeProcessing) return;
     wipeProcessing = true;
@@ -532,6 +571,7 @@
         on:rescan={rescanDisks}
         on:create-pool={openCreatePoolWizard}
         on:wipe={(e) => openWipeDialog(e.detail.path)}
+        on:replace-device={(e) => openReplaceDialog(e.detail.pool, e.detail.disk)}
       />
     {/if}
 
@@ -602,6 +642,66 @@
     <div class="dialog-err">{wipeError}</div>
   {/if}
 </ConfirmDialog>
+
+<!-- Reemplazar disco · reparación de pool degradado -->
+{#if replacePool && replaceOldDisk}
+  <div class="replace-overlay" on:click|self={closeReplaceDialog}>
+    <div class="replace-dialog">
+      <h3 class="replace-title">
+        Reemplazar disco en {replacePool.name}
+      </h3>
+
+      <p class="replace-info">
+        Vas a reemplazar el disco
+        <span class="mono">{replaceOldDisk.current_path || replaceOldDisk.model || replaceOldDisk.serial || '—'}</span>
+        {#if replaceOldDisk.smart_status === 'missing'}
+          <span class="replace-missing">(que falta)</span>
+        {/if}
+        por un disco libre. Esto reconstruye la redundancia del pool con
+        <span class="mono">btrfs replace</span>.
+      </p>
+
+      {#if (replacePool.profile === 'raid1' || replacePool.profile === 'raid1c3' || replacePool.profile === 'raid10') && (replacePool.devices?.filter(d => d.smart_status !== 'missing').length || 0) <= 1}
+        <div class="replace-warn">
+          ⚠ Este pool está degradado y sin redundancia: solo queda una copia de
+          los datos. Si tienes una copia de seguridad, es buen momento para
+          comprobarla antes de reparar. La reparación leerá del disco que queda.
+        </div>
+      {/if}
+
+      <label class="replace-label">Disco nuevo (libre):</label>
+      {#if (disks.eligible?.length || 0) === 0}
+        <div class="replace-err">No hay discos libres disponibles.</div>
+      {:else}
+        <select class="replace-select" bind:value={replaceNewDeviceId}>
+          <option value="">— Selecciona un disco —</option>
+          {#each disks.eligible as d}
+            <option value={d.id || d.device_id || d.path}>
+              {d.path} · {d.model || 'disco'} · {fmtBytes(d.size_bytes)}
+            </option>
+          {/each}
+        </select>
+      {/if}
+
+      {#if replaceError}
+        <div class="replace-err">{replaceError}</div>
+      {/if}
+
+      <div class="replace-actions">
+        <button class="btn-secondary" on:click={closeReplaceDialog} disabled={replaceProcessing}>
+          Cancelar
+        </button>
+        <button
+          class="btn-primary"
+          on:click={confirmReplace}
+          disabled={!replaceNewDeviceId || replaceProcessing}
+        >
+          {replaceProcessing ? 'Reparando…' : 'Reemplazar y reparar'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <!-- Create pool wizard · 4 pasos: tipo → discos → nombre → confirmación -->
 {#if creatingPool}
@@ -676,6 +776,73 @@
   .sep { color: var(--fg-faint); }
 
   /* Error en wipe dialog */
+  .replace-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .replace-dialog {
+    background: var(--surface, #14171c);
+    border: 1px solid var(--line, #2a2f37);
+    border-radius: 12px;
+    padding: 24px;
+    width: min(520px, 92vw);
+    max-height: 90vh;
+    overflow: auto;
+  }
+  .replace-title {
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+    color: var(--text, #e8eaed);
+  }
+  .replace-info {
+    font-size: 0.9rem;
+    color: var(--text-dim, #9aa0a6);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .replace-missing { color: #e0625f; }
+  .replace-warn {
+    background: rgba(224, 179, 65, 0.12);
+    border: 1px solid rgba(224, 179, 65, 0.4);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 0.84rem;
+    color: var(--warn, #e0b341);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .replace-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-dim, #9aa0a6);
+    margin-bottom: 6px;
+  }
+  .replace-select {
+    width: 100%;
+    padding: 10px;
+    background: var(--surface-2, #1c2026);
+    border: 1px solid var(--line, #2a2f37);
+    border-radius: 8px;
+    color: var(--text, #e8eaed);
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+  }
+  .replace-err {
+    color: #e0625f;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+  .replace-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
   .dialog-err {
     padding: 10px 12px;
     background: rgba(255, 90, 90, 0.08);

@@ -131,9 +131,21 @@
                 <button class="disk-action-btn" disabled title="Disponible en Fase B7">
                   Desasignar <span class="action-tag">B7</span>
                 </button>
-                <button class="disk-action-btn" disabled title="Disponible en Fase B7">
-                  Reemplazar <span class="action-tag">B7</span>
-                </button>
+                {#if (disks.eligible?.length || 0) > 0}
+                  <button
+                    class="disk-action-btn"
+                    on:click={() => dispatch('replace-device', { pool, disk })}
+                    title={disk.smart_status === 'missing'
+                      ? 'Reemplazar este disco que falta por uno libre (repara el pool)'
+                      : 'Reemplazar este disco por uno libre'}
+                  >
+                    Reemplazar
+                  </button>
+                {:else}
+                  <button class="disk-action-btn" disabled title="No hay discos libres para reemplazar">
+                    Reemplazar
+                  </button>
+                {/if}
               </span>
             </div>
           {/each}
