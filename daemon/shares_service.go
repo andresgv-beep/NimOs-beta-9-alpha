@@ -136,9 +136,9 @@ func CreateShare(ctx context.Context, input CreateShareInput) (*CreateShareResul
 	mountPoint := pool.MountPoint
 	volumeName := pool.Name
 
-	// Step 4 — Verificar pool montado
-	if !isPathOnMountedPool(mountPoint) {
-		return nil, fmt.Errorf("Storage pool is not mounted. Check Storage Manager for pool status.")
+	// Step 4 — Verificar que el pool es seguro para escribir (montado + rw)
+	if err := assertPoolWritable(filepath.Join(mountPoint, "shares")); err != nil {
+		return nil, fmt.Errorf("no se puede crear la carpeta compartida: %w", err)
 	}
 
 	folderPath := filepath.Join(mountPoint, "shares", safeName)

@@ -259,8 +259,8 @@ func requireShareMounted(w http.ResponseWriter, share *ResolvedShare) bool {
 		jsonError(w, 503, "Remote share not available — device may be offline")
 		return false
 	}
-	if !isPathOnMountedPool(share.Path) {
-		jsonError(w, 503, "Storage pool not mounted — cannot access files")
+	if err := assertPoolWritable(share.Path); err != nil {
+		jsonError(w, 503, "Storage no disponible: "+err.Error())
 		return false
 	}
 	return true

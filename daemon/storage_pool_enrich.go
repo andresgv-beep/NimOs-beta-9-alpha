@@ -76,24 +76,24 @@ func enrichPool(p *Pool, primaryPool string) {
 	// device with SmartStatus (runtime, from smartctl cache).
 	configDisks := make([]string, 0, len(p.Devices))
 	for i, d := range p.Devices {
-		// getDiskStatusForBtrfs y getSmartDetailsForDisk esperan nombres
-		// cortos como "sda" (sin /dev/), pero el servicio Beta 8 usa rutas
-		// completas. Convertimos aquí para compatibilidad con esas funciones.
+		// ── Fuente ÚNICA de verdad del estado (resolveDeviceState) ──────────
+		// En vez de calcular presencia + SMART aquí (y arriesgar divergir con
+		// otras vistas), delegamos en resolveDeviceState: la realidad (path +
+		// serial) manda sobre el SMART cacheado. Un disco ausente sale missing,
+		// uno cambiado sale swapped — nunca "ok" falso.
 		name := d.CurrentPath
 		if strings.HasPrefix(name, "/dev/") {
 			name = strings.TrimPrefix(name, "/dev/")
 		}
-		if name == "" {
-			continue
-		}
-		configDisks = append(configDisks, name)
 
-		// Enriquecer Device con SmartStatus (runtime, cache de smartctl).
-		// getSmartDetailsForDisk no llama smartctl: lee de smartHistory.
-		smartStatus, _ := getSmartDetailsForDisk(name)
-		if smartStatus != "" {
-			p.Devices[i].SmartStatus = smartStatus
+		var smartStatus string
+		if name != "" {
+			smartStatus, _ = getSmartDetailsForDisk(name)
+			configDisks = append(configDisks, name)
 		}
+
+		state := resolveDeviceState(&p.Devices[i], smartStatus)
+		p.Devices[i].SmartStatus = deviceStateToSmartStatus(state, smartStatus)
 	}
 
 	vdevType := btrfsVdevTypeForProfile(string(p.Profile))
@@ -287,4 +287,40 @@ func getPrimaryPoolName() string {
 		return ""
 	}
 	return pool.Name
+}
+
+// deviceIsPresent comprueba si un disco registrado en la BD sigue presente
+// físicamente. Inyectable para tests. Regla 16: el kernel manda sobre la BD.
+//
+//   1. by-id estable existe → presente (lo más fiable).
+//   2. CurrentPath existe Y serial coincide → presente.
+//   3. en otro caso → ausente (missing).
+//
+// El serial es la identidad absoluta: /dev/sdb puede existir pero ser OTRO
+// disco (uno nuevo), así que se confirma el serial, no solo el path.
+var deviceIsPresent = func(d *Device) bool {
+	if d.ByIDPath != "" && devicePathExists(d.ByIDPath) {
+		return true
+	}
+	if d.CurrentPath != "" && devicePathExists(d.CurrentPath) {
+		if d.Serial == "" {
+			return true
+		}
+		actualSerial := readDeviceSerial(d.CurrentPath)
+		if actualSerial == "" || actualSerial == d.Serial {
+			return true
+		}
+		return false // path existe pero es otro disco (serial distinto)
+	}
+	return false
+}
+
+// readDeviceSerial lee el serial del disco en un path (vía lsblk). "" si no se
+// puede determinar. Inyectable para tests.
+var readDeviceSerial = func(path string) string {
+	out, ok := runSafe("lsblk", "-ndo", "SERIAL", path)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(out)
 }
