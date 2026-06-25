@@ -394,12 +394,29 @@
       await api.replaceDevice(replacePool.id || replacePool.name, oldId, replaceNewDeviceId);
       replaceProcessing = false;
       closeReplaceDialog();
-      await loadAll();
+      await loadAll();         // refresco inmediato → el disco se mueve al pool
+      startRepairPolling();    // refresco acelerado mientras dura el replace
     } catch (err) {
       console.error('replace error:', err);
       replaceError = err.message || 'Error al reemplazar el disco';
       replaceProcessing = false;
     }
+  }
+
+  // Polling acelerado (cada 3s) mientras algún pool está reparándose, para que
+  // la barra de progreso avance de forma fluida. Cuando ningún pool tiene
+  // resilver activo, vuelve al polling normal (20s).
+  let repairPollInterval = null;
+  function startRepairPolling() {
+    if (repairPollInterval) return;
+    repairPollInterval = setInterval(async () => {
+      await loadAll();
+      const anyRepairing = (pools || []).some(p => p.health?.resilver_active);
+      if (!anyRepairing) {
+        clearInterval(repairPollInterval);
+        repairPollInterval = null;
+      }
+    }, 3000);
   }
 
   async function confirmWipe() {
@@ -465,10 +482,15 @@
     while (!$token && attempts < 10) { await new Promise(r => setTimeout(r, 200)); attempts++; }
     await loadAll();
     pollInterval = setInterval(loadAll, 20000); // 20s · storage es lento de cambiar
+    // Si al entrar ya hay un pool reparándose (recarga a medias), acelerar.
+    if ((pools || []).some(p => p.health?.resilver_active)) {
+      startRepairPolling();
+    }
   });
 
   onDestroy(() => {
     if (pollInterval) clearInterval(pollInterval);
+    if (repairPollInterval) clearInterval(repairPollInterval);
   });
 </script>
 

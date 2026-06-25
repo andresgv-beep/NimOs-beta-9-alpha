@@ -754,12 +754,63 @@ func buildPoolHealth(input DiagnosticInput) PoolHealth {
 	resilverEta := ""
 
 	if input.PoolType == "btrfs" && input.MountPoint != "" {
+		// 1. Balance en curso (rebalanceo de datos).
 		out, ok := runSafe("btrfs", "balance", "status", input.MountPoint)
 		if ok && (strings.Contains(out, "in progress") || strings.Contains(out, "running")) {
 			resilverActive = true
+		}
+
+		// 2. Replace en curso (reemplazo de disco — reparación). Tiene su
+		//    propio status con % de progreso, que parseamos para la barra.
+		//    Formato: "X.Y% done, N write errs, M uncorr. read errs"
+		rout, rok := runSafe("btrfs", "replace", "status", input.MountPoint)
+		if rok {
+			if pct, running := parseReplaceProgress(rout); running {
+				resilverActive = true
+				resilverProgress = pct
+			}
 		}
 	}
 
 	totalDisks := len(input.ConfigDisks)
 	return ComputePoolHealth(diagnostics, input.VdevType, totalDisks, resilverActive, resilverProgress, resilverEta)
+}
+
+// parseReplaceProgress extrae el % de progreso de la salida de
+// `btrfs replace status`. Devuelve (porcentaje 0-100, replaceEnCurso).
+//
+// Salidas posibles:
+//   "Started on ..., finished on ..."           → terminado (running=false)
+//   "X.Y% done, 0 write errs, 0 uncorr..."        → en curso (running=true)
+//   "Never started"                               → no hay replace (false)
+func parseReplaceProgress(out string) (float64, bool) {
+	out = strings.TrimSpace(out)
+	if out == "" || strings.Contains(out, "Never started") {
+		return 0, false
+	}
+	// Si ya terminó, btrfs lo indica con "finished" y no debe contar como activo.
+	if strings.Contains(out, "finished") || strings.Contains(out, "completed") {
+		return 100, false
+	}
+	// Buscar el patrón "NN.N% done".
+	idx := strings.Index(out, "% done")
+	if idx < 0 {
+		return 0, false
+	}
+	// Retroceder desde "% done" para capturar el número.
+	start := idx
+	for start > 0 {
+		c := out[start-1]
+		if (c >= '0' && c <= '9') || c == '.' {
+			start--
+		} else {
+			break
+		}
+	}
+	numStr := out[start:idx]
+	var pct float64
+	if _, err := fmt.Sscanf(numStr, "%f", &pct); err != nil {
+		return 0, true // hay replace pero no pudimos parsear el %; activo igual
+	}
+	return pct, true
 }

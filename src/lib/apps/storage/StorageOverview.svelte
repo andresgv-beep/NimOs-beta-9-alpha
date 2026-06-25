@@ -194,6 +194,28 @@
             >⋮</button>
           </div>
 
+          {#if pool.health?.resilver_active}
+            <div class="repair-bar">
+              <div class="repair-bar-head">
+                <span class="repair-bar-label">
+                  ⟳ Reparando pool · reconstruyendo redundancia
+                </span>
+                <span class="repair-bar-pct">
+                  {(pool.health?.resilver_progress ?? 0).toFixed(1)}%
+                </span>
+              </div>
+              <div class="repair-track">
+                <div
+                  class="repair-fill"
+                  style="width:{pool.health?.resilver_progress ?? 0}%"
+                ></div>
+              </div>
+              <span class="repair-hint">
+                No apagues el equipo. El proceso continúa en segundo plano.
+              </span>
+            </div>
+          {/if}
+
           <!-- Toolbar inline de acciones -->
           {#if kebabOpenFor === pool.name}
             <div
@@ -903,6 +925,45 @@
     font-size: 0.78rem;
     color: var(--warn, #e0b341);
     opacity: 0.9;
+  }
+
+  .repair-bar {
+    padding: 10px 16px 14px;
+    border-top: 1px solid var(--line, #2a2f37);
+    background: rgba(0, 255, 159, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .repair-bar-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .repair-bar-label {
+    font-size: 0.82rem;
+    color: var(--accent, #00ff9f);
+  }
+  .repair-bar-pct {
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent, #00ff9f);
+  }
+  .repair-track {
+    height: 6px;
+    background: var(--surface-2, #1c2026);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .repair-fill {
+    height: 100%;
+    background: var(--accent, #00ff9f);
+    border-radius: 3px;
+    transition: width 0.6s ease;
+  }
+  .repair-hint {
+    font-size: 0.74rem;
+    color: var(--text-dim, #9aa0a6);
   }
 
   .divergences {
