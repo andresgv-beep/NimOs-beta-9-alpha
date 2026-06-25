@@ -411,13 +411,20 @@
             <button
               class="btn-primary"
               on:click={() => dispatch('import-orphan', { fs })}
-              disabled={fs.devices_missing > 0}
-              title={fs.devices_missing > 0
-                ? 'No se puede importar: faltan discos'
-                : 'Importar como pool gestionado (preserva datos)'}
+              disabled={(fs.devices_online ?? (fs.devices_expected - fs.devices_missing)) <= 0}
+              title={(fs.devices_online ?? (fs.devices_expected - fs.devices_missing)) <= 0
+                ? 'No se puede importar: no hay discos disponibles'
+                : fs.devices_missing > 0
+                  ? 'Importar en modo solo-lectura (faltan discos) — podrás recuperar tus datos y reparar el pool'
+                  : 'Importar como pool gestionado (preserva datos)'}
             >
               ⬇ Importar como pool
             </button>
+            {#if fs.devices_missing > 0 && (fs.devices_online ?? (fs.devices_expected - fs.devices_missing)) > 0}
+              <span class="obs-degraded-hint">
+                Se importará en solo-lectura · faltan {fs.devices_missing} disco(s)
+              </span>
+            {/if}
             <button
               class="btn-secondary"
               on:click={() => dispatch('destroy-orphan', { fs })}
@@ -888,6 +895,14 @@
     gap: 8px;
     padding-top: 12px;
     border-top: 1px solid var(--line);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .obs-degraded-hint {
+    font-size: 0.78rem;
+    color: var(--warn, #e0b341);
+    opacity: 0.9;
   }
 
   .divergences {
