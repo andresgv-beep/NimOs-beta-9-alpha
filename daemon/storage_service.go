@@ -210,6 +210,7 @@ func (s *StorageService) ListPools(ctx context.Context) ([]*Pool, error) {
 	}
 
 	primaryPool := getPrimaryPoolName()
+	divergences := observerDivergencesFn() // FIX-2: verdad del observer (btrfs)
 
 	// Hidratar cada pool con sus devices y capabilities + enriquecer
 	for _, p := range pools {
@@ -230,6 +231,10 @@ func (s *StorageService) ListPools(ctx context.Context) ([]*Pool, error) {
 
 		// Campos derivados runtime (Usage, Health, IsPrimary, Mounted)
 		enrichPool(p, primaryPool)
+
+		// FIX-2 (split-brain): la realidad del observer sobrescribe la caché.
+		// Si btrfs ve una divergencia para este pool, no puede quedar "healthy".
+		reconcileHealthWithDivergences(p, divergences)
 	}
 
 	return pools, nil
@@ -264,6 +269,9 @@ func (s *StorageService) GetPool(ctx context.Context, id string) (*Pool, error) 
 
 	// Campos derivados runtime (Usage, Health, IsPrimary, Mounted)
 	enrichPool(pool, getPrimaryPoolName())
+
+	// FIX-2 (split-brain): la realidad del observer sobrescribe la caché.
+	reconcileHealthWithDivergences(pool, observerDivergencesFn())
 
 	return pool, nil
 }
