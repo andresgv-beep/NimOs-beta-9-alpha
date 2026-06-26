@@ -59,6 +59,17 @@ func handleSharesRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Huérfanos (FIX-3) · deben ir ANTES del regex de recurso, porque "orphans"
+	// matchearía como nombre de share.
+	if path == "/api/shares/orphans" && method == "GET" {
+		sharesOrphansListHTTP(w, r)
+		return
+	}
+	if path == "/api/shares/orphans/readopt" && method == "POST" {
+		sharesOrphansReadoptHTTP(w, r)
+		return
+	}
+
 	// Recurso · /api/shares/:name
 	matches := sharePathRegex.FindStringSubmatch(path)
 	if matches == nil {
