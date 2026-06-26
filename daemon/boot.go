@@ -234,6 +234,13 @@ func bootStorage() {
 	// así los pools válidos ya están montados y NO se confunden con huérfanos.
 	cleanOrphanPoolDirs()
 
+	// FIX-4: regenerar el bloque [nimos] de /etc/fstab desde la BD. Auto-cura el
+	// drift que dejó a data8 fuera de fstab: cualquier pool en la BD que falte en
+	// fstab se añade aquí, con nofail. Idempotente y no destructivo.
+	if err := syncFstabFromDB(context.Background()); err != nil {
+		logMsg("startup: syncFstabFromDB error: %v", err)
+	}
+
 	// STOR-06: consumir el journal de wipe al arrancar. Si un wipe se
 	// interrumpió por un crash, lo reporta y limpia (el wipe es re-ejecutable).
 	journalRecoverOnBoot()
