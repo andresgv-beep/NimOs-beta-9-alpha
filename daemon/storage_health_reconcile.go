@@ -37,6 +37,10 @@ func healthStatusRank(status string) int {
 		return 3
 	case "critical":
 		return 4
+	case "missing":
+		// El pool entero no se detecta: estado propio y el más severo de mostrar
+		// (no es solo "degradado": faltan TODOS sus discos / no lo ve btrfs).
+		return 5
 	default:
 		// Estado desconocido: lo tratamos como "healthy" (rank 0) para que
 		// cualquier divergencia real pueda empeorarlo.
@@ -68,6 +72,11 @@ func divergenceAffectsManagedPool(d Divergence, pool *Pool) bool {
 // salud MÍNIMO que implica. Incluso una divergencia "info" (p.ej. pool no
 // montado) impide afirmar "healthy": un pool no montado no está sano.
 func divergenceToHealthStatus(d Divergence) string {
+	// El pool entero no detectado → estado MISSING propio (FIX-5), sea cual sea
+	// la severidad. No es "degradado": el pool no está físicamente.
+	if d.Type == DivPoolNotDetected {
+		return "missing"
+	}
 	switch d.Severity {
 	case SeverityCritical:
 		return "critical"

@@ -34,7 +34,7 @@
   } from '$lib/ui';
   import {
     fmtBytes, fmtDate, inferDiskRole,
-    healthLabel, healthVariant,
+    healthLabel, healthVariant, healthStatusLabel,
     usageVariant, ledVariantForHealth, smartVariant,
   } from './formatters.js';
   import './views-styles.css';
@@ -142,7 +142,8 @@
           class="pool"
           class:open={expandedPools.has(pool.name)}
           class:degraded={pool.health?.status === 'degraded' || pool.health?.status === 'at_risk' || pool.health?.status === 'unstable'}
-          class:crit={!pool.mounted || pool.health?.status === 'critical'}
+          class:crit={pool.health?.status === 'critical' || (!pool.mounted && pool.health?.status !== 'missing')}
+          class:missing={pool.health?.status === 'missing'}
         >
           <!-- Pool header -->
           <div class="pool-head" on:click={() => togglePoolExpand(pool.name)}
@@ -182,6 +183,9 @@
             </div>
             <div class="pool-size">{fmtBytes(pool.usage?.total_bytes)}</div>
             <div class="pool-status">
+              {#if pool.health?.status === 'missing'}
+                <span class="pool-missing-tag">no detectado</span>
+              {/if}
               <LED size={8} variant={ledVariantForHealth(pool.health?.status)} />
             </div>
             <div class="pool-chev" class:rot={expandedPools.has(pool.name)}>›</div>
@@ -281,7 +285,7 @@
                   <div class="pig-label">Health</div>
                   <div class="pig-value pig-flex">
                     <LED size={7} variant={ledVariantForHealth(pool.health?.status)} />
-                    <span>{pool.health?.status || '—'}</span>
+                    <span>{healthStatusLabel(pool.health?.status)}</span>
                   </div>
                 </div>
                 <div class="pig-col">
@@ -520,6 +524,18 @@
   .pool.open { border-color: rgba(255, 255, 255, 0.14); }
   .pool.degraded { border-left: 3px solid var(--warn); }
   .pool.crit { border-left: 3px solid var(--crit); }
+  .pool.missing { border-left: 3px solid var(--fg-4, #7a7a82); }
+  .pool-missing-tag {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--fg-4, #7a7a82);
+    border: 1px solid var(--fg-4, #7a7a82);
+    border-radius: 4px;
+    padding: 1px 6px;
+    white-space: nowrap;
+  }
 
   .pool-head {
     display: grid;

@@ -318,7 +318,7 @@ func (d PoolDependencyInfo) ToMap() map[string]interface{} {
 // CollectDiagnostics generates ALL signals without prioritizing — the reducer
 // (ComputePoolHealth) decides what matters.
 type Diagnostic struct {
-	Code     string `json:"code"`     // "smart_warning", "smart_critical", "io_errors", "disk_missing",
+	Code string `json:"code"` // "smart_warning", "smart_critical", "io_errors", "disk_missing",
 	//                                    "disk_faulted", "disk_unavailable", "disk_removed",
 	//                                    "temp_high", "pool_faulted"
 	Severity int    `json:"severity"` // 1=info, 2=warning, 3=error, 4=critical
@@ -415,12 +415,12 @@ func (r PoolRedundancy) ToMap() map[string]interface{} {
 // ─── PoolHealth ──────────────────────────────────────────────────────────────
 
 // PoolHealth is the final reduced state of a storage pool.
-// status: healthy | at_risk | unstable | degraded | critical
+// status: healthy | at_risk | unstable | degraded | critical | missing
 // intent: normal | rebuilding | replacing
 type PoolHealth struct {
 	Version int `json:"version"` // schema version for future compatibility
 
-	Status string           `json:"status"` // healthy | at_risk | unstable | degraded | critical
+	Status string           `json:"status"` // healthy | at_risk | unstable | degraded | critical | missing
 	Reason PoolHealthReason `json:"reason"`
 
 	Redundancy PoolRedundancy `json:"redundancy"`
@@ -621,4 +621,3 @@ func NormalizeDockerHealth(healthStatus string) string {
 		return "healthy"
 	}
 }
-

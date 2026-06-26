@@ -101,11 +101,12 @@ type ObservedDevice struct {
 
 // Divergence representa una diferencia entre managed y observed.
 // Tipos posibles:
-//   · pool_missing_device   — pool managed con N devices, observed ve N-k
-//   · orphan_filesystem     — BTRFS observed sin pool managed que lo cubra
-//   · unexpected_io_errors  — observed reporta errors en devices managed
-//   · pool_unmounted        — pool managed con mount_point pero no mounted
-//   · profile_mismatch      — profile declarado != profile real (raro)
+//
+//	· pool_missing_device   — pool managed con N devices, observed ve N-k
+//	· orphan_filesystem     — BTRFS observed sin pool managed que lo cubra
+//	· unexpected_io_errors  — observed reporta errors en devices managed
+//	· pool_unmounted        — pool managed con mount_point pero no mounted
+//	· profile_mismatch      — profile declarado != profile real (raro)
 type Divergence struct {
 	Type     string `json:"type"`
 	Severity string `json:"severity"` // info / warning / critical
@@ -134,9 +135,10 @@ const (
 
 // Divergence types
 const (
-	DivPoolMissingDevice   = "pool_missing_device"
-	DivOrphanFilesystem    = "orphan_filesystem"
-	DivUnexpectedIOErrors  = "unexpected_io_errors"
-	DivPoolUnmounted       = "pool_unmounted"
-	DivProfileMismatch     = "profile_mismatch"
+	DivPoolMissingDevice  = "pool_missing_device"
+	DivPoolNotDetected    = "pool_not_detected"
+	DivOrphanFilesystem   = "orphan_filesystem"
+	DivUnexpectedIOErrors = "unexpected_io_errors"
+	DivPoolUnmounted      = "pool_unmounted"
+	DivProfileMismatch    = "profile_mismatch"
 )

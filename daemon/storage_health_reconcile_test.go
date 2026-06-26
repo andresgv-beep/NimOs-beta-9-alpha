@@ -50,7 +50,43 @@ func TestReconcile_MissingDevice_DowngradesFromHealthy(t *testing.T) {
 	}
 }
 
-// Crítico → critical.
+// FIX-5 — pool entero no detectado → estado MISSING (distinto de degraded).
+func TestReconcile_PoolNotDetected_Missing(t *testing.T) {
+	pool := newHealthyPool("p", "u")
+	divs := []Divergence{{
+		Type:     DivPoolNotDetected,
+		Severity: SeverityCritical,
+		PoolID:   "p",
+		Detail:   "Pool 'p' está registrado pero no se detecta físicamente.",
+	}}
+	reconcileHealthWithDivergences(pool, divs)
+	if pool.Health.Status != "missing" {
+		t.Errorf("un pool no detectado debe ser 'missing', no %q", pool.Health.Status)
+	}
+}
+
+// MISSING gana sobre degraded (es más severo de mostrar).
+func TestReconcile_Missing_BeatsDegraded(t *testing.T) {
+	pool := newHealthyPool("p", "u")
+	pool.Health.Status = "degraded"
+	divs := []Divergence{{Type: DivPoolNotDetected, Severity: SeverityCritical, PoolID: "p", Detail: "x"}}
+	reconcileHealthWithDivergences(pool, divs)
+	if pool.Health.Status != "missing" {
+		t.Errorf("missing debe sobrescribir degraded; got %q", pool.Health.Status)
+	}
+}
+
+// Un disco que falta (pool presente) sigue siendo degraded, NO missing.
+func TestReconcile_DeviceMissing_StaysDegraded(t *testing.T) {
+	pool := newHealthyPool("p", "u")
+	divs := []Divergence{{Type: DivPoolMissingDevice, Severity: SeverityWarning, PoolID: "p", Detail: "falta 1 disco"}}
+	reconcileHealthWithDivergences(pool, divs)
+	if pool.Health.Status != "degraded" {
+		t.Errorf("falta de un disco (pool presente) es degraded, no %q", pool.Health.Status)
+	}
+}
+
+// Crítico (tipo no-NotDetected) → critical.
 func TestReconcile_CriticalDivergence_Critical(t *testing.T) {
 	pool := newHealthyPool("p", "u")
 	divs := []Divergence{{Type: DivPoolMissingDevice, Severity: SeverityCritical, PoolID: "p", Detail: "Pool no detectado."}}

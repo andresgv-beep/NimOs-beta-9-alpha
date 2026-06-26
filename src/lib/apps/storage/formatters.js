@@ -103,7 +103,7 @@ export function usageVariant(pct) {
 /**
  * ledVariantForHealth — Mapea PoolHealth.Status del backend v2 a variant de LED.
  * Vocabulario de PoolHealth (distinto al del observer):
- *   healthy | at_risk | unstable | degraded | critical
+ *   healthy | at_risk | unstable | degraded | critical | missing
  */
 export function ledVariantForHealth(health) {
   const h = (health || '').toLowerCase();
@@ -111,7 +111,24 @@ export function ledVariantForHealth(health) {
   if (h === 'at_risk' || h === 'unstable')          return 'warn';
   if (h === 'degraded')                             return 'warn';
   if (h === 'critical')                             return 'crit';
+  if (h === 'missing')                              return 'off'; // gris: ausente
   return 'off';
+}
+
+/**
+ * healthStatusLabel — Etiqueta legible (es) para PoolHealth.Status.
+ */
+export function healthStatusLabel(health) {
+  const h = (health || '').toLowerCase();
+  switch (h) {
+    case 'healthy':  return 'correcto';
+    case 'at_risk':  return 'en riesgo';
+    case 'unstable': return 'inestable';
+    case 'degraded': return 'degradado';
+    case 'critical': return 'crítico';
+    case 'missing':  return 'no detectado';
+    default:         return health || '—';
+  }
 }
 
 /**

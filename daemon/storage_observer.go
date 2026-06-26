@@ -137,12 +137,13 @@ func (o *StorageObserver) Snapshot() *ObservedSnapshot {
 // (1 scan cubrirá ambos eventos).
 //
 // Llamar desde:
-//   · createPoolBtrfs tras mkfs+mount
-//   · destroyPoolBtrfs tras unmount+wipe
-//   · exportPoolBtrfs tras unmount
-//   · wipeDiskGo tras wipefs
-//   · Storage scheduler reconciler si detecta cambio
-//   · Endpoint /api/storage/observed?refresh=true
+//
+//	· createPoolBtrfs tras mkfs+mount
+//	· destroyPoolBtrfs tras unmount+wipe
+//	· exportPoolBtrfs tras unmount
+//	· wipeDiskGo tras wipefs
+//	· Storage scheduler reconciler si detecta cambio
+//	· Endpoint /api/storage/observed?refresh=true
 func (o *StorageObserver) InvalidateNow() {
 	// Marca que el próximo reconcile es forzado: no se salta por fingerprint
 	// y, si llega tarde (otro reconcile ya corriendo), se re-encola al terminar.
@@ -397,7 +398,7 @@ func analyzeDivergences(filesystems []ObservedBtrfs) []Divergence {
 			for _, p := range pools {
 				if !observedUUIDs[p.BtrfsUUID] {
 					divs = append(divs, Divergence{
-						Type:     DivPoolMissingDevice,
+						Type:     DivPoolNotDetected,
 						Severity: SeverityCritical,
 						PoolID:   p.ID,
 						PoolName: p.Name,
