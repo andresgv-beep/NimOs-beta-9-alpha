@@ -57,7 +57,7 @@ func dbUsersGetRaw(username string) (*DBUser, error) {
 func dbUsersCreate(username, password, role, description string) error {
 	_, err := db.Exec(`INSERT INTO users (username, password, role, description, created_at) VALUES (?, ?, ?, ?, ?)`,
 		username, password, role, description, time.Now().UTC().Format(time.RFC3339Nano))
-	return err
+	return dirtyIfOK(err)
 }
 
 func dbUsersUpdate(username string, u UserUpdate) error {
@@ -101,12 +101,12 @@ func dbUsersUpdate(username string, u UserUpdate) error {
 
 	query := "UPDATE users SET " + joinStrings(sets, ", ") + " WHERE username = ?"
 	_, err := db.Exec(query, args...)
-	return err
+	return dirtyIfOK(err)
 }
 
 func dbUsersDelete(username string) error {
 	_, err := db.Exec(`DELETE FROM users WHERE username = ?`, username)
-	return err
+	return dirtyIfOK(err)
 }
 
 func dbUsersVerifyPassword(username string) (string, error) {

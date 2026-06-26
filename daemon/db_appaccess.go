@@ -189,17 +189,17 @@ func dbAppAccessListAll() ([]DBAppGrant, error) {
 func dbAppAccessGrant(username, appId, permission, grantedBy string) error {
 	_, err := db.Exec(`INSERT OR REPLACE INTO user_app_access (username, app_id, permission, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)`,
 		username, appId, permission, grantedBy, time.Now().UTC().Format(time.RFC3339Nano))
-	return err
+	return dirtyIfOK(err)
 }
 
 // Revoke app access
 func dbAppAccessRevoke(username, appId string) error {
 	_, err := db.Exec(`DELETE FROM user_app_access WHERE username = ? AND app_id = ?`, username, appId)
-	return err
+	return dirtyIfOK(err)
 }
 
 // Revoke all app access for a user
 func dbAppAccessRevokeAll(username string) error {
 	_, err := db.Exec(`DELETE FROM user_app_access WHERE username = ?`, username)
-	return err
+	return dirtyIfOK(err)
 }

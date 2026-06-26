@@ -398,10 +398,10 @@ func backupConfigToPoolGo() {
 		return
 	}
 
-	// Files to back up — these are everything needed to reconstruct NimOS after reinstall
-	// Note: storage.json removed in Beta 8.1 — SQLite (nimos.db) is the source of truth.
-	configFiles := []string{
-		"/var/lib/nimos/config/nimos.db",
+	// Ficheros de config PLANOS (JSON) → copia directa. La BD NO va aquí: se
+	// respalda con un snapshot consistente (VACUUM INTO) más abajo, porque
+	// copiarla a pelo perdería las escrituras que viven en el WAL.
+	plainConfigFiles := []string{
 		"/var/lib/nimos/config/docker.json",
 		"/var/lib/nimos/config/remote-access.json",
 		"/var/lib/nimos/config/security.json",
@@ -417,7 +417,15 @@ func backupConfigToPoolGo() {
 		backupDir := filepath.Join(p.MountPoint, "system-backup", "config")
 		os.MkdirAll(backupDir, 0755)
 
-		for _, src := range configFiles {
+		// La BD se respalda con un snapshot CONSISTENTE (VACUUM INTO), que
+		// incluye lo que aún vive en el WAL. Copiarla a pelo perdería los
+		// cambios recientes — fue la causa probable de la pérdida de shares.
+		dbDst := filepath.Join(backupDir, filepath.Base(dbPath))
+		if err := backupDBConsistent(dbDst); err != nil {
+			logMsg("config backup: WAL-safe DB snapshot failed → %s: %v", dbDst, err)
+		}
+
+		for _, src := range plainConfigFiles {
 			data, err := os.ReadFile(src)
 			if err != nil {
 				continue // file doesn't exist, skip
@@ -435,8 +443,10 @@ func backupConfigToPoolGo() {
 	}
 }
 
-// startConfigBackupLoop runs backupConfigToPoolGo periodically (every 30 min)
-// and once at startup after a delay.
+// startConfigBackupLoop · backup de config event-driven (OP-1). Respalda al
+// arrancar, luego ante cada cambio de config durable (con debounce de 5s para
+// coalescer ráfagas) y, como red de seguridad, cada 30 min aunque nada marque
+// dirty. markConfigDirty() vive en config_dirty.go.
 func startConfigBackupLoop() {
 	// Wait for system to settle
 	time.Sleep(60 * time.Second)
@@ -444,11 +454,8 @@ func startConfigBackupLoop() {
 	// Initial backup
 	backupConfigToPoolGo()
 
-	ticker := time.NewTicker(30 * time.Minute)
-	defer ticker.Stop()
-	for range ticker.C {
-		backupConfigToPoolGo()
-	}
+	// Event-driven con backstop. stop=nil → corre indefinidamente.
+	runConfigBackupLoop(configDirty, 5*time.Second, 30*time.Minute, backupConfigToPoolGo, nil)
 }
 
 func appendFstab(uuid, mountPoint, filesystem string) {

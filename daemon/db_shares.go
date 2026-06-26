@@ -81,7 +81,7 @@ func dbSharesCreate(name, displayName, desc, path, volume, pool, createdBy strin
 	_, err := db.Exec(`INSERT INTO shares (name, display_name, description, path, volume, pool, created_by, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		name, displayName, desc, path, volume, pool, createdBy, time.Now().UTC().Format(time.RFC3339Nano))
-	return err
+	return dirtyIfOK(err)
 }
 
 func dbSharesUpdate(name string, u ShareUpdate) error {
@@ -105,33 +105,33 @@ func dbSharesUpdate(name string, u ShareUpdate) error {
 	args = append(args, name)
 	query := "UPDATE shares SET " + joinStrings(sets, ", ") + " WHERE name = ?"
 	_, err := db.Exec(query, args...)
-	return err
+	return dirtyIfOK(err)
 }
 
 func dbSharesDelete(name string) error {
 	_, err := db.Exec(`DELETE FROM shares WHERE name = ?`, name)
-	return err
+	return dirtyIfOK(err)
 }
 
 func dbShareSetPermission(shareName, username, permission string) error {
 	if permission == "none" || permission == "" {
 		_, err := db.Exec(`DELETE FROM share_permissions WHERE share_name = ? AND username = ?`, shareName, username)
-		return err
+		return dirtyIfOK(err)
 	}
 	_, err := db.Exec(`INSERT OR REPLACE INTO share_permissions (share_name, username, permission) VALUES (?, ?, ?)`,
 		shareName, username, permission)
-	return err
+	return dirtyIfOK(err)
 }
 
 func dbShareSetAppPermission(shareName, appId string, uid int, permission string) error {
 	_, err := db.Exec(`INSERT OR REPLACE INTO app_permissions (share_name, app_id, uid, permission) VALUES (?, ?, ?, ?)`,
 		shareName, appId, uid, permission)
-	return err
+	return dirtyIfOK(err)
 }
 
 func dbShareRemoveAppPermission(shareName, appId string) error {
 	_, err := db.Exec(`DELETE FROM app_permissions WHERE share_name = ? AND app_id = ?`, shareName, appId)
-	return err
+	return dirtyIfOK(err)
 }
 
 func dbPrefsSet(username, key, value string) error {

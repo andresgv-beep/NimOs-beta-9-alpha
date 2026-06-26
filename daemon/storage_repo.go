@@ -274,7 +274,7 @@ func (r *StorageRepo) CreatePool(ctx context.Context, tx *sql.Tx, p *Pool) error
 	}
 
 	_, err = r.incrementGlobalGeneration(ctx, tx)
-	return err
+	return dirtyIfOK(err) // OP-1: alta de pool = config durable
 }
 
 // SetPoolMountPoint actualiza el mount point de un pool. Usado por el rename,
@@ -310,7 +310,7 @@ func (r *StorageRepo) RenamePool(ctx context.Context, tx *sql.Tx, id, newName st
 	}
 
 	_, err = r.incrementGlobalGeneration(ctx, tx)
-	return err
+	return dirtyIfOK(err) // OP-1: rename de pool = config durable
 }
 
 // SetPoolProfile cambia el profile de un pool. Debe llamarse dentro de tx.
@@ -387,7 +387,7 @@ func (r *StorageRepo) DeletePool(ctx context.Context, tx *sql.Tx, id string) err
 	}
 
 	_, err = r.incrementGlobalGeneration(ctx, tx)
-	return err
+	return dirtyIfOK(err) // OP-1: baja de pool = config durable
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
