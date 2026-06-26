@@ -62,6 +62,15 @@ func main() {
 	logMsg("Shares config: %s", sharesFile)
 	logMsg("Database: %s", dbPath)
 
+	// Auto-restore (Capa 2): si la BD viva no existe o está vacía y hay un
+	// backup válido en un pool montado, restaurarlo ANTES de abrir la BD.
+	// Solo actúa sobre BD ausente/vacía — nunca pisa una BD con contenido.
+	if restored, rerr := maybeRestoreConfigOnBoot(); rerr != nil {
+		logMsg("config restore: %v", rerr)
+	} else if restored {
+		logMsg("config restore: BD restaurada desde backup en pool")
+	}
+
 	// Initialize SQLite database. El defer db.Close() vive aquí (no en
 	// bootCore) porque debe sobrevivir hasta que main() retorne.
 	if err := openDB(); err != nil {
