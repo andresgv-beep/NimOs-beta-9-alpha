@@ -126,6 +126,12 @@ func (s *StorageService) AddDevice(ctx context.Context, req AddDeviceRequest) (*
 		return nil, err
 	}
 
+	// FIX-1: gate de montaje. `btrfs device add` exige el pool montado; sin esto
+	// un pool no montado da el críptico "not a btrfs filesystem".
+	if err := assertLayoutOpAllowed(pool); err != nil {
+		return nil, err
+	}
+
 	// El frontend identifica el disco libre por su /dev/path (la lista de
 	// discos eligible viene de lsblk, no expone el ID interno). Resolvemos
 	// path → ID buscando en los devices registrados.
@@ -253,6 +259,11 @@ func (s *StorageService) RemoveDevice(ctx context.Context, req RemoveDeviceReque
 		return nil, err
 	}
 
+	// FIX-1: gate de montaje. `btrfs device remove` exige el pool montado.
+	if err := assertLayoutOpAllowed(pool); err != nil {
+		return nil, err
+	}
+
 	// Buscar el device en este pool
 	var device *Device
 	for i := range pool.Devices {
@@ -339,6 +350,12 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 	}
 
 	if err := s.checkPolicy(pool, OpTypeReplaceDevice); err != nil {
+		return nil, err
+	}
+
+	// FIX-1: gate de montaje. `btrfs replace start` exige el pool montado
+	// (también en degradado rw, el caso típico de reparación).
+	if err := assertLayoutOpAllowed(pool); err != nil {
 		return nil, err
 	}
 
@@ -517,8 +534,8 @@ func noopDeviceChecker(devices []*Device) error {
 // en storage_devices (o que el frontend referenció por path).
 //
 // Estrategia (Regla 16, el kernel manda):
-//   1. Forzar un ScanDevices → registra/actualiza los discos presentes.
-//   2. Buscar en la lista actualizada por CurrentPath exacto o por Serial.
+//  1. Forzar un ScanDevices → registra/actualiza los discos presentes.
+//  2. Buscar en la lista actualizada por CurrentPath exacto o por Serial.
 //
 // Devuelve nil si no se encuentra ningún disco presente con ese path/serial.
 func (s *StorageService) resolveFreeDeviceByPathOrSerial(ctx context.Context, ref string) *Device {

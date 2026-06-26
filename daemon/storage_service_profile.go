@@ -25,6 +25,11 @@ func (s *StorageService) ConvertProfile(ctx context.Context, req ConvertProfileR
 		return nil, err
 	}
 
+	// FIX-1: gate de montaje. `btrfs balance ... -dconvert` exige el pool montado.
+	if err := assertLayoutOpAllowed(pool); err != nil {
+		return nil, err
+	}
+
 	if !req.NewProfile.IsValid() {
 		return nil, errFromCode(ErrCodeProfileInvalid,
 			fmt.Sprintf("invalid profile %q", req.NewProfile))

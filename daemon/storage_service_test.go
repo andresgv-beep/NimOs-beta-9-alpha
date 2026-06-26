@@ -47,10 +47,19 @@ func setupTestService(t *testing.T) (*StorageService, *MockBtrfsExecutor, func()
 	// montaje post-creación tiene éxito.
 	origVerifyMount := verifyPoolMountedFn
 	verifyPoolMountedFn = func(string) bool { return true }
+	// FIX-1: el gate de montaje de las ops de layout usa checks reales del
+	// sistema; en tests los pools no son montajes reales, así que simulamos
+	// "montado y rw" (lo que estos tests ya asumían implícitamente).
+	origWritableChecks := defaultPoolWritableChecks
+	defaultPoolWritableChecks = poolWritableChecks{
+		mountedPool: func(string) bool { return true },
+		readOnly:    func(string) bool { return false },
+	}
 	wrappedCleanup := func() {
 		devicePathExists = origPathExists
 		applyPoolRenamePhysicalFn = origRename
 		verifyPoolMountedFn = origVerifyMount
+		defaultPoolWritableChecks = origWritableChecks
 		cleanupDB()
 	}
 
