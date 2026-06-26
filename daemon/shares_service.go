@@ -106,17 +106,32 @@ func validateShareName(name string) (safeName string, err error) {
 }
 
 // CreateShare crea un nuevo share:
-//   1. Valida nombre + comprueba que no exista
-//   2. Resuelve pool destino
-//   3. Verifica que el pool está montado
-//   4. Crea subvolumen BTRFS
-//   5. Aplica quota qgroup (si > 0)
-//   6. Llama a handleOp share.create (permisos filesystem)
-//   7. setfacl para usuario nimos (apps internas)
-//   8. Registra en SQLite con permisos rw para creator
+//  1. Valida nombre + comprueba que no exista
+//  2. Resuelve pool destino
+//  3. Verifica que el pool está montado
+//  4. Crea subvolumen BTRFS
+//  5. Aplica quota qgroup (si > 0)
+//  6. Llama a handleOp share.create (permisos filesystem)
+//  7. setfacl para usuario nimos (apps internas)
+//  8. Registra en SQLite con permisos rw para creator
 //
 // Errores devueltos son user-friendly (van directos a la UI).
+// CreateShare crea una share nueva (aplica permisos de filesystem por defecto).
 func CreateShare(ctx context.Context, input CreateShareInput) (*CreateShareResult, error) {
+	return createOrAdoptShare(ctx, input, true)
+}
+
+// readoptShareService re-adopta una share huérfana: registra la fila + ACL de
+// nimos + permiso del owner, pero NO re-aplica permisos de filesystem, así
+// PRESERVA el dueño/grupo actual de la carpeta (clave al re-adoptar carpetas con
+// permisos custom tras una pérdida de la BD — incidente data8).
+func readoptShareService(ctx context.Context, input CreateShareInput) (*CreateShareResult, error) {
+	return createOrAdoptShare(ctx, input, false)
+}
+
+// createOrAdoptShare es el núcleo compartido. applyFsPerms=true crea los permisos
+// de filesystem (chown/chmod vía daemon); false los preserva (re-adopción).
+func createOrAdoptShare(ctx context.Context, input CreateShareInput, applyFsPerms bool) (*CreateShareResult, error) {
 	// Step 1 — Validar nombre
 	safeName, err := validateShareName(input.Name)
 	if err != nil {
@@ -149,15 +164,19 @@ func CreateShare(ctx context.Context, input CreateShareInput) (*CreateShareResul
 		return nil, fmt.Errorf("Failed to create BTRFS subvolume: %s", err)
 	}
 
-	// Step 6 — Crear permisos filesystem vía daemon ops
-	daemonResult := handleOp(Request{
-		Op:        "share.create",
-		ShareName: safeName,
-		PoolPath:  mountPoint,
-	})
-	if !daemonResult.Ok {
-		logMsg("ERROR share.create handleOp failed for '%s': %s", safeName, daemonResult.Error)
-		return nil, fmt.Errorf("Failed to create share: %s", daemonResult.Error)
+	// Step 6 — Crear permisos filesystem vía daemon ops.
+	// En re-adopción (applyFsPerms=false) se OMITE para PRESERVAR el dueño/grupo
+	// existente de la carpeta.
+	if applyFsPerms {
+		daemonResult := handleOp(Request{
+			Op:        "share.create",
+			ShareName: safeName,
+			PoolPath:  mountPoint,
+		})
+		if !daemonResult.Ok {
+			logMsg("ERROR share.create handleOp failed for '%s': %s", safeName, daemonResult.Error)
+			return nil, fmt.Errorf("Failed to create share: %s", daemonResult.Error)
+		}
 	}
 
 	// Step 7 — ACL para usuario nimos (NimTorrent etc. necesitan escribir)
@@ -233,17 +252,17 @@ func createBtrfsSubvolIfMissing(folderPath string, quotaBytes int64) error {
 type UpdateShareInput struct {
 	Description    *string
 	RecycleBin     *bool
-	Quota          *int64                  // nil = no tocar; 0 = quitar quota; >0 = nuevo límite
-	Permissions    map[string]string       // username → "rw"|"ro"|"none"; nil = no tocar
+	Quota          *int64                   // nil = no tocar; 0 = quitar quota; >0 = nuevo límite
+	Permissions    map[string]string        // username → "rw"|"ro"|"none"; nil = no tocar
 	AppPermissions []map[string]interface{} // []{appId, uid, permission}; nil = no tocar
 }
 
 // UpdateShare aplica cambios parciales a un share existente.
 // Coordina:
-//   1. Update SQLite (description, recycleBin)
-//   2. Update quota BTRFS (qgroup limit)
-//   3. Diff y aplicación de permisos de usuario
-//   4. Diff y aplicación de permisos de app
+//  1. Update SQLite (description, recycleBin)
+//  2. Update quota BTRFS (qgroup limit)
+//  3. Diff y aplicación de permisos de usuario
+//  4. Diff y aplicación de permisos de app
 func UpdateShare(ctx context.Context, target string, input UpdateShareInput) error {
 	share, err := dbSharesGetRaw(target)
 	if err != nil || share == nil {
@@ -320,10 +339,12 @@ func updateBtrfsQuota(ctx context.Context, share *DBShare, target string, quotaB
 
 // applyPermissionDiff calcula y aplica el delta de permisos de usuario.
 // Para cada usuario presente en oldPerms o newPerms:
-//   · Si oldPerm == newPerm: skip
-//   · Si newPerm == "none" o vacío: handleOp share.remove_user
-//   · Si newPerm == "rw":  handleOp share.add_user_rw
-//   · Si newPerm == "ro":  handleOp share.add_user_ro
+//
+//	· Si oldPerm == newPerm: skip
+//	· Si newPerm == "none" o vacío: handleOp share.remove_user
+//	· Si newPerm == "rw":  handleOp share.add_user_rw
+//	· Si newPerm == "ro":  handleOp share.add_user_ro
+//
 // Y siempre persiste en SQLite con dbShareSetPermission.
 func applyPermissionDiff(target string, oldPerms, newPerms map[string]string) {
 	if oldPerms == nil {
@@ -363,8 +384,8 @@ func applyPermissionDiff(target string, oldPerms, newPerms map[string]string) {
 }
 
 // applyAppPermissionDiff coordina cambios en permisos de apps:
-//   1. Apps en oldPerms pero NO en newPerms → remove
-//   2. Apps en newPerms → add (o re-add si cambió permission)
+//  1. Apps en oldPerms pero NO en newPerms → remove
+//  2. Apps en newPerms → add (o re-add si cambió permission)
 func applyAppPermissionDiff(target string, oldApps []AppPermission, newApps []map[string]interface{}) {
 	// 1. Eliminar apps viejas no presentes en la nueva lista
 	for _, oldApp := range oldApps {
@@ -395,9 +416,9 @@ func applyAppPermissionDiff(target string, oldApps []AppPermission, newApps []ma
 // ═══════════════════════════════════════════════════════════════════════
 
 // DeleteShare elimina un share por completo:
-//   1. Remove permisos filesystem (handleOp share.delete)
-//   2. Destruye subvolumen BTRFS (con todos los datos)
-//   3. Elimina de SQLite
+//  1. Remove permisos filesystem (handleOp share.delete)
+//  2. Destruye subvolumen BTRFS (con todos los datos)
+//  3. Elimina de SQLite
 //
 // El paso 2 puede fallar (subvolumen ya eliminado, error de FS). En ese
 // caso se LOG warning y se sigue con el paso 3 para mantener consistencia.
@@ -453,9 +474,10 @@ func destroyBtrfsSubvolIfExists(subvolPath, shareName string) {
 // Para admin: devuelve todos (filterByUser == "").
 //
 // El "enriquecimiento" añade datos runtime que no están en SQLite:
-//   · Quota / Used / Available (BTRFS qgroup + df)
-//   · FileStats por categoría
-//   · PoolType + MountPoint
+//
+//	· Quota / Used / Available (BTRFS qgroup + df)
+//	· FileStats por categoría
+//	· PoolType + MountPoint
 func ListShares(ctx context.Context, filterByUser string) ([]ShareView, error) {
 	dbShares, err := dbSharesListRaw()
 	if err != nil {

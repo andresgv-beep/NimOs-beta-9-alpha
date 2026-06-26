@@ -110,10 +110,11 @@ func listShareSubdirs(dir string) ([]string, error) {
 	return names, nil
 }
 
-// readoptOrphanShare re-registra una share huérfana reutilizando CreateShare, que
-// respeta el subvolumen existente y NO toca los datos. createdBy queda como owner.
+// readoptOrphanShare re-registra una share huérfana reutilizando la variante que
+// PRESERVA los permisos de la carpeta existente (readoptShareService), registrando
+// la fila + permisos del owner SIN re-chownear los datos. createdBy queda como owner.
 func readoptOrphanShare(ctx context.Context, pool, name, createdBy string) error {
-	_, err := CreateShare(ctx, CreateShareInput{
+	_, err := readoptShareService(ctx, CreateShareInput{
 		Name:      name,
 		PoolName:  pool,
 		CreatedBy: createdBy,

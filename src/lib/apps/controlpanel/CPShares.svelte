@@ -25,6 +25,10 @@
   let shareMsg = '';
   let shareMsgError = false;
 
+  // Carpetas huérfanas · subvolúmenes en disco sin fila en la BD (FIX-3)
+  let orphans = [];
+  let readopting = false;
+
   // Borrado de share
   let deleteTarget = null;   // nombre del share a borrar
   let deleting = false;
@@ -35,14 +39,19 @@
 
   async function loadShares() {
     try {
-      const [rs, rp] = await Promise.all([
+      const [rs, rp, ro] = await Promise.all([
         fetch('/api/shares', { headers: hdrs() }),
         fetch('/api/storage/v2/pools', { headers: hdrs() }),
+        fetch('/api/shares/orphans', { headers: hdrs() }),
       ]);
       if (rs.ok) shares = await rs.json();
       if (rp.ok) {
         const pd = await rp.json();
         pools = pd.data || pd.pools || (Array.isArray(pd) ? pd : []);
+      }
+      if (ro.ok) {
+        const od = await ro.json();
+        orphans = od.orphans || [];
       }
     } catch {}
     loading = false;
@@ -65,6 +74,31 @@
   async function onWizardCreated() {
     wizardOpen = false;
     await loadShares();
+  }
+
+  // ─── Re-adopción de carpetas huérfanas (FIX-3) ───
+  async function readoptAll() {
+    if (readopting || orphans.length === 0) return;
+    readopting = true;
+    shareMsg = '';
+    try {
+      const r = await fetch('/api/shares/orphans/readopt', {
+        method: 'POST',
+        headers: { ...hdrs(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true }),
+      });
+      if (r.ok) {
+        await loadShares();
+      } else {
+        const err = await r.json().catch(() => ({}));
+        shareMsg = err.error || 'No se pudieron re-adoptar las carpetas';
+        shareMsgError = true;
+      }
+    } catch {
+      shareMsg = 'Error de red al re-adoptar';
+      shareMsgError = true;
+    }
+    readopting = false;
   }
 
   // ─── Borrado de share ───
@@ -145,6 +179,24 @@
     <div class="cps-msg" class:error={shareMsgError}>{shareMsg}</div>
   {/if}
 
+  {#if orphans.length > 0}
+    <div class="cps-orphans">
+      <div class="cps-orphans-info">
+        <span class="cps-orphans-title">
+          {orphans.length} {orphans.length === 1 ? 'carpeta encontrada' : 'carpetas encontradas'} en disco sin registrar
+        </span>
+        <span class="cps-orphans-names">{orphans.map((o) => o.name).join('  ·  ')}</span>
+        <span class="cps-orphans-note">
+          Tienen tus datos, pero no aparecen porque no están en la base de datos.
+          Re-adoptarlas las registra sin tocar los archivos ni sus permisos.
+        </span>
+      </div>
+      <button class="cps-btn warn" on:click={readoptAll} disabled={readopting}>
+        {readopting ? 'Re-adoptando…' : 'Re-adoptar'}
+      </button>
+    </div>
+  {/if}
+
   <div class="cps-head">
     <span class="cps-head-lbl">Carpetas · {shares.length}</span>
     <button class="cps-btn primary" on:click={openWizard}>+ Nueva carpeta</button>
@@ -202,6 +254,48 @@
 
   .cps-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
   .cps-msg.error { color: var(--st-crit, #ff5a5a); }
+
+  /* Banner de carpetas huérfanas · acento ámbar de atención (ni acción ni error) */
+  .cps-orphans {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+    background: var(--bg-inner, #101015);
+    border: 1px solid var(--st-warn, #f5a623);
+    border-left-width: 3px;
+    border-radius: 6px;
+  }
+  .cps-orphans-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .cps-orphans-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--st-warn, #f5a623);
+    font-family: var(--font-mono);
+  }
+  .cps-orphans-names {
+    font-size: 12px;
+    color: var(--fg, #f0f0f0);
+    font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cps-orphans-note {
+    font-size: 11px;
+    color: var(--fg-4, #7a7a82);
+    font-family: var(--font-mono);
+    line-height: 1.4;
+  }
+  .cps-btn.warn {
+    background: var(--st-warn, #f5a623);
+    border-color: var(--st-warn, #f5a623);
+    color: var(--bg-window, #16161a);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .cps-btn.warn:hover:not(:disabled) { filter: brightness(1.08); }
 
   .cps-head {
     display: flex;
