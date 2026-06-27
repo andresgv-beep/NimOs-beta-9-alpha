@@ -161,6 +161,9 @@
                 BTRFS · {pool.profile || 'single'} ·
                 {pool.devices?.length || 0} disco{pool.devices?.length === 1 ? '' : 's'} ·
                 {fmtBytes(pool.usage?.used_bytes)} usados
+                {#if pool.kernel_devices_missing > 0}
+                  <span class="sm tc-warn mono" title="El kernel ve {pool.kernel_devices_expected} discos en este filesystem y faltan {pool.kernel_devices_missing}. Puede haber discos ausentes que NimOS no tiene registrados (p.ej. añadidos por CLI fuera de la app).">· ⚠ kernel {pool.kernel_devices_online}/{pool.kernel_devices_expected} · faltan {pool.kernel_devices_missing}</span>
+                {/if}
                 {#if canUpgradeToRaid1(pool)}
                   <button
                     class="raid-upgrade-chip"

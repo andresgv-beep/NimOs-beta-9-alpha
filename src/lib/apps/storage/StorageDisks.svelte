@@ -114,8 +114,18 @@
           <div class="pool-group-title">
             <Badge size="sm" variant="accent">{pool.name}</Badge>
             <span class="sm tc-dim">· {(pool.devices || []).length} {(pool.devices || []).length === 1 ? 'disco' : 'discos'}</span>
+            {#if pool.kernel_devices_missing > 0}
+              <span
+                class="sm tc-warn mono"
+                title="El kernel ve {pool.kernel_devices_expected} discos en este filesystem y faltan {pool.kernel_devices_missing}. Puede haber discos ausentes que NimOS no tiene registrados (p.ej. añadidos por CLI fuera de la app)."
+              >⚠ kernel {pool.kernel_devices_online}/{pool.kernel_devices_expected} · faltan {pool.kernel_devices_missing}</span>
+            {/if}
           </div>
-          <span class="sm tc-faint mono">montado · para destruir, desmóntalo primero</span>
+          {#if pool.mounted}
+            <span class="sm tc-faint mono">montado · para destruir, desmóntalo primero</span>
+          {:else}
+            <span class="sm tc-faint mono">no montado</span>
+          {/if}
         </div>
         <DataTable cols="130px 1fr 90px 100px 110px 200px" headers={['Dispositivo', 'Modelo', 'Capacidad', 'Pool', 'SMART', 'Acción']}>
           {#each (pool.devices || []) as disk}
