@@ -211,6 +211,7 @@ func (s *StorageService) ListPools(ctx context.Context) ([]*Pool, error) {
 
 	primaryPool := getPrimaryPoolName()
 	divergences := observerDivergencesFn() // FIX-2: verdad del observer (btrfs)
+	filesystems := observerFilesystemsFn() // FIX-3: conteo real de devices del kernel
 
 	// Hidratar cada pool con sus devices y capabilities + enriquecer
 	for _, p := range pools {
@@ -235,6 +236,7 @@ func (s *StorageService) ListPools(ctx context.Context) ([]*Pool, error) {
 		// FIX-2 (split-brain): la realidad del observer sobrescribe la caché.
 		// Si btrfs ve una divergencia para este pool, no puede quedar "healthy".
 		reconcileHealthWithDivergences(p, divergences)
+		reconcilePoolDeviceCounts(p, filesystems)
 	}
 
 	return pools, nil
@@ -272,6 +274,7 @@ func (s *StorageService) GetPool(ctx context.Context, id string) (*Pool, error) 
 
 	// FIX-2 (split-brain): la realidad del observer sobrescribe la caché.
 	reconcileHealthWithDivergences(pool, observerDivergencesFn())
+	reconcilePoolDeviceCounts(pool, observerFilesystemsFn())
 
 	return pool, nil
 }

@@ -46,6 +46,15 @@ type Pool struct {
 	Health    *PoolHealth `json:"health,omitempty"`     // Estado de salud computado
 	IsPrimary bool        `json:"is_primary"`           // true si es el primary_pool
 	Mounted   bool        `json:"mounted"`              // true si está montado en MountPoint
+
+	// Conteo REAL de devices según el kernel (observer btrfs), NO la BD. Permite
+	// a la UI no mentir cuando el filesystem tiene discos que la BD no conoce
+	// (p.ej. un device añadido por CLI fuera de NimOS) o más ausentes de los
+	// registrados. 0 = sin datos del observer (omitempty). Solo-lectura: NO muta
+	// la lista Devices ni la BD (alineación de membresía, reality-wins).
+	KernelDevicesExpected int `json:"kernel_devices_expected,omitempty"`
+	KernelDevicesOnline   int `json:"kernel_devices_online,omitempty"`
+	KernelDevicesMissing  int `json:"kernel_devices_missing,omitempty"`
 }
 
 // PoolUsage representa el uso de capacidad de un pool en runtime.

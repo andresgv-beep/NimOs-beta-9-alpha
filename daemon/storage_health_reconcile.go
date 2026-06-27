@@ -174,3 +174,39 @@ var observerDivergencesFn = func() []Divergence {
 	}
 	return snap.Divergences
 }
+
+// observerFilesystemsFn devuelve los filesystems observados del snapshot actual
+// del observer. Es var (no func) para que los tests puedan inyectar filesystems
+// sin un observer real. En producción lee globalObserver de forma nil-safe.
+var observerFilesystemsFn = func() []ObservedBtrfs {
+	if globalObserver == nil {
+		return nil
+	}
+	snap := globalObserver.Snapshot()
+	if snap == nil {
+		return nil
+	}
+	return snap.Filesystems
+}
+
+// reconcilePoolDeviceCounts proyecta sobre el pool el conteo REAL de devices que
+// el kernel (observer) ve para su filesystem, emparejando por BtrfsUUID. Cierra
+// el "conteo falso" de discos: la UI deriva el número de discos de la BD, que no
+// conoce devices añadidos por CLI fuera de NimOS, y mostraba menos ausentes de
+// los reales. Aquí exponemos la verdad del kernel SIN mutar la lista Devices ni
+// la BD (Regla 16: la realidad es la autoridad; la BD es caché).
+//
+// Función PURA sobre los datos pasados, testeable sin observer real.
+func reconcilePoolDeviceCounts(pool *Pool, filesystems []ObservedBtrfs) {
+	if pool == nil || pool.BtrfsUUID == "" {
+		return
+	}
+	for _, fs := range filesystems {
+		if fs.UUID == pool.BtrfsUUID {
+			pool.KernelDevicesExpected = fs.DevicesExpected
+			pool.KernelDevicesOnline = fs.DevicesOnline
+			pool.KernelDevicesMissing = fs.DevicesMissing
+			return
+		}
+	}
+}
