@@ -216,14 +216,27 @@ func startScrub(body map[string]interface{}) map[string]interface{} {
 		return map[string]interface{}{"ok": false, "error": "Pool not found or not a BTRFS filesystem"}
 	}
 
-	_, err := runCmd("btrfs", []string{"scrub", "start", mountPoint}, CmdOptions{Timeout: 15 * time.Second})
-	if err != nil {
+	if err := startScrubOnPool(mountPoint, pool); err != nil {
 		return map[string]interface{}{"ok": false, "error": fmt.Sprintf("btrfs scrub failed: %s", err)}
+	}
+	return map[string]interface{}{"ok": true, "type": "btrfs"}
+}
+
+// startScrubOnPool lanza un `btrfs scrub` (NO bloqueante: el kernel lo corre en
+// segundo plano) sobre un mountpoint ya resuelto. Extraído de startScrub para
+// poder reutilizarlo desde flujos internos —p.ej. el auto-scrub tras un replace
+// exitoso— sin pasar por el body HTTP. Var para inyectarlo en tests.
+var startScrubOnPool = func(mountPoint, poolName string) error {
+	if mountPoint == "" {
+		return fmt.Errorf("startScrubOnPool: mountPoint vacío")
+	}
+	if _, err := runCmd("btrfs", []string{"scrub", "start", mountPoint}, CmdOptions{Timeout: 15 * time.Second}); err != nil {
+		return err
 	}
 	logMsg("BTRFS scrub started on %s", mountPoint)
 	addNotification("info", "system", "Verificación iniciada",
-		fmt.Sprintf("Verificación de integridad iniciada en volumen %s", pool))
-	return map[string]interface{}{"ok": true, "type": "btrfs"}
+		fmt.Sprintf("Verificación de integridad iniciada en volumen %s", poolName))
+	return nil
 }
 
 // getScrubStatus returns detailed scrub status for a BTRFS pool.

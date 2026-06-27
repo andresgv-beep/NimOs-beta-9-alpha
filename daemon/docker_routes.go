@@ -149,6 +149,20 @@ func handleDockerRegexRoutes(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 
+	// GET /api/docker/app/:id/broken · ¿contenedor roto (necesita reparar)?
+	reAppBroken := regexp.MustCompile(`^/api/docker/app/([a-zA-Z0-9_-]+)/broken$`)
+	if m := reAppBroken.FindStringSubmatch(urlPath); m != nil && method == "GET" {
+		dockerAppBroken(w, r, m[1])
+		return true
+	}
+
+	// POST /api/docker/app/:id/repair · recrear contenedor roto (re-pull + recreate)
+	reAppRepair := regexp.MustCompile(`^/api/docker/app/([a-zA-Z0-9_-]+)/repair$`)
+	if m := reAppRepair.FindStringSubmatch(urlPath); m != nil && method == "POST" {
+		dockerAppRepair(w, r, m[1])
+		return true
+	}
+
 	// GET /api/docker/pull/:image
 	if strings.HasPrefix(urlPath, "/api/docker/pull/") && method == "GET" {
 		dockerPull(w, r)

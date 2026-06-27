@@ -495,6 +495,15 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 		return s.repo.GetOperation(ctx, op.ID)
 	}
 
+	// Redundancia restaurada (el replace con -B ya terminó). Lanzamos un scrub
+	// para VERIFICAR que la copia reconstruida es íntegra (detecta/corrige bit-rot
+	// silencioso contra la otra copia). No bloqueante: `btrfs scrub start` corre
+	// en el kernel. Best-effort: si no arranca, el replace ya está completo y no
+	// se invalida — solo se loguea.
+	if serr := startScrubOnPool(pool.MountPoint, pool.Name); serr != nil {
+		logMsg("ReplaceDevice: no se pudo lanzar el scrub de verificación post-replace en %s: %v", pool.MountPoint, serr)
+	}
+
 	return s.repo.GetOperation(ctx, op.ID)
 }
 

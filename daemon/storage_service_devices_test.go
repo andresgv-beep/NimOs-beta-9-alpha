@@ -263,6 +263,11 @@ func TestStorageServiceReplaceDeviceHappy(t *testing.T) {
 	tx.Commit()
 	mock.Reset()
 
+	// Aislar el auto-scrub post-replace (no shell-out a btrfs en unit test).
+	origScrub := startScrubOnPool
+	defer func() { startScrubOnPool = origScrub }()
+	startScrubOnPool = func(mp, name string) error { return nil }
+
 	op, err := service.ReplaceDevice(ctx, ReplaceDeviceRequest{
 		PoolID:      poolID,
 		OldDeviceID: deviceIDs[0],
@@ -367,6 +372,42 @@ func TestStorageServiceReplaceDeviceRevertsToReadOnlyOnFailure(t *testing.T) {
 	}
 	if !stillOld {
 		t.Error("el disco viejo debería seguir en el pool tras un fallo")
+	}
+}
+
+// TestStorageServiceReplaceDeviceLaunchesScrubOnSuccess — tras un replace
+// exitoso debe lanzarse un scrub de verificación sobre el pool reparado.
+func TestStorageServiceReplaceDeviceLaunchesScrubOnSuccess(t *testing.T) {
+	service, mock, cleanup := setupTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	poolID, deviceIDs := createTestPool(t, service, ctx, "data", ProfileRaid1, 2)
+
+	tx, _ := service.db.BeginTx(ctx, nil)
+	service.repo.UpsertDevice(ctx, tx, &Device{
+		ID: "new-1", Serial: "NEW-1",
+		ByIDPath: "/dev/disk/by-id/new-1", CurrentPath: "/dev/sdn",
+		SizeBytes: 2e12,
+	})
+	tx.Commit()
+	mock.Reset()
+
+	origScrub := startScrubOnPool
+	defer func() { startScrubOnPool = origScrub }()
+	scrubbedMount := ""
+	startScrubOnPool = func(mp, name string) error { scrubbedMount = mp; return nil }
+
+	op, err := service.ReplaceDevice(ctx, ReplaceDeviceRequest{
+		PoolID:      poolID,
+		OldDeviceID: deviceIDs[0],
+		NewDeviceID: "new-1",
+	})
+	if err != nil || op == nil || op.Status != OpStatusCompleted {
+		t.Fatalf("el replace debería completar, got op=%+v err=%v", op, err)
+	}
+	if scrubbedMount == "" {
+		t.Error("tras un replace exitoso debió lanzarse un scrub de verificación")
 	}
 }
 

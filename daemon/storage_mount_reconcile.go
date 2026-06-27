@@ -89,14 +89,21 @@ func reconcileMountState(ctx context.Context) (*MountReconcileResult, error) {
 			logMsg("MountReconcile: pool '%s' no montado, montando desde fstab", p.Name)
 			if _, ok := runSafe("mount", p.MountPoint); ok && isPathOnMountedPool(p.MountPoint) {
 				result.Mounted++
-			} else if _, ok := runSafe("mount", "-o", "degraded", p.MountPoint); ok && isPathOnMountedPool(p.MountPoint) {
+			} else if _, ok := runSafe("mount", "-o", "degraded,ro", p.MountPoint); ok && isPathOnMountedPool(p.MountPoint) {
 				// El mount normal falló: caso típico de RAID1 degradado con un disco
-				// ausente (btrfs se niega sin la opción `degraded`). NO la ponemos fija
-				// en fstab (footgun: montaría degradado si un disco solo tarda en
+				// ausente (btrfs se niega sin la opción `degraded`). NO ponemos `degraded`
+				// fijo en fstab (footgun: montaría degradado si un disco solo tarda en
 				// aparecer); la decidimos aquí, como último recurso y con aviso visible.
 				// El daemon arranca tarde: un disco ausente a estas alturas lo está de
 				// verdad, no es lentitud.
-				logMsg("MountReconcile: ADVERTENCIA — '%s' montado en modo DEGRADED (falta >=1 disco). Restaura la redundancia.", p.Name)
+				//
+				// Montamos READ-ONLY a propósito: un pool sin redundancia NO debe
+				// aceptar escrituras a ciegas (las apps escribirían sin red y sin
+				// enterarse — justo la mentira que evitamos). Así el volumen es VISIBLE
+				// y reparable, pero protegido. La reparación (ReplaceDevice) lo sube a
+				// degraded,rw solo durante el replace y, si falla, lo revierte a ro.
+				logMsg("MountReconcile: ADVERTENCIA — '%s' montado DEGRADED,READ-ONLY (falta >=1 disco). Restaura la redundancia para volver a escribir.", p.Name)
+				result.ReadOnly++
 				result.Mounted++
 			} else {
 				logMsg("MountReconcile: WARNING — no se pudo montar '%s' en %s (ni normal ni degraded)", p.Name, p.MountPoint)
