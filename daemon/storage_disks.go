@@ -119,7 +119,45 @@ func detectStorageDisks() DiskScanResult {
 		}
 	}
 
+	// Disco objetivo de un replace EN CURSO: aún no es miembro del pool en la BD
+	// (la membresía se cambia al terminar), pero btrfs ya está reconstruyendo
+	// sobre él → NO debe aparecer como "libre". Lo tratamos como en-uso para que
+	// salga de la lista de elegibles mientras dura la reconstrucción.
+	for s := range inProgressReplaceTargetSerials() {
+		poolSerials[s] = true
+	}
+
 	return parseDetectedDisks(lsblkRaw, rootDisk, poolSerials)
+}
+
+// inProgressReplaceTargetSerials devuelve el conjunto de seriales que son el
+// disco NUEVO de una operación de replace pendiente o en curso. Se leen del JSON
+// `data` de storage_operations. Vacío si no hay ninguna o ante cualquier error.
+func inProgressReplaceTargetSerials() map[string]bool {
+	out := map[string]bool{}
+	if storageService == nil {
+		return out
+	}
+	rows, err := storageService.repo.db.QueryContext(context.Background(),
+		`SELECT data FROM storage_operations WHERE type = ? AND status IN ('pending','in_progress')`,
+		string(OpTypeReplaceDevice))
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var data string
+		if rows.Scan(&data) != nil {
+			continue
+		}
+		var d struct {
+			NewDeviceSerial string `json:"new_device_serial"`
+		}
+		if json.Unmarshal([]byte(data), &d) == nil && d.NewDeviceSerial != "" {
+			out[d.NewDeviceSerial] = true
+		}
+	}
+	return out
 }
 
 func emptyDiskScanResult() DiskScanResult {
