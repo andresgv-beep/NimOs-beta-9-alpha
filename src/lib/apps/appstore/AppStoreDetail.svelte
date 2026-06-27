@@ -45,7 +45,7 @@
   import { openWindow } from '$lib/stores/windows.js';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
   import { fetchCatalog } from './catalog.js';
-  import { getInstalledApps, uninstallApp, checkAppUpdates, updateApp } from './api.js';
+  import { getInstalledApps, uninstallApp, checkAppUpdates, updateApp, checkAppBroken, repairApp } from './api.js';
   import { fetchLaunchable, normalizeLaunchable, openApp } from './launchApp.js';
   import InstallFlow from './InstallFlow.svelte';
   import {
@@ -72,6 +72,10 @@
   /** @type {AppView | null} */
   let view = null;
   let launchInfo = null; // datos de /api/apps/launchable para abrir esta app
+  // Estado "roto": contenedor que existe pero no arranca (capa/imagen perdida).
+  let brokenInfo = null; // { broken: bool, reason: string } | null
+  let repairProcessing = false;
+  let repairError = '';
   let loading = true;
   let loadError = '';
   let iconError = false;
@@ -179,6 +183,9 @@
     // Sprint Updates · reset
     hasUpdate = false;
     updateServices = [];
+    // Estado "roto" · reset
+    brokenInfo = null;
+    repairError = '';
 
     try {
       const [cat, installed] = await Promise.all([
@@ -217,6 +224,12 @@
           console.warn('[appstore/detail] checkAppUpdates failed:', err);
         }
       }
+
+      // ¿El contenedor está ROTO (existe pero no arranca)? Solo tiene sentido
+      // mirarlo si NO está corriendo. checkAppBroken es tolerante a fallos.
+      if (view?.installed && view.status !== 'running') {
+        brokenInfo = await checkAppBroken(appId);
+      }
     } catch (err) {
       loadError = err?.message || String(err);
       view = null;
@@ -252,8 +265,11 @@
 
   // Hay app instalada Y corriendo (para botón "Abrir" funcional)
   $: canOpen = view?.installed && view.status === 'running';
-  // Hay app instalada pero parada (botón "Abrir" deshabilitado + nota)
-  $: isStopped = view?.installed && view.status !== 'running';
+  // Contenedor ROTO: existe pero no arranca (capa/imagen perdida) → "Reparar".
+  $: needsRepair = !!(view?.installed && brokenInfo?.broken);
+  // Hay app instalada pero parada (botón "Abrir" deshabilitado + nota). Excluye
+  // el caso "roto", que tiene su propio botón "Reparar".
+  $: isStopped = view?.installed && view.status !== 'running' && !needsRepair;
 
   // Puerto del badge superior · si la app está instalada, el EFECTIVO (registrado
   // por el Port Allocator, que puede diferir del default del catálogo cuando hubo
@@ -285,6 +301,23 @@
 
   function handleInstallCancel() {
     mode = 'detail';
+  }
+
+  // Reparar contenedor roto · recrea desde compose (re-pull + recreate) y recarga.
+  // Puede tardar minutos (descarga de imagen). La config de la app se conserva.
+  async function handleRepair() {
+    if (!view?.installed || repairProcessing) return;
+    repairProcessing = true;
+    repairError = '';
+    try {
+      await repairApp(appId);
+      // Recargar para reflejar el nuevo estado (debería pasar a 'running').
+      await load();
+    } catch (err) {
+      repairError = err?.message || String(err);
+    } finally {
+      repairProcessing = false;
+    }
   }
 
   function handleOpen() {
@@ -580,6 +613,16 @@
             <button class="btn btn-primary" on:click={handleOpen}>
               Abrir {view.name}
             </button>
+          {:else if needsRepair}
+            <button class="btn btn-primary" on:click={handleRepair} disabled={repairProcessing}
+                    title="Recrea el contenedor reusando su configuración">
+              {#if repairProcessing}
+                <span class="spinner"></span>
+                Reparando…
+              {:else}
+                Reparar contenedor
+              {/if}
+            </button>
           {:else if isStopped}
             <button class="btn btn-primary" disabled title="Inicia el contenedor desde NimHealth">
               Abrir {view.name}
@@ -594,6 +637,17 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         La app está detenida. Inicia el contenedor desde <strong>NimHealth → Task Manager</strong>.
       </div>
+    {/if}
+
+    {#if needsRepair}
+      <div class="hint-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        El contenedor está dañado{#if brokenInfo?.reason} · {brokenInfo.reason}{/if}. Pulsa <strong>Reparar contenedor</strong> para recrearlo conservando tu configuración.
+      </div>
+    {/if}
+
+    {#if repairError}
+      <div class="error-row">No se pudo reparar: {repairError}</div>
     {/if}
 
     {#if actionError}

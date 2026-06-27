@@ -631,6 +631,41 @@ export async function getUpdatesSummary() {
  * @param {{ force?: boolean }} [opts]
  * @returns {Promise<{updateAvailable: boolean, services: Array<{name: string, image: string, updateAvailable: boolean, localDigest: string, remoteDigest: string, remoteCheckedAt: string, checkStatus: string}>}>}
  */
+/**
+ * Comprueba si el contenedor de una app está ROTO (no solo parado): existe pero
+ * no puede arrancar porque le falta la capa/imagen (p.ej. tras una caída de
+ * disco). Distinto de "parado" (que se arranca con start). Si está roto, la UI
+ * ofrece "Reparar contenedor" en vez de "Abrir".
+ *
+ * Tolerante a fallos: ante cualquier error devuelve { broken: false } para no
+ * romper el detalle de la app.
+ */
+export async function checkAppBroken(appId) {
+  if (!appId) return { broken: false };
+  try {
+    const res = await fetch(`/api/docker/app/${encodeURIComponent(appId)}/broken`, { headers: hdrs() });
+    const data = await unwrap(res, 'check app broken');
+    return { broken: data.broken === true, reason: data.reason || '' };
+  } catch (err) {
+    console.warn('[appstore/api] checkAppBroken failed:', err);
+    return { broken: false };
+  }
+}
+
+/**
+ * Repara (recrea) el contenedor de una app stack: re-pull de la imagen perdida +
+ * recreate, conservando su configuración (bind-mounts en el pool). Síncrono ·
+ * puede tardar minutos por la descarga de imagen. Lanza Error si falla.
+ */
+export async function repairApp(appId) {
+  if (!appId) throw new Error('repairApp: appId required');
+  const res = await fetch(`/api/docker/app/${encodeURIComponent(appId)}/repair`, {
+    method: 'POST',
+    headers: hdrs(),
+  });
+  return unwrap(res, 'repair app');
+}
+
 export async function checkAppUpdates(appId, opts = {}) {
   if (!appId) throw new Error('checkAppUpdates: appId required');
   const url = opts.force === true
