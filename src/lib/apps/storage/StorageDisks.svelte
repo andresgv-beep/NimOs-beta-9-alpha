@@ -127,6 +127,11 @@
             <span class="sm tc-faint mono">no montado</span>
           {/if}
         </div>
+        {#if pool.health?.resilver_active}
+          <div class="sm tc-warn mono" style="padding:2px 0 6px;">
+            ⟳ reconstruyendo redundancia · {(pool.health?.resilver_progress ?? 0).toFixed(1)}%
+          </div>
+        {/if}
         <DataTable cols="130px 1fr 90px 100px 110px 200px" headers={['Dispositivo', 'Modelo', 'Capacidad', 'Pool', 'SMART', 'Acción']}>
           {#each (pool.devices || []) as disk}
             <div class="dt-row">
