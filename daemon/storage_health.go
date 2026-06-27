@@ -351,7 +351,8 @@ func CollectDiagnostics(input DiagnosticInput) []Diagnostic {
 
 // poolMountIsReadOnly comprueba si el mountpoint está montado en modo `ro`.
 // Storage solo mira el estado real del kernel vía findmnt.
-func poolMountIsReadOnly(mountPoint string) bool {
+// Var (no func) para poder inyectarla en tests del flujo de reparación.
+var poolMountIsReadOnly = func(mountPoint string) bool {
 	out, ok := runSafe("findmnt", "-n", "-o", "OPTIONS", "--target", mountPoint)
 	if !ok {
 		return false

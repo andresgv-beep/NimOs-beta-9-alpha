@@ -13,9 +13,10 @@ import "testing"
 // ─────────────────────────────────────────────────────────────────────────────
 
 // classifyOne corre parseDetectedDisks con un solo disco y devuelve en qué
-// categoría cayó (o "" si fue filtrado/excluido).
-func classifyOne(lsblk, rootDisk string, poolDisks map[string]bool) string {
-	r := parseDetectedDisks(lsblk, rootDisk, poolDisks)
+// categoría cayó (o "" si fue filtrado/excluido). poolSerials = seriales que
+// pertenecen a algún pool (identidad), no rutas.
+func classifyOne(lsblk, rootDisk string, poolSerials map[string]bool) string {
+	r := parseDetectedDisks(lsblk, rootDisk, poolSerials)
 	switch {
 	case len(r.Eligible) == 1:
 		return "eligible"
@@ -68,10 +69,36 @@ func TestClassify_NvmeNonBootIsNvme(t *testing.T) {
 }
 
 func TestClassify_ProvisionedTakesPriority(t *testing.T) {
-	// Un disco asignado a pool es provisioned aunque sería eligible.
-	lsblk := `{"blockdevices":[{"name":"sdc","size":2000398934016,"type":"disk","tran":"sata","rm":false}]}`
-	if got := classifyOne(lsblk, "", map[string]bool{"/dev/sdc": true}); got != "provisioned" {
+	// Un disco cuyo SERIAL está en un pool es provisioned aunque sería eligible.
+	lsblk := `{"blockdevices":[{"name":"sdc","size":2000398934016,"type":"disk","tran":"sata","rm":false,"serial":"POOLSER1"}]}`
+	if got := classifyOne(lsblk, "", map[string]bool{"POOLSER1": true}); got != "provisioned" {
 		t.Errorf("disco en pool: got %q, want provisioned", got)
+	}
+}
+
+// TestClassify_SwappedDiskBecomesEligible — REGRESIÓN del bug del cambio de
+// disco. Al sustituir físicamente un disco del pool, el registro viejo conservaba
+// su ruta (/dev/sdb) en la BD. La clasificación por RUTA marcaba el disco NUEVO
+// (otro serial, misma /dev/sdb) como "provisioned", lo escondía de "discos
+// libres" y hacía imposible reemplazarlo por la UI. Clasificando por SERIAL, el
+// disco nuevo aparece como eligible y se puede usar para reparar el pool.
+func TestClassify_SwappedDiskBecomesEligible(t *testing.T) {
+	// El pool conoce al disco VIEJO por su serial.
+	poolSerials := map[string]bool{"OLD_SERIAL": true}
+	// Pero en /dev/sdb hay ahora un disco NUEVO (otro serial, misma bahía).
+	lsblk := `{"blockdevices":[{"name":"sdb","size":4000787030016,"type":"disk","tran":"sata","rm":false,"serial":"NEW_SERIAL"}]}`
+	if got := classifyOne(lsblk, "", poolSerials); got != "eligible" {
+		t.Errorf("disco nuevo tras swap: got %q, want eligible (no debe esconderse como provisioned)", got)
+	}
+}
+
+// TestClassify_MemberByPathButDifferentSerialNotProvisioned — variante explícita:
+// que coincida la RUTA con un miembro del pool ya no basta; manda el serial.
+func TestClassify_DiskWithoutSerialNotProvisioned(t *testing.T) {
+	// Un disco sin serial no puede afirmarse como miembro → no provisioned.
+	lsblk := `{"blockdevices":[{"name":"sdb","size":4000787030016,"type":"disk","tran":"sata","rm":false}]}`
+	if got := classifyOne(lsblk, "", map[string]bool{"SOMESER": true}); got != "eligible" {
+		t.Errorf("disco sin serial: got %q, want eligible", got)
 	}
 }
 

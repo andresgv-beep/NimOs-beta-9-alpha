@@ -292,15 +292,25 @@ func (e *RealBtrfsExecutor) ReplaceDevice(ctx context.Context, mountPoint, oldBy
 		}
 	}
 
-	// El nuevo device se sincroniza desde los demás miembros del pool.
-	// Tras esto el old queda fuera del pool y se le hace wipefs SEGURO.
-	_, err := e.runCommand(ctx, "btrfs", "replace", "start", "-f", oldRef, newByIDPath, mountPoint)
+	// `-B` = foreground: BLOQUEA hasta que la reconstrucción TERMINA. Sin él,
+	// `btrfs replace start` corre en segundo plano y retorna al instante, con lo
+	// que el service marcaría la operación COMPLETED y cambiaría la membresía en
+	// la BD mientras la copia sigue sincronizándose por detrás (minutos en GB,
+	// horas en TB) — "listo" cuando aún no hay redundancia. Con `-B` el éxito de
+	// este comando significa redundancia REAL reconstruida.
+	//
+	// runCommandNoTimeout (no el de 30 min): un replace en un array de TB puede
+	// durar horas; el CmdTimeout estándar lo mataría a la mitad (STOR-03, igual
+	// que ConvertProfile). Sigue respetando el ctx del caller.
+	_, err := e.runCommandNoTimeout(ctx, "btrfs", "replace", "start", "-B", "-f", oldRef, newByIDPath, mountPoint)
 	if err != nil {
 		return fmt.Errorf("ReplaceDevice: replace start: %w", err)
 	}
 
 	// Wipefs SEGURO del old SOLO si existe físicamente (un disco missing no se
-	// puede ni se debe wipear — ya no está).
+	// puede ni se debe wipear — ya no está). Como `-B` ya bloqueó hasta terminar,
+	// aquí el replace está COMPLETO: wipear el viejo ya no compite con una
+	// sincronización en curso.
 	if devicePathExists(oldByIDPath) {
 		if err := e.WipeDevice(ctx, oldByIDPath); err != nil {
 			logMsg("ReplaceDevice: warning, wipe of old device %s failed: %v", oldByIDPath, err)

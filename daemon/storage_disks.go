@@ -98,21 +98,28 @@ func detectStorageDisks() DiskScanResult {
 
 	rootDisk := findRootDiskGo(lsblkRaw)
 
-	// Beta 8.1: leer discos asignados a pools vía service v2
-	poolDisks := map[string]bool{}
+	// Discos asignados a pools, indexados por SERIAL (identidad absoluta), NO por
+	// ruta. La ruta (/dev/sdb) es una BAHÍA, no un disco: al cambiar físicamente
+	// un disco, el registro viejo conserva su current_path en la BD y colisiona
+	// con el disco NUEVO que ahora ocupa esa misma ruta. Indexar por path hacía
+	// que el disco nuevo se clasificara como "provisioned" (miembro del pool),
+	// desapareciera de "discos libres" y no se pudiera usar para reparar el pool.
+	// El serial es la identidad real del firmware: solo es miembro del pool el
+	// disco cuyo serial figura en el pool. (Regla 16: el kernel/identidad manda.)
+	poolSerials := map[string]bool{}
 	if storageService != nil {
 		if pools, err := storageService.ListPools(context.Background()); err == nil {
 			for _, p := range pools {
 				for _, dev := range p.Devices {
-					if dev.CurrentPath != "" {
-						poolDisks[dev.CurrentPath] = true
+					if dev.Serial != "" {
+						poolSerials[dev.Serial] = true
 					}
 				}
 			}
 		}
 	}
 
-	return parseDetectedDisks(lsblkRaw, rootDisk, poolDisks)
+	return parseDetectedDisks(lsblkRaw, rootDisk, poolSerials)
 }
 
 func emptyDiskScanResult() DiskScanResult {
@@ -126,9 +133,12 @@ func emptyDiskScanResult() DiskScanResult {
 
 // parseDetectedDisks contiene TODA la lógica de clasificación y construcción.
 // Pura: no toca hardware ni el service. Dado el JSON crudo de lsblk, el disco
-// root y el set de discos ya asignados a pools, produce el DiskScanResult.
+// root y el set de SERIALES ya asignados a pools, produce el DiskScanResult.
 // Esto la hace testeable con inputs simulados (red de seguridad del refactor).
-func parseDetectedDisks(lsblkRaw, rootDisk string, poolDisks map[string]bool) DiskScanResult {
+//
+// poolSerials es el conjunto de seriales (identidad de firmware) que pertenecen
+// a algún pool — NO rutas. Ver detectStorageDisks para el porqué.
+func parseDetectedDisks(lsblkRaw, rootDisk string, poolSerials map[string]bool) DiskScanResult {
 	result := emptyDiskScanResult()
 
 	var data struct {
@@ -237,7 +247,10 @@ func parseDetectedDisks(lsblkRaw, rootDisk string, poolDisks map[string]bool) Di
 			continue // boot disk — never show
 		}
 
-		if poolDisks["/dev/"+devName] {
+		// Provisioned por IDENTIDAD (serial), no por ruta: así un disco nuevo
+		// que ocupa la bahía de uno reemplazado NO se confunde con el miembro
+		// del pool. Sin serial no podemos afirmar pertenencia → no provisioned.
+		if disk.Serial != "" && poolSerials[disk.Serial] {
 			disk.Classification = DiskClassProvisioned
 			result.Provisioned = append(result.Provisioned, disk)
 			continue

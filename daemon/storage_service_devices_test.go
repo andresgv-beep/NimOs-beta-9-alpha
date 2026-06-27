@@ -298,6 +298,78 @@ func TestStorageServiceReplaceDeviceHappy(t *testing.T) {
 	}
 }
 
+// TestStorageServiceReplaceDeviceRevertsToReadOnlyOnFailure — si el pool estaba
+// en read-only (degradado) y lo remontamos rw SOLO para reparar, un replace que
+// falla NO debe dejar el pool en escritura sin redundancia: debe revertirse a ro.
+// Además la membresía no debe cambiar (el viejo sigue, el nuevo no entra) y la
+// operación queda FAILED.
+func TestStorageServiceReplaceDeviceRevertsToReadOnlyOnFailure(t *testing.T) {
+	service, mock, cleanup := setupTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	poolID, deviceIDs := createTestPool(t, service, ctx, "data", ProfileRaid1, 2)
+
+	// Disco nuevo válido (más grande que el viejo).
+	tx, _ := service.db.BeginTx(ctx, nil)
+	service.repo.UpsertDevice(ctx, tx, &Device{
+		ID: "new-1", Serial: "NEW-1",
+		ByIDPath: "/dev/disk/by-id/new-1", CurrentPath: "/dev/sdn",
+		SizeBytes: 2e12,
+	})
+	tx.Commit()
+	mock.Reset()
+
+	// Inyectar: pool en ro, captar remounts, y forzar fallo del replace.
+	origRO, origRW, origToRO := poolMountIsReadOnly, remountPoolReadWriteDegraded, remountPoolReadOnlyDegraded
+	defer func() {
+		poolMountIsReadOnly = origRO
+		remountPoolReadWriteDegraded = origRW
+		remountPoolReadOnlyDegraded = origToRO
+	}()
+	poolMountIsReadOnly = func(string) bool { return true }
+	rwCalled := false
+	remountPoolReadWriteDegraded = func(string) error { rwCalled = true; return nil }
+	roReverted := false
+	remountPoolReadOnlyDegraded = func(string) error { roReverted = true; return nil }
+	mock.ReplaceDeviceFn = func(ctx context.Context, mp, oldP, newP string) error {
+		return fmt.Errorf("boom: target write error")
+	}
+
+	op, err := service.ReplaceDevice(ctx, ReplaceDeviceRequest{
+		PoolID:      poolID,
+		OldDeviceID: deviceIDs[0],
+		NewDeviceID: "new-1",
+	})
+	if err != nil {
+		t.Fatalf("esperaba op fallida sin error de transporte, got %v", err)
+	}
+	if op == nil || op.Status != OpStatusFailed {
+		t.Fatalf("op debería estar FAILED, got %+v", op)
+	}
+	if !rwCalled {
+		t.Error("debió remontar rw para intentar la reparación")
+	}
+	if !roReverted {
+		t.Error("tras el fallo del replace debió revertir el pool a ro (no dejarlo rw degradado)")
+	}
+
+	// La membresía NO cambió: el viejo sigue, el nuevo no entró.
+	pool, _ := service.GetPool(ctx, poolID)
+	stillOld := false
+	for _, d := range pool.Devices {
+		if d.ID == deviceIDs[0] {
+			stillOld = true
+		}
+		if d.ID == "new-1" {
+			t.Error("new-1 no debería estar en el pool tras un fallo")
+		}
+	}
+	if !stillOld {
+		t.Error("el disco viejo debería seguir en el pool tras un fallo")
+	}
+}
+
 func TestStorageServiceReplaceDeviceNewSmaller(t *testing.T) {
 	service, _, cleanup := setupTestService(t)
 	defer cleanup()

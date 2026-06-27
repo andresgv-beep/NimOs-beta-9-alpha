@@ -135,19 +135,20 @@ func detectStorageDisksGo() map[string]interface{} {
 	}
 
 	rootDisk := findRootDiskGo(lsblkRaw)
-	poolDisks := map[string]bool{}
+	// Indexar por SERIAL (identidad), no por ruta. Ver detectStorageDisks.
+	poolSerials := map[string]bool{}
 	if storageService != nil {
 		if pools, err := storageService.ListPools(context.Background()); err == nil {
 			for _, p := range pools {
 				for _, dev := range p.Devices {
-					if dev.CurrentPath != "" {
-						poolDisks[dev.CurrentPath] = true
+					if dev.Serial != "" {
+						poolSerials[dev.Serial] = true
 					}
 				}
 			}
 		}
 	}
-	return parseDetectedDisksLegacy(lsblkRaw, rootDisk, poolDisks)
+	return parseDetectedDisksLegacy(lsblkRaw, rootDisk, poolSerials)
 }
 
 // parseDetectedDisksLegacy es el core map[string]interface{} original, extraído
@@ -157,7 +158,7 @@ func detectStorageDisksGo() map[string]interface{} {
 //
 // Se ELIMINARÁ cuando el test de equivalencia se considere estable y el endpoint
 // lleve tiempo sirviendo la versión tipada sin incidencias.
-func parseDetectedDisksLegacy(lsblkRaw, rootDisk string, poolDisks map[string]bool) map[string]interface{} {
+func parseDetectedDisksLegacy(lsblkRaw, rootDisk string, poolSerials map[string]bool) map[string]interface{} {
 	result := map[string]interface{}{
 		"eligible":    []interface{}{},
 		"nvme":        []interface{}{},
@@ -254,7 +255,7 @@ func parseDetectedDisksLegacy(lsblkRaw, rootDisk string, poolDisks map[string]bo
 			continue // boot disk — never show
 		}
 
-		if poolDisks["/dev/"+devName] {
+		if s := strings.TrimSpace(serial); s != "" && poolSerials[s] {
 			diskInfo["classification"] = "provisioned"
 			provisioned = append(provisioned, diskInfo)
 			continue

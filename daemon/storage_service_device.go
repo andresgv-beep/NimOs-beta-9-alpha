@@ -434,6 +434,7 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 	// calculado y consciente: durante el replace se escribe sin redundancia,
 	// pero es la ÚNICA forma de reconstruirla. Al terminar, el pool queda
 	// completo y se puede remontar rw normal.
+	remountedForRepair := false
 	if poolMountIsReadOnly(pool.MountPoint) {
 		logMsg("ReplaceDevice: pool %s está en read-only; remontando degraded,rw para permitir la reparación", pool.MountPoint)
 		if err := remountPoolReadWriteDegraded(pool.MountPoint); err != nil {
@@ -442,6 +443,7 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 				ErrCodeBtrfsCommandFailed)
 			return s.repo.GetOperation(ctx, op.ID)
 		}
+		remountedForRepair = true
 	}
 
 	// Ejecutar btrfs replace (incluye wipefs seguro del old)
@@ -465,6 +467,15 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 		oldPath = oldDev.ByIDPath
 	}
 	if err := s.btrfs.ReplaceDevice(ctx, pool.MountPoint, oldPath, newPath); err != nil {
+		// Si habíamos puesto el pool rw SOLO para reparar, revertirlo a ro tras el
+		// fallo: un pool degradado en escritura sin redundancia es el peor estado.
+		// Best-effort: si el revert falla, lo logueamos pero el fallo del replace
+		// es lo que manda en la operación.
+		if remountedForRepair {
+			if rerr := remountPoolReadOnlyDegraded(pool.MountPoint); rerr != nil {
+				logMsg("ReplaceDevice: no se pudo revertir %s a ro tras fallo del replace: %v", pool.MountPoint, rerr)
+			}
+		}
 		s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
 		return s.repo.GetOperation(ctx, op.ID)
 	}
@@ -596,5 +607,18 @@ var remountPoolReadWriteDegraded = func(mountPoint string) error {
 		return fmt.Errorf("el pool %s sigue en read-only tras el remount", mountPoint)
 	}
 	logMsg("remountPoolReadWriteDegraded: %s remontado en degraded,rw para reparación", mountPoint)
+	return nil
+}
+
+// remountPoolReadOnlyDegraded revierte un pool a `degraded,ro` (el estado seguro
+// de un raid sin redundancia) tras un intento de reparación fallido. Contraparte
+// de remountPoolReadWriteDegraded: si pusimos el pool en escritura solo para el
+// replace y este falló, no debe quedarse rw degradado. Inyectable para tests.
+var remountPoolReadOnlyDegraded = func(mountPoint string) error {
+	out, ok := runSafe("mount", "-o", "remount,ro,degraded", mountPoint)
+	if !ok {
+		return fmt.Errorf("mount remount ro degraded falló en %s: %s", mountPoint, strings.TrimSpace(out))
+	}
+	logMsg("remountPoolReadOnlyDegraded: %s revertido a degraded,ro tras fallo de reparación", mountPoint)
 	return nil
 }

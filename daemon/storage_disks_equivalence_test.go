@@ -37,7 +37,7 @@ func TestDisksSmartPresentInAllCategories(t *testing.T) {
 		{"name":"sdd","size":8000000000,"type":"disk","rota":false,"tran":"usb","rm":true,"fstype":"vfat","model":"USB","serial":"U1"},
 		{"name":"nvme0n1","size":512110190592,"type":"disk","rota":false,"tran":"nvme","rm":false,"model":"NVMe","serial":"N1"}
 	]}`
-	r := parseDetectedDisks(lsblk, "", map[string]bool{"/dev/sdb": true})
+	r := parseDetectedDisks(lsblk, "", map[string]bool{"P1": true})
 
 	for _, d := range r.Provisioned {
 		if !hasSmartFields(d) {
