@@ -268,9 +268,10 @@ func (h *StorageHTTPHandler) listPools(w http.ResponseWriter, r *http.Request) {
 // createPool — POST /api/storage/v2/pools
 //
 // Body:
-//   {"name": "data", "profile": "raid1",
-//    "device_ids": ["d1", "d2"],
-//    "compression": "zstd", "wipe_first": false}
+//
+//	{"name": "data", "profile": "raid1",
+//	 "device_ids": ["d1", "d2"],
+//	 "compression": "zstd", "wipe_first": false}
 func (h *StorageHTTPHandler) createPool(w http.ResponseWriter, r *http.Request) {
 	var req CreatePoolRequest
 	if err := decodeJSONBody(r, &req); err != nil {
@@ -324,6 +325,14 @@ func (h *StorageHTTPHandler) handlePoolByID(w http.ResponseWriter, r *http.Reque
 
 	// Caso 2: /pools/{id}/{subresource...}
 	switch {
+	case rest == "references":
+		// G3: qué shares y apps referencian este pool (informativo, pre-destroy).
+		if r.Method != http.MethodGet {
+			methodNotAllowed(w, "GET")
+			return
+		}
+		h.poolReferences(w, r, id)
+
 	case rest == "rename":
 		if r.Method != http.MethodPost {
 			methodNotAllowed(w, "POST")
@@ -409,6 +418,22 @@ func (h *StorageHTTPHandler) getPool(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 	writeData(w, http.StatusOK, pool)
+}
+
+// poolReferences (G3) — qué referencia un pool: sus shares y las apps que las
+// usan. Informativo, para avisar antes de destruir. No bloquea.
+func (h *StorageHTTPHandler) poolReferences(w http.ResponseWriter, r *http.Request, id string) {
+	pool, err := h.service.GetPool(r.Context(), id)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	refs, err := findPoolReferences(pool.Name)
+	if err != nil {
+		writeError(w, ErrCodeInternal, err.Error())
+		return
+	}
+	writeData(w, http.StatusOK, refs)
 }
 
 func (h *StorageHTTPHandler) destroyPool(w http.ResponseWriter, r *http.Request, id string) {
@@ -864,16 +889,17 @@ func (h *StorageHTTPHandler) handleAlerts(w http.ResponseWriter, r *http.Request
 // ─── GET /v2/disks ────────────────────────────────────────────────────────
 // Devuelve discos físicos del sistema en formato CATEGORIZADO:
 //
-//   {
-//     "eligible":    [...discos libres elegibles para crear pool],
-//     "nvme":        [...discos NVMe (subset por tecnología)],
-//     "usb":         [...discos USB (subset por bus)],
-//     "provisioned": [...discos ya asignados a pools]
-//   }
+//	{
+//	  "eligible":    [...discos libres elegibles para crear pool],
+//	  "nvme":        [...discos NVMe (subset por tecnología)],
+//	  "usb":         [...discos USB (subset por bus)],
+//	  "provisioned": [...discos ya asignados a pools]
+//	}
 //
 // Diferencia con /v2/devices:
-//   · /v2/devices  → array plano de Device structs (canónico, interno)
-//   · /v2/disks    → categorización por estado/tecnología para UI humana
+//
+//	· /v2/devices  → array plano de Device structs (canónico, interno)
+//	· /v2/disks    → categorización por estado/tecnología para UI humana
 //
 // Delega en detectStorageDisks() (storage_disks.go, tipado). La función
 // tiene la lógica de categorización: filtrar root disk, marcar los

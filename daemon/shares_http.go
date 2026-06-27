@@ -33,6 +33,9 @@ import (
 // sharePathRegex matchea /api/shares/:name con :name en grupo 1.
 var sharePathRegex = regexp.MustCompile(`^/api/shares/([a-zA-Z0-9_-]+)$`)
 
+// shareRefsPathRegex matchea /api/shares/:name/references (G3).
+var shareRefsPathRegex = regexp.MustCompile(`^/api/shares/([a-zA-Z0-9_-]+)/references$`)
+
 // handleSharesRoutes despacha las requests del módulo Shares.
 // Punto de entrada único registrado en el router HTTP principal.
 func handleSharesRoutes(w http.ResponseWriter, r *http.Request) {
@@ -67,6 +70,12 @@ func handleSharesRoutes(w http.ResponseWriter, r *http.Request) {
 	}
 	if path == "/api/shares/orphans/readopt" && method == "POST" {
 		sharesOrphansReadoptHTTP(w, r)
+		return
+	}
+
+	// Referencias (G3): GET /api/shares/{name}/references — qué apps usan la carpeta.
+	if m := shareRefsPathRegex.FindStringSubmatch(path); m != nil && method == "GET" {
+		sharesReferencesHTTP(w, r, m[1])
 		return
 	}
 

@@ -32,6 +32,7 @@
   // Borrado de share
   let deleteTarget = null;   // nombre del share a borrar
   let deleting = false;
+  let deleteRefs = [];       // apps que usan la carpeta (G3), para avisar antes de borrar
 
   // Edición de share
   let editTarget = null;     // objeto share a editar
@@ -102,8 +103,17 @@
   }
 
   // ─── Borrado de share ───
-  function onCardDelete(e) {
+  async function onCardDelete(e) {
     deleteTarget = e.detail.name;
+    deleteRefs = [];
+    // G3: averiguar qué apps usan la carpeta, para avisar antes de borrar.
+    try {
+      const r = await fetch(`/api/shares/${encodeURIComponent(deleteTarget)}/references`, { headers: hdrs() });
+      if (r.ok) {
+        const d = await r.json();
+        deleteRefs = d.apps || [];
+      }
+    } catch { /* sin referencias → borrado normal */ }
   }
 
   async function confirmDelete() {
@@ -225,7 +235,7 @@
   <ConfirmDialog
     open={deleteTarget !== null}
     title="Eliminar carpeta compartida"
-    message={`¿Seguro que quieres eliminar «${deleteTarget || ''}»? Se eliminará el acceso compartido. Esta acción no se puede deshacer.`}
+    message={`¿Seguro que quieres eliminar «${deleteTarget || ''}»? Se eliminará el acceso compartido. Esta acción no se puede deshacer.${deleteRefs.length ? `\n\n⚠ Esta carpeta la usan: ${deleteRefs.join(', ')}. Esas apps podrían dejar de funcionar.` : ''}`}
     confirmLabel="Eliminar"
     cancelLabel="Cancelar"
     variant="danger"

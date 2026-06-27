@@ -26,7 +26,6 @@ import (
 	"strings"
 )
 
-
 // ─── parseBtrfsDeviceStats ───────────────────────────────────────────────────
 //
 // Parses `btrfs device stats <mountPoint>` to extract per-disk IO error counts.
@@ -585,12 +584,12 @@ func ComputePoolHealth(
 // Beta 8.1: BTRFS-only. Los profiles BTRFS tienen tolerancia distinta a
 // los vdev types de ZFS. Mapeo directo a tolerancia:
 //
-//   raid1     → 1 copia extra            → tolera 1 fallo
-//   raid1c3   → 2 copias extras          → tolera 2 fallos
-//   raid1c4   → 3 copias extras          → tolera 3 fallos
-//   raid10    → mirrors apareados         → tolera 1 por par (conservador)
-//   raid5/6   → no recomendados en BTRFS  → tratados como 1/2 por compat
-//   single    → sin redundancia          → 0
+//	raid1     → 1 copia extra            → tolera 1 fallo
+//	raid1c3   → 2 copias extras          → tolera 2 fallos
+//	raid1c4   → 3 copias extras          → tolera 3 fallos
+//	raid10    → mirrors apareados         → tolera 1 por par (conservador)
+//	raid5/6   → no recomendados en BTRFS  → tratados como 1/2 por compat
+//	single    → sin redundancia          → 0
 func vdevTypeCanLose(vdevType string) int {
 	switch normalizeVdevType(vdevType) {
 	case "mirror", "raid1":
@@ -763,7 +762,11 @@ func buildPoolHealth(input DiagnosticInput) PoolHealth {
 		// 2. Replace en curso (reemplazo de disco — reparación). Tiene su
 		//    propio status con % de progreso, que parseamos para la barra.
 		//    Formato: "X.Y% done, N write errs, M uncorr. read errs"
-		rout, rok := runSafe("btrfs", "replace", "status", input.MountPoint)
+		//
+		//    OJO: `btrfs replace status` SIN `-1` monitoriza en BUCLE hasta que el
+		//    replace termina (no retorna) → runSafe se bloquea/expira → la barra
+		//    nunca se mostraba. `-1` imprime el estado UNA vez y sale.
+		rout, rok := runSafe("btrfs", "replace", "status", "-1", input.MountPoint)
 		if rok {
 			if pct, running := parseReplaceProgress(rout); running {
 				resilverActive = true
@@ -780,9 +783,10 @@ func buildPoolHealth(input DiagnosticInput) PoolHealth {
 // `btrfs replace status`. Devuelve (porcentaje 0-100, replaceEnCurso).
 //
 // Salidas posibles:
-//   "Started on ..., finished on ..."           → terminado (running=false)
-//   "X.Y% done, 0 write errs, 0 uncorr..."        → en curso (running=true)
-//   "Never started"                               → no hay replace (false)
+//
+//	"Started on ..., finished on ..."           → terminado (running=false)
+//	"X.Y% done, 0 write errs, 0 uncorr..."        → en curso (running=true)
+//	"Never started"                               → no hay replace (false)
 func parseReplaceProgress(out string) (float64, bool) {
 	out = strings.TrimSpace(out)
 	if out == "" || strings.Contains(out, "Never started") {
