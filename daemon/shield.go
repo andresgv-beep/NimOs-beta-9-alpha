@@ -503,6 +503,20 @@ func shieldMiddleware(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 
+	// 1.5. NimShield Intelligence — ¿la IP está en el threat feed firmado?
+	// En modo observación solo registra (no corta); en bloqueo activo, corta.
+	// Respeta la whitelist internamente.
+	if shieldIntelCheck(r) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Retry-After", "3600")
+		w.WriteHeader(403)
+		resp, _ := json.Marshal(map[string]string{
+			"error": "Blocked by NimShield Intelligence threat feed",
+		})
+		w.Write(resp)
+		return true
+	}
+
 	// 2. Check honeypots (instant detection, zero false positives)
 	if checkHoneypot(r) {
 		http.NotFound(w, r)
