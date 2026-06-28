@@ -62,6 +62,7 @@ func dbShieldInit() {
 
 	dbShieldReputationInit()
 	dbShieldConfigInit()
+	dbIntelInit()
 }
 
 // ── Enabled-state persistence ────────────────────────────────────────────────
