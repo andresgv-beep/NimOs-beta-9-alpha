@@ -17,6 +17,7 @@
   import ShieldWhitelist from './shield/ShieldWhitelist.svelte';
   import ShieldReputation from './shield/ShieldReputation.svelte';
   import ShieldSettings from './shield/ShieldSettings.svelte';
+  import ShieldIntelligence from './shield/ShieldIntelligence.svelte';
 
   let active = 'overview';
 
@@ -29,6 +30,7 @@
         { id: 'blocks',    label: 'Bloqueos',  badge: $blocks.length || null, badgeVariant: $blocks.length ? 'crit' : 'default' },
         { id: 'whitelist', label: 'Whitelist', badge: $whitelist.length || null },
         { id: 'reputation', label: 'Reputación', badge: $reputation.length || null },
+        { id: 'intel', label: 'Intelligence' },
       ],
     },
     {
@@ -45,6 +47,7 @@
     blocks:    { t: 'Bloqueos',  s: '· IPs bloqueadas activas' },
     whitelist: { t: 'Whitelist', s: '· IPs en confianza' },
     reputation: { t: 'Reputación', s: '· IPs conocidas y su nivel' },
+    intel: { t: 'Intelligence', s: '· threat feed firmado' },
     settings: { t: 'Ajustes', s: '· política de defensa' },
   };
 
@@ -107,6 +110,8 @@
       <ShieldWhitelist whitelist={$whitelist} now={$now} />
     {:else if active === 'reputation'}
       <ShieldReputation reputation={$reputation} now={$now} />
+    {:else if active === 'intel'}
+      <ShieldIntelligence />
     {:else if active === 'settings'}
       <ShieldSettings />
     {/if}

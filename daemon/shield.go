@@ -613,6 +613,9 @@ func startShieldEngine() {
 
 	// Process events
 	go shieldEventLoop()
+
+	// NimShield Intelligence: carga el feed y refresca cada 2 días (no bloquea).
+	startIntel()
 }
 
 func shieldEventLoop() {

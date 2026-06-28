@@ -334,6 +334,49 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 		jsonOk(w, map[string]interface{}{"ok": true, "config": getShieldConfig()})
 
 	// GET /api/shield/reputation — IPs conocidas con su nivel
+	// GET /api/shield/intel — estado del threat feed
+	case path == "/api/shield/intel" && method == "GET":
+		jsonOk(w, map[string]interface{}{"ok": true, "intel": intelStatus()})
+
+	// POST /api/shield/intel/enforce — activar/desactivar bloqueo en duro (admin)
+	case path == "/api/shield/intel/enforce" && method == "POST":
+		if session.Role != "admin" {
+			jsonError(w, 403, "Solo un administrador puede modificar NimShield")
+			return
+		}
+		body, _ := readBody(r)
+		on, _ := bodyBool(body, "enforce")
+		intelSetEnforce(on)
+		jsonOk(w, map[string]interface{}{"ok": true, "intel": intelStatus()})
+
+	// POST /api/shield/intel/refresh — forzar descarga del feed ahora (admin)
+	case path == "/api/shield/intel/refresh" && method == "POST":
+		if session.Role != "admin" {
+			jsonError(w, 403, "Solo un administrador puede modificar NimShield")
+			return
+		}
+		v, err := intelRefresh()
+		if err != nil {
+			jsonError(w, 502, "No se pudo actualizar el feed: "+err.Error())
+			return
+		}
+		logMsg("shield: intel feed refreshed to v%d by %s", v, session.Username)
+		jsonOk(w, map[string]interface{}{"ok": true, "intel": intelStatus()})
+
+	// POST /api/shield/intel/rollback — volver a la versión previa (admin)
+	case path == "/api/shield/intel/rollback" && method == "POST":
+		if session.Role != "admin" {
+			jsonError(w, 403, "Solo un administrador puede modificar NimShield")
+			return
+		}
+		v, err := intelRollback()
+		if err != nil {
+			jsonError(w, 400, "No se pudo hacer rollback: "+err.Error())
+			return
+		}
+		logMsg("shield: intel rolled back to v%d by %s", v, session.Username)
+		jsonOk(w, map[string]interface{}{"ok": true, "intel": intelStatus()})
+
 	case path == "/api/shield/reputation" && method == "GET":
 		jsonOk(w, map[string]interface{}{"ok": true, "reputation": shieldRepList()})
 

@@ -12,6 +12,7 @@ export const blocks = writable([]);
 export const whitelist = writable([]);
 export const reputation = writable([]);
 export const config = writable(null);
+export const intel = writable(null);
 export const configDefaults = writable(null);
 export const loading = writable(true);
 export const adminRequired = writable(false);
@@ -46,9 +47,9 @@ export const post = (path, body) => send(path, 'POST', body);
 export const put = (path, body) => send(path, 'PUT', body);
 
 export async function refresh() {
-  const [s, e, b, wl, rep, cfg] = await Promise.all([
+  const [s, e, b, wl, rep, cfg, intl] = await Promise.all([
     getJSON('status'), getJSON('events?limit=200'), getJSON('blocks'),
-    getJSON('whitelist'), getJSON('reputation'), getJSON('config'),
+    getJSON('whitelist'), getJSON('reputation'), getJSON('config'), getJSON('intel'),
   ]);
   if (s) status.set(s);
   if (e) events.set(e.events || []);
@@ -56,6 +57,7 @@ export async function refresh() {
   if (wl) whitelist.set(wl.whitelist || []);
   if (rep) reputation.set(rep.reputation || []);
   if (cfg) { config.set(cfg.config); configDefaults.set(cfg.defaults); }
+  if (intl) intel.set(intl.intel);
   loading.set(false);
 }
 
@@ -126,4 +128,18 @@ export async function saveConfig(draft) {
   const r = await put('config', draft); // el error se propaga al componente
   config.set(r.config);
   return r.config;
+}
+
+// ─── NimShield Intelligence (threat feed) ───
+export async function intelSetEnforce(on) {
+  const r = await post('intel/enforce', { enforce: on });
+  intel.set(r.intel);
+}
+export async function intelRefreshNow() {
+  const r = await post('intel/refresh');
+  intel.set(r.intel);
+}
+export async function intelRollback() {
+  const r = await post('intel/rollback');
+  intel.set(r.intel);
 }
