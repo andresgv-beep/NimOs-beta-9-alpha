@@ -60,6 +60,10 @@ func dbShieldReputationInit() {
 		);
 	`)
 	db.Exec(`ALTER TABLE shield_reputation ADD COLUMN block_count INTEGER NOT NULL DEFAULT 0`)
+	// Motor de comportamiento (Fase 1): score 0-100 y momento de su última
+	// actualización (para el decay). ALTER idempotente: si ya existen, no pasa nada.
+	db.Exec(`ALTER TABLE shield_reputation ADD COLUMN score INTEGER NOT NULL DEFAULT 100`)
+	db.Exec(`ALTER TABLE shield_reputation ADD COLUMN last_score_update TEXT`)
 }
 
 // ShieldAuthSuccess registra un login EXITOSO: +1 a la cuenta y borra la
@@ -168,9 +172,10 @@ func shieldRepList() []map[string]interface{} {
 		return out
 	}
 	rows, err := db.Query(`
-		SELECT ip, success_count, fail_streak, COALESCE(last_success,''), COALESCE(last_fail,'')
+		SELECT ip, success_count, fail_streak, COALESCE(last_success,''), COALESCE(last_fail,''),
+		       score, COALESCE(last_score_update,'')
 		FROM shield_reputation
-		ORDER BY success_count DESC, last_success DESC
+		ORDER BY score ASC, success_count DESC, last_success DESC
 		LIMIT 500
 	`)
 	if err != nil {
@@ -178,9 +183,9 @@ func shieldRepList() []map[string]interface{} {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var ip, lastSuccess, lastFail string
-		var success, streak int
-		if err := rows.Scan(&ip, &success, &streak, &lastSuccess, &lastFail); err != nil {
+		var ip, lastSuccess, lastFail, lastScoreUpd string
+		var success, streak, score int
+		if err := rows.Scan(&ip, &success, &streak, &lastSuccess, &lastFail, &score, &lastScoreUpd); err != nil {
 			continue
 		}
 		out = append(out, map[string]interface{}{
@@ -190,6 +195,7 @@ func shieldRepList() []map[string]interface{} {
 			"lastSuccess":  lastSuccess,
 			"lastFail":     lastFail,
 			"level":        shieldRepLevel(success, streak),
+			"score":        scoreApplyDecay(score, lastScoreUpd), // 0-100, con recuperación aplicada
 		})
 	}
 	return out

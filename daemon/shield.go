@@ -623,6 +623,10 @@ func shieldEventLoop() {
 		// Store event in DB
 		dbShieldEventInsert(event)
 
+		// Motor de comportamiento (Fase 1, OBSERVE): puntúa la IP por este
+		// evento y correla con su actividad reciente. Fuera del hot path.
+		shieldScorePenalize(event)
+
 		// Run rule engine
 		processRules(event)
 	}
