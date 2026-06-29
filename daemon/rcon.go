@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"time"
 )
 
@@ -93,7 +94,9 @@ func rconExecute(host string, port int, password, command string, timeout time.D
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
-	addr := fmt.Sprintf("%s:%d", host, port)
+	// net.JoinHostPort pone corchetes a las IPv6 ("[::1]:25575"); un
+	// fmt.Sprintf("%s:%d") las rompería (lo marcaba go vet).
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
 		return "", fmt.Errorf("rcon: no se pudo conectar a %s: %w", addr, err)

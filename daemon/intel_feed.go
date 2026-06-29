@@ -133,24 +133,52 @@ func dbIntelLoadVersion(version int) (map[string][]byte, error) {
 
 // ─── Descarga de red ───
 
+// intelFetchRetries — nº de intentos de descarga por fichero antes de rendirse.
+const intelFetchRetries = 3
+
+// intelFetch descarga un fichero del feed con reintentos y backoff exponencial
+// (#minor): un fallo puntual de red o un 5xx/429 de GitHub no debe tumbar el
+// refresco. Solo reintenta errores transitorios; un 404/4xx no se reintenta.
 func intelFetch(client *http.Client, name string) ([]byte, error) {
+	var lastErr error
+	for attempt := 1; attempt <= intelFetchRetries; attempt++ {
+		data, err, retriable := intelFetchOnce(client, name)
+		if err == nil {
+			return data, nil
+		}
+		lastErr = err
+		if !retriable || attempt == intelFetchRetries {
+			break
+		}
+		wait := time.Duration(1<<(attempt-1)) * time.Second // 1s, 2s, 4s…
+		logMsg("intel: descarga de %s falló (intento %d/%d): %v — reintento en %s",
+			name, attempt, intelFetchRetries, err, wait)
+		time.Sleep(wait)
+	}
+	return nil, lastErr
+}
+
+// intelFetchOnce hace UN intento. Devuelve también si el error es reintentable.
+func intelFetchOnce(client *http.Client, name string) (data []byte, err error, retriable bool) {
 	url := intelFeedBaseURL + "/" + name
 	resp, err := client.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, err, true // error de red/timeout → reintentable
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP %d para %s", resp.StatusCode, name)
+		// 5xx y 429 son transitorios; 4xx (p.ej. 404) no tiene sentido reintentarlo.
+		transient := resp.StatusCode >= 500 || resp.StatusCode == http.StatusTooManyRequests
+		return nil, fmt.Errorf("HTTP %d para %s", resp.StatusCode, name), transient
 	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, intelMaxFileBytes+1))
+	data, err = io.ReadAll(io.LimitReader(resp.Body, intelMaxFileBytes+1))
 	if err != nil {
-		return nil, err
+		return nil, err, true
 	}
 	if len(data) > intelMaxFileBytes {
-		return nil, fmt.Errorf("%s excede el tope de tamaño", name)
+		return nil, fmt.Errorf("%s excede el tope de tamaño", name), false
 	}
-	return data, nil
+	return data, nil, false
 }
 
 // ─── Aplicar un feed (desde bytes ya en mano: red o caché) ───
