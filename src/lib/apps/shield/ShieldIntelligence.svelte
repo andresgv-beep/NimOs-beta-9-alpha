@@ -25,6 +25,14 @@
     const d = new Date(s);
     return isNaN(d) ? '—' : d.toLocaleString('es-ES', { hour12: false });
   }
+
+  // Estado EFECTIVO: el bloqueo real necesita DOS cosas — que el admin active el
+  // enforcement Y que el feed venga con action=block (no observe-only). Si solo
+  // se da una, NO se bloquea. El badge debe reflejar eso, no solo el toggle.
+  $: enforce = $intel?.enforce_active ?? false;
+  $: observeOnly = $intel?.observe_only ?? false;
+  $: blocking = enforce && !observeOnly;          // bloqueo de verdad
+  $: enforceButObserve = enforce && observeOnly;  // toggle ON pero feed en observación
 </script>
 
 {#if !$intel}
@@ -53,12 +61,12 @@
       <div class="kpi-val mono">{$intel.prefixes.toLocaleString('es-ES')}</div>
       <div class="kpi-tag">en vigilancia</div>
     </div>
-    <div class="kpi" class:obs={!$intel.enforce_active}>
+    <div class="kpi" class:obs={!blocking}>
       <div class="kpi-lbl">Observadas</div>
       <div class="kpi-val mono">{$intel.observed_total.toLocaleString('es-ES')}</div>
       <div class="kpi-tag">habría bloqueado</div>
     </div>
-    <div class="kpi" class:active={$intel.enforce_active}>
+    <div class="kpi" class:active={blocking}>
       <div class="kpi-lbl">Bloqueadas</div>
       <div class="kpi-val mono">{$intel.blocked_total.toLocaleString('es-ES')}</div>
       <div class="kpi-tag">en duro</div>
@@ -66,16 +74,21 @@
   </div>
 
   <!-- Estado del modo -->
-  <div class="mode-box" class:enforcing={$intel.enforce_active}>
+  <div class="mode-box" class:enforcing={blocking} class:warn={enforceButObserve}>
     <div class="mode-head">
-      <span class="mode-led" class:on={$intel.enforce_active}></span>
+      <span class="mode-led" class:on={blocking} class:warn={enforceButObserve}></span>
       <span class="mode-title">
-        {$intel.enforce_active ? 'BLOQUEO ACTIVO' : 'MODO OBSERVACIÓN'}
+        {#if blocking}BLOQUEO ACTIVO{:else if enforceButObserve}ACTIVADO · FEED EN OBSERVACIÓN{:else}MODO OBSERVACIÓN{/if}
       </span>
     </div>
     <p class="mode-desc">
-      {#if $intel.enforce_active}
+      {#if blocking}
         El feed está bloqueando IPs maliciosas en duro. La whitelist siempre tiene prioridad.
+      {:else if enforceButObserve}
+        Has activado el bloqueo, pero el feed actual viene en modo observación
+        (<span class="mono">action=observe</span>), así que <b>no se bloquea nada todavía</b>.
+        Para bloquear de verdad, el feed debe publicarse con <span class="mono">action=block</span>
+        desde la fábrica.
       {:else}
         El feed solo observa: registra coincidencias sin bloquear. Revisa las "Observadas"
         arriba; si el impacto en tu tráfico es razonable, activa el bloqueo.
@@ -83,12 +96,12 @@
     </p>
     <button
       class="ibtn primary"
-      class:danger={$intel.enforce_active}
+      class:danger={enforce}
       disabled={busy}
-      on:click={() => action(() => intelSetEnforce(!$intel.enforce_active),
-                             $intel.enforce_active ? 'Bloqueo desactivado' : 'Bloqueo activado')}
+      on:click={() => action(() => intelSetEnforce(!enforce),
+                             enforce ? 'Bloqueo desactivado' : 'Bloqueo activado')}
     >
-      {$intel.enforce_active ? 'Volver a solo observar' : 'Activar bloqueo en duro'}
+      {enforce ? 'Volver a solo observar' : 'Activar bloqueo en duro'}
     </button>
   </div>
 
@@ -124,9 +137,12 @@
 
   .mode-box { background: var(--bg-card, #15151a); border: 1px solid var(--bd-2, #20202a); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
   .mode-box.enforcing { border-color: rgba(255,90,90,0.3); background: rgba(255,90,90,0.03); }
+  .mode-box.warn { border-color: rgba(255,184,77,0.35); background: rgba(255,184,77,0.04); }
   .mode-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .mode-led { width: 8px; height: 8px; border-radius: 2px; background: var(--st-info, #4db8ff); box-shadow: 0 0 6px rgba(77,184,255,0.5); }
   .mode-led.on { background: var(--st-crit, #ff5a5a); box-shadow: 0 0 6px rgba(255,90,90,0.5); }
+  .mode-led.warn { background: var(--st-warn, #ffb84d); box-shadow: 0 0 6px rgba(255,184,77,0.5); }
+  .mode-desc b { color: var(--st-warn, #ffb84d); }
   .mode-title { font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; color: var(--fg, #f0f0f0); }
   .mode-desc { font-size: 11.5px; color: var(--fg-3, #9c9ca4); line-height: 1.5; margin: 0 0 14px; max-width: 600px; }
 
