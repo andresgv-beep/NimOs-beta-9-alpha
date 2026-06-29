@@ -29,8 +29,8 @@ func TestClientIP_XFFSpoofRejected(t *testing.T) {
 			want:   "203.0.113.7",          // NimOS debe tomar el último
 		},
 		{
-			name:   "XFF de un solo elemento (lo pone Caddy)",
-			remote: "::1:54321",
+			name:   "loopback IPv6 con corchetes (formato real): confía en XFF",
+			remote: "[::1]:54321", // forma REAL de RemoteAddr IPv6 (con corchetes)
 			xff:    "198.51.100.9",
 			want:   "198.51.100.9",
 		},
@@ -39,6 +39,12 @@ func TestClientIP_XFFSpoofRejected(t *testing.T) {
 			remote: "203.0.113.200:443",
 			xff:    "8.8.8.8", // intento de spoof directo, sin pasar por Caddy
 			want:   "203.0.113.200",
+		},
+		{
+			name:   "cliente IPv6 directo (no loopback): IP sin corchetes",
+			remote: "[2001:db8::5]:443",
+			xff:    "8.8.8.8",     // no debe confiarse (no es loopback)
+			want:   "2001:db8::5", // y la IP sale sin corchetes
 		},
 	}
 	for _, c := range cases {

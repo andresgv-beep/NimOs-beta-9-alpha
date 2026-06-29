@@ -164,10 +164,12 @@ func requireAppAccess(w http.ResponseWriter, r *http.Request, appId string) *DBS
 
 // Get client IP — only trusts proxy headers from localhost (Caddy)
 func clientIP(r *http.Request) string {
-	// RemoteAddr is host:port
+	// RemoteAddr is host:port. net.SplitHostPort quita el puerto Y los corchetes
+	// del IPv6 ("[::1]:443" -> "::1"); un LastIndex(":") dejaba "[::1]" y rompía
+	// el match de loopback y el formato de la IP.
 	addr := r.RemoteAddr
-	if idx := strings.LastIndex(addr, ":"); idx != -1 {
-		addr = addr[:idx]
+	if host, _, err := net.SplitHostPort(addr); err == nil {
+		addr = host
 	}
 	// SECURITY: Only trust X-Forwarded-For/X-Real-IP if request comes from
 	// local proxy (Caddy on 127.0.0.1). External clients can spoof these headers.
