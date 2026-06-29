@@ -22,12 +22,13 @@ const intelMaxFileBytes = 25 * 1024 * 1024 // 25 MB
 
 // IntelState es el estado vivo del feed en memoria.
 type IntelState struct {
-	trie        *IntelTrie
-	feedVersion int
-	generatedAt string
-	loadedAt    time.Time
-	source      string // "embedded" | "cache" | "network"
-	observeOnly bool   // true mientras el feed esté en modo observación
+	trie          *IntelTrie
+	feedVersion   int
+	schemaVersion int
+	generatedAt   string
+	loadedAt      time.Time
+	source        string // "embedded" | "cache" | "network"
+	observeOnly   bool   // true mientras el feed esté en modo observación
 }
 
 // intelActive es el trie/estado en uso por el hot path. Arranca vacío.
@@ -167,11 +168,16 @@ func applyFeed(manifestBytes, sigBytes []byte, fileLoader func(name string) ([]b
 	if err != nil {
 		return 0, err
 	}
-	// 3. anti-replay: no aplicar un feed más viejo que el vigente
+	// 3. anti-replay: no aplicar un feed más viejo que el vigente. Usamos como
+	// suelo el MÁXIMO entre la versión en DB y la cargada en memoria (#3): así
+	// hay anti-replay aunque db==nil y aunque la DB vaya por detrás de memoria.
 	if enforceNewer {
-		cur := dbIntelCurrentVersion()
-		if m.FeedVersion < cur {
-			return 0, fmt.Errorf("feed v%d es más viejo que el vigente v%d — ignorado (anti-replay)", m.FeedVersion, cur)
+		floor := dbIntelCurrentVersion()
+		if intelActive != nil && intelActive.feedVersion > floor {
+			floor = intelActive.feedVersion
+		}
+		if m.FeedVersion < floor {
+			return 0, fmt.Errorf("feed v%d es más viejo que el vigente v%d — ignorado (anti-replay)", m.FeedVersion, floor)
 		}
 	}
 	// 4. cargar ficheros y validar hashes → construir trie
@@ -199,6 +205,7 @@ func applyFeed(manifestBytes, sigBytes []byte, fileLoader func(name string) ([]b
 	// 6. SWAP atómico: a partir de aquí el hot path usa el trie nuevo
 	intelActive.trie.swapFrom(trie)
 	intelActive.feedVersion = m.FeedVersion
+	intelActive.schemaVersion = m.SchemaVersion
 	intelActive.generatedAt = m.GeneratedAt
 	intelActive.loadedAt = time.Now()
 	intelActive.source = source

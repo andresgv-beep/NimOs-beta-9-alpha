@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 // helper: carga un trie con una IP conocida y la deja activa con una acción.
@@ -99,5 +100,38 @@ func TestIntelC_UnlistedIgnored(t *testing.T) {
 	}
 	if intelObservedTotal.Load() != before {
 		t.Error("una IP no listada no debe contarse")
+	}
+}
+
+// #4: el rate-limit no debe emitir dos eventos seguidos para la misma IP,
+// pero el contador SÍ debe subir siempre.
+func TestIntelC_ObserveRateLimit(t *testing.T) {
+	defer setupIntelTest(t)()
+	loadIntelWith("203.0.113.77", "observe", true)
+
+	// limpiar el mapa de rate-limit
+	intelObserveSeenMu.Lock()
+	intelObserveSeen = map[string]time.Time{}
+	intelObserveSeenMu.Unlock()
+
+	before := intelObservedTotal.Load()
+	// primera vez: debe emitir
+	if !intelShouldEmitObserve("203.0.113.77") {
+		t.Fatal("primera observación debería emitir evento")
+	}
+	// inmediatamente después: NO debe emitir (cooldown)
+	if intelShouldEmitObserve("203.0.113.77") {
+		t.Error("dentro del cooldown no debería emitir otro evento")
+	}
+	// otra IP distinta: sí emite
+	if !intelShouldEmitObserve("203.0.113.78") {
+		t.Error("una IP distinta debería emitir")
+	}
+
+	// el contador sube en cada shieldIntelCheck aunque no emita evento
+	shieldIntelCheck(intelReq("203.0.113.77"))
+	shieldIntelCheck(intelReq("203.0.113.77"))
+	if intelObservedTotal.Load() < before+2 {
+		t.Error("el contador debe subir en cada match, con o sin evento")
 	}
 }

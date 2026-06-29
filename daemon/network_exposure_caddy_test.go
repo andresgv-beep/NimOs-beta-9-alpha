@@ -194,7 +194,7 @@ func TestCollectTLSDomains(t *testing.T) {
 	apps := []*NetworkExposedApp{
 		{AppID: "a", Subdomain: "next", UpstreamHost: "h", UpstreamPort: 1, Enabled: true},
 		{AppID: "b", Path: "/gitea", UpstreamHost: "h", UpstreamPort: 2, Enabled: true},
-		{AppID: "c", Path: "/otro", UpstreamHost: "h", UpstreamPort: 3, Enabled: true},  // dedupe → base
+		{AppID: "c", Path: "/otro", UpstreamHost: "h", UpstreamPort: 3, Enabled: true},     // dedupe → base
 		{AppID: "d", Subdomain: "off", UpstreamHost: "h", UpstreamPort: 4, Enabled: false}, // omitida
 	}
 	got := collectTLSDomains(cfg, apps)
@@ -372,13 +372,13 @@ func TestBuildHTTPSRedirectRoute(t *testing.T) {
 	if h.Handler != "static_response" || h.StatusCode != 308 {
 		t.Errorf("handle = %+v, want static_response 308", h)
 	}
-	if loc := h.Headers["Location"][0]; loc != "https://{http.request.host}{http.request.uri}" {
+	if loc := h.Headers.(map[string][]string)["Location"][0]; loc != "https://{http.request.host}{http.request.uri}" {
 		t.Errorf("location = %q (sin puerto custom no debe llevar puerto)", loc)
 	}
 
 	// Puerto custom: Location con puerto.
 	r = buildHTTPSRedirectRoute(domains, 8443)
-	if loc := r.Handle[0].Headers["Location"][0]; loc != "https://{http.request.host}:8443{http.request.uri}" {
+	if loc := r.Handle[0].Headers.(map[string][]string)["Location"][0]; loc != "https://{http.request.host}:8443{http.request.uri}" {
 		t.Errorf("location custom = %q", loc)
 	}
 }

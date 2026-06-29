@@ -87,6 +87,13 @@ func parseManifest(manifestBytes []byte) (IntelManifest, error) {
 	if m.SchemaVersion < 1 {
 		return m, fmt.Errorf("schema_version inválida: %d", m.SchemaVersion)
 	}
+	// Forward-compat (#2): un feed con schema mayor del que entendemos se acepta
+	// parcialmente — cargamos los tipos conocidos (blocklist_ip) e ignoramos los
+	// nuevos. Avisamos para que el admin sepa que su NimOS va por detrás del feed.
+	if m.SchemaVersion > intelSupportedSchema {
+		logMsg("intel: AVISO feed schema_version=%d > soportado=%d — se cargará lo conocido; conviene actualizar NimOS",
+			m.SchemaVersion, intelSupportedSchema)
+	}
 	if len(m.Files) == 0 {
 		return m, fmt.Errorf("manifest sin ficheros")
 	}

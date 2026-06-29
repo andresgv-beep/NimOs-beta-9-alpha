@@ -172,12 +172,17 @@ func clientIP(r *http.Request) string {
 	// SECURITY: Only trust X-Forwarded-For/X-Real-IP if request comes from
 	// local proxy (Caddy on 127.0.0.1). External clients can spoof these headers.
 	if addr == "127.0.0.1" || addr == "::1" || addr == "@" {
+		// Preferimos X-Real-IP: Caddy lo fija con la IP REAL del peer
+		// ({http.request.client_ip}), que el cliente NO puede falsificar.
+		if xri := strings.TrimSpace(r.Header.Get("X-Real-IP")); xri != "" {
+			return xri
+		}
+		// Fallback a X-Forwarded-For: Caddy AÑADE la IP real al FINAL de lo
+		// que mande el cliente, así que el elemento de confianza es el ÚLTIMO
+		// (rightmost), no el primero (que el cliente controla y es spoofeable).
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 			parts := strings.Split(xff, ",")
-			return strings.TrimSpace(parts[0])
-		}
-		if xri := r.Header.Get("X-Real-IP"); xri != "" {
-			return xri
+			return strings.TrimSpace(parts[len(parts)-1])
 		}
 	}
 	return addr

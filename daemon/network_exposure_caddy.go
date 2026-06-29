@@ -47,10 +47,14 @@ type caddyMatch struct {
 }
 
 type caddyHandle struct {
-	Handler    string              `json:"handler"`
-	Upstreams  []caddyUpstream     `json:"upstreams,omitempty"`
-	StatusCode int                 `json:"status_code,omitempty"` // static_response
-	Headers    map[string][]string `json:"headers,omitempty"`     // static_response
+	Handler    string          `json:"handler"`
+	Upstreams  []caddyUpstream `json:"upstreams,omitempty"`
+	StatusCode int             `json:"status_code,omitempty"` // static_response
+	// Headers sirve para dos handlers distintos (mutuamente excluyentes):
+	//  · static_response → map[string][]string (ej. {"Location": [...]})
+	//  · reverse_proxy   → {"request":{"set":{"X-Real-IP":["{http.request.client_ip}"]}}}
+	// Por eso es `any`: cada handler pone su forma.
+	Headers any `json:"headers,omitempty"`
 }
 
 type caddyUpstream struct {
@@ -92,6 +96,17 @@ func buildAppRoutes(cfg NetworkExposureConfig, apps []*NetworkExposedApp) []cadd
 				Upstreams: []caddyUpstream{{
 					Dial: fmt.Sprintf("%s:%d", a.UpstreamHost, a.UpstreamPort),
 				}},
+				// SECURITY (#1): fijamos X-Real-IP con la IP REAL del peer
+				// ({http.request.client_ip}, que Caddy calcula y el cliente NO
+				// controla). Sin esto, clientIP() en el daemon confiaría en un
+				// X-Forwarded-For spoofeable. clientIP() prefiere X-Real-IP.
+				Headers: map[string]any{
+					"request": map[string]any{
+						"set": map[string][]string{
+							"X-Real-IP": {"{http.request.client_ip}"},
+						},
+					},
+				},
 			}},
 		})
 	}
@@ -296,10 +311,12 @@ const caddyTLSAutomatePath = "/config/apps/tls/certificates/automate"
 // path concreto del array.
 //
 // IMPORTANTE: el método es PATCH, no PUT. En la API de Caddy:
-//   · PATCH → reemplaza un objeto/array existente (lo que queremos).
-//   · PUT   → INSERTA en el array (daría 409 "key already exists" sobre un
-//             array ya presente).
-//   · POST  → set/replace, pero sobre arrays "appendea".
+//
+//	· PATCH → reemplaza un objeto/array existente (lo que queremos).
+//	· PUT   → INSERTA en el array (daría 409 "key already exists" sobre un
+//	          array ya presente).
+//	· POST  → set/replace, pero sobre arrays "appendea".
+//
 // Como el array "routes" ya existe en el base (vacío), PATCH lo reemplaza
 // limpiamente con el conjunto regenerado.
 func (c *CaddyAdminClient) SyncAppRoutes(ctx context.Context, routes []caddyRoute) error {
@@ -310,10 +327,12 @@ func (c *CaddyAdminClient) SyncAppRoutes(ctx context.Context, routes []caddyRout
 }
 
 // SyncListen sincroniza los puertos de escucha en TRES pasos:
-//   1-2. http_port / https_port globales (POST: create-or-replace, por si
-//        el base no los declara) — sin esto el automatic HTTPS no sabe en
-//        qué listener terminar TLS y el puerto custom serviría HTTP plano.
-//   3.   listen del server (PATCH: el array existe en el base).
+//
+//	1-2. http_port / https_port globales (POST: create-or-replace, por si
+//	     el base no los declara) — sin esto el automatic HTTPS no sabe en
+//	     qué listener terminar TLS y el puerto custom serviría HTTP plano.
+//	3.   listen del server (PATCH: el array existe en el base).
+//
 // Caddy rebindea los sockets en caliente al aplicar cada cambio.
 func (c *CaddyAdminClient) SyncListen(ctx context.Context, httpPort, httpsPort int) error {
 	if err := c.postJSON(ctx, caddyHTTPPortPath, httpPort, "caddy http_port"); err != nil {
@@ -329,8 +348,8 @@ func (c *CaddyAdminClient) SyncListen(ctx context.Context, httpPort, httpsPort i
 // SyncTLS sincroniza la gestión de certs con Caddy en dos pasos quirúrgicos,
 // en este orden (primero el CÓMO, luego el QUÉ, para que cuando Caddy
 // empiece a gestionar un dominio ya tenga la política DNS-01 lista):
-//   1. PATCH /id/nimos_tls → política (issuer ACME + DNS-01 DuckDNS + token).
-//   2. PATCH .../certificates/automate → dominios a gestionar.
+//  1. PATCH /id/nimos_tls → política (issuer ACME + DNS-01 DuckDNS + token).
+//  2. PATCH .../certificates/automate → dominios a gestionar.
 func (c *CaddyAdminClient) SyncTLS(ctx context.Context, domains []string, policy caddyTLSPolicy) error {
 	if err := c.patchJSON(ctx, caddyTLSPolicyPath, policy, "caddy tls policy"); err != nil {
 		return err
@@ -402,4 +421,3 @@ func (c *CaddyAdminClient) Ping(ctx context.Context) error {
 	}
 	return nil
 }
-
