@@ -10,28 +10,43 @@
     if (!confirm(`¿Olvidar la reputación de ${ip}? Volverá a trato estricto (desconocida).`)) return;
     await forgetReputation(ip);
   }
+
+  // Score de comportamiento (0-100): color por umbral, mismo lenguaje que el resto.
+  // ≥70 confianza (verde), 30-69 vigilar (ámbar), <30 candidata a bloqueo (rojo).
+  function scoreColor(s) {
+    if (s == null) return 'var(--fg-4, #7a7a82)';
+    if (s < 30) return 'var(--st-crit, #f87171)';
+    if (s < 70) return 'var(--st-warn, #ffc857)';
+    return 'var(--nim-green, #00ff9f)';
+  }
 </script>
 
 <div class="rep-intro ns-msg">
-  NimShield aprende qué IPs entran con éxito habitualmente y les da más margen ante un despiste.
-  Una IP conocida que falla en ráfaga pierde el margen al instante (desconfianza).
+  NimShield puntúa el <b>comportamiento</b> de cada IP (0-100): una que entra con éxito y se porta bien
+  mantiene la confianza; una que combina honeypots, scanning o inyección hunde su score. En
+  <b>observación</b>: registra a quién bloquearía sin bloquear (la whitelist siempre manda).
 </div>
 <div class="block-table">
   <div class="block-head rep-head">
     <span>IP origen</span>
     <span>Nivel</span>
+    <span>Comportamiento</span>
     <span>Éxitos</span>
     <span>Racha</span>
     <span>Último acceso</span>
     <span style="text-align:right">Acción</span>
   </div>
   {#if reputation.length === 0}
-    <div class="ns-msg">Aún no hay IPs con historial. Entra con éxito y aparecerás aquí.</div>
+    <div class="ns-msg">Aún no hay IPs con historial. Aparecerán al entrar con éxito o al ser detectadas.</div>
   {:else}
     {#each reputation as rp (rp.ip)}
       <div class="block-row rep-row">
         <span class="block-ip">{rp.ip}</span>
         <span><span class="lvl-pill {repLevelMeta[rp.level]?.cls}">{repLevelMeta[rp.level]?.label || rp.level}</span></span>
+        <span class="rep-score">
+          <span class="score-num" style="color:{scoreColor(rp.score)}">{rp.score ?? 100}</span>
+          <span class="score-bar"><span class="score-fill" style="width:{rp.score ?? 100}%; background:{scoreColor(rp.score)}"></span></span>
+        </span>
         <span class="rep-num">{rp.successCount}</span>
         <span class="rep-num" class:rep-streak={rp.failStreak >= 3}>{rp.failStreak}</span>
         <span class="block-created">{rp.lastSuccess ? fmtAgo(rp.lastSuccess, now, true) : '—'}</span>
@@ -60,9 +75,16 @@
 
   /* Reputación: misma rejilla que Bloqueos, columnas propias */
   .rep-intro { margin: 0 0 14px; }
-  .rep-head, .rep-row { grid-template-columns: 130px 110px 70px 60px 1fr 70px; }
+  .rep-intro b { color: var(--nim-green, #00ff9f); }
+  .rep-head, .rep-row { grid-template-columns: 120px 100px 96px 64px 56px 1fr 64px; }
   .rep-num { font-family: var(--font-mono); font-size: 12px; color: var(--fg-3, #b0b0b8); font-variant-numeric: tabular-nums; }
   .rep-streak { color: var(--st-warn, #ffc857); font-weight: 600; }
+
+  /* Score de comportamiento: número coloreado + barra de relleno */
+  .rep-score { display: flex; flex-direction: column; gap: 4px; }
+  .score-num { font-family: var(--font-mono); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; }
+  .score-bar { height: 3px; border-radius: 2px; background: var(--bd-2, #20202a); overflow: hidden; }
+  .score-fill { display: block; height: 100%; border-radius: 2px; transition: width 0.3s ease; }
   .lvl-pill { display: inline-block; font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--bd-3, #2a2a32); color: var(--fg-4, #7a7a82); letter-spacing: 0.3px; }
   .lvl-trusted { border-color: rgba(0,255,159,0.4); color: var(--nim-green, #00ff9f); background: rgba(0,255,159,0.06); }
   .lvl-known { border-color: rgba(122,158,177,0.5); color: #9bb8c7; background: rgba(122,158,177,0.08); }
