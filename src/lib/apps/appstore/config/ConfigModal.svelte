@@ -133,7 +133,7 @@
   }
   .cfg-modal {
     width: 100%; max-width: 440px;
-    background: var(--bg-window); border-radius: 14px; overflow: hidden;
+    background: var(--bg-window); border-radius: 6px; overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
     max-height: 90vh; display: flex; flex-direction: column;
   }

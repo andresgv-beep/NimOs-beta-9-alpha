@@ -172,7 +172,7 @@
     max-width: calc(100% - 40px);
     background: var(--panel-elev);
     border: 1px solid var(--line);
-    border-radius: var(--radius-lg, 12px);
+    border-radius: 6px;
     overflow: hidden;
     box-shadow:
       0 20px 60px rgba(0, 0, 0, 0.5),

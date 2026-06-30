@@ -273,7 +273,7 @@
     display: flex;
     flex-direction: column;
     background: var(--bg-window, #16161a);
-    border-radius: 14px;
+    border-radius: 6px;
     overflow: hidden;
     /* Ventana profesional: sólida + filo definido + elevación.
        Solo sombras (coste 0 en GPU). El contorno oscuro (0 0 0 1px negro)

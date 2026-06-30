@@ -277,7 +277,7 @@
     width: 560px;
     background: var(--bg-window);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 6px;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
     display: flex;
     flex-direction: column;

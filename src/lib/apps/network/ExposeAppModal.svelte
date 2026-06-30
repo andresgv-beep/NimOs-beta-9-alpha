@@ -272,7 +272,7 @@
     z-index: 1000; padding: 20px;
   }
   .ex-modal {
-    background: var(--bg-window, #16161a); border-radius: 14px;
+    background: var(--bg-window, #16161a); border-radius: 6px;
     width: 100%; max-width: 460px; overflow: hidden;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
     position: relative;
