@@ -221,7 +221,7 @@
 </div>
 
 <style>
-  .cp-portal { display: flex; flex-direction: column; gap: 14px; max-width: 640px; }
+  .cp-portal { display: flex; flex-direction: column; gap: 14px; }
 
   .cpp-empty {
     padding: 24px;

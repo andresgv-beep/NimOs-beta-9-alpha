@@ -134,7 +134,7 @@
 </div>
 
 <style>
-  .cp-perms { display: flex; flex-direction: column; gap: 16px; max-width: 860px; }
+  .cp-perms { display: flex; flex-direction: column; gap: 16px; }
 
   .cpp-stats {
     display: grid;

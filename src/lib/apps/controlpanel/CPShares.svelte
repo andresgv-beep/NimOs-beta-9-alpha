@@ -254,7 +254,7 @@
 </div>
 
 <style>
-  .cp-shares { display: flex; flex-direction: column; gap: 16px; max-width: 820px; }
+  .cp-shares { display: flex; flex-direction: column; gap: 16px; }
 
   .cps-stats {
     display: grid;

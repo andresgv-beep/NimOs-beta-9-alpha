@@ -93,7 +93,7 @@
 </div>
 
 <style>
-  .cp-updates { display: flex; flex-direction: column; gap: 16px; max-width: 680px; }
+  .cp-updates { display: flex; flex-direction: column; gap: 16px; }
 
   .cpu-stats {
     display: grid;

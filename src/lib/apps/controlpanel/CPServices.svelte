@@ -76,7 +76,7 @@
 </div>
 
 <style>
-  .cp-services { display: flex; flex-direction: column; gap: 18px; max-width: 860px; }
+  .cp-services { display: flex; flex-direction: column; gap: 18px; }
 
   .svc-tabs {
     display: flex;

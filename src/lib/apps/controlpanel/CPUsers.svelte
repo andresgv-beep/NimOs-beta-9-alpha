@@ -190,7 +190,7 @@
 </div>
 
 <style>
-  .cp-users { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+  .cp-users { display: flex; flex-direction: column; gap: 16px; }
 
   .cpu-stats {
     display: grid;
