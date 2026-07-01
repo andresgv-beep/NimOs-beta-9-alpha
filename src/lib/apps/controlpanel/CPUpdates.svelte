@@ -5,10 +5,9 @@
    * Versión del sistema y aplicación de updates. Migrado desde Settings
    * (sección 'updates') al lenguaje visual v3.
    *
-   * API:
-   *   GET  /api/updates/info   → { currentVersion, latestVersion, updateAvailable }
-   *   POST /api/updates/check  → mismo shape (refresca)
-   *   POST /api/updates/apply  → inicia la actualización (puede reiniciar)
+   * API (daemon):
+   *   GET  /api/system/update/check  → { currentVersion, latestVersion, updateAvailable }
+   *   POST /api/system/update/apply  → inicia la actualización (puede reiniciar)
    */
   import { onMount } from 'svelte';
   import { hdrs } from '$lib/stores/auth.js';
@@ -27,7 +26,7 @@
 
   async function loadInfo() {
     try {
-      const r = await fetch('/api/updates/info', { headers: hdrs() });
+      const r = await fetch('/api/system/update/check', { headers: hdrs() });
       if (r.ok) updateData = await r.json();
     } catch {}
     loading = false;
@@ -38,7 +37,7 @@
     checking = true;
     msg = '';
     try {
-      const r = await fetch('/api/updates/check', { method: 'POST', headers: hdrs() });
+      const r = await fetch('/api/system/update/check', { headers: hdrs() });
       if (r.ok) updateData = await r.json();
       else { msg = 'Error al comprobar'; msgError = true; }
     } catch { msg = 'Error de red'; msgError = true; }
@@ -51,7 +50,7 @@
     applying = true;
     msg = '';
     try {
-      const r = await fetch('/api/updates/apply', { method: 'POST', headers: hdrs() });
+      const r = await fetch('/api/system/update/apply', { method: 'POST', headers: hdrs() });
       if (r.ok) { msg = 'Actualización en curso…'; msgError = false; }
       else { msg = 'Error al actualizar'; msgError = true; }
     } catch { msg = 'Error de red'; msgError = true; }

@@ -315,14 +315,14 @@ func handleUpdateApply(w http.ResponseWriter) {
 		logMsg("update.sh not found, downloading from GitHub...")
 		// SECURITY: Download update script safely (no shell interpolation)
 		_, ok := runSafe("curl", "-fsSL",
-			"https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9/main/scripts/update.sh",
+			"https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9-alpha/main/scripts/update.sh",
 			"-o", "/opt/nimos/scripts/update.sh")
 		if !ok {
 			// curl returns "" on success sometimes
 		}
 		// Download checksum file for verification
 		checksumOut, csOk := runSafe("curl", "-fsSL",
-			"https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9/main/scripts/update.sh.sha256")
+			"https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9-alpha/main/scripts/update.sh.sha256")
 		if csOk && checksumOut != "" {
 			// Verify checksum: expected format "sha256hash  filename" or just hash
 			expectedHash := strings.Fields(checksumOut)[0]
