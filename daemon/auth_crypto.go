@@ -29,6 +29,21 @@ func hashPassword(password string) (string, error) {
 	return saltHex + ":" + hex.EncodeToString(dk), nil
 }
 
+// dummyPasswordHash es un hash scrypt VÁLIDO, precomputado una vez al arrancar.
+// Se usa cuando el usuario NO existe para correr el MISMO scrypt.Key (caro) que
+// un login real y así equalizar el timing (anti-enumeración de usuarios).
+// Antes se pasaba un dummy con formato bcrypt ("$2a$…") que verifyPassword
+// rechazaba al instante por no tener ":" → retorno rápido → oráculo de timing.
+var dummyPasswordHash = func() string {
+	h, err := hashPassword("nimos-timing-equalizer-dummy")
+	if err != nil {
+		// Improbable (solo si rand/scrypt fallan). Formato salt:hash válido de
+		// respaldo para no romper el flujo; el coste de scrypt igual se paga arriba.
+		return "0000:00"
+	}
+	return h
+}()
+
 func verifyPassword(password, stored string) bool {
 	parts := strings.SplitN(stored, ":", 2)
 	if len(parts) != 2 {

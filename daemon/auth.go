@@ -258,8 +258,9 @@ func authLogin(w http.ResponseWriter, r *http.Request) {
 	// This prevents timing attacks that reveal valid usernames
 	storedPwd, err := dbUsersVerifyPassword(username)
 	if err != nil {
-		// User doesn't exist — run a dummy bcrypt to equalize timing
-		verifyPassword(password, "$2a$10$0000000000000000000000uDummyHashToPreventTimingAttack0000")
+		// User doesn't exist — run the SAME scrypt as a real verify (dummy hash
+		// scrypt VÁLIDO) para equalizar el timing y no filtrar usuarios válidos.
+		verifyPassword(password, dummyPasswordHash)
 		recordFailedAttempt("ip:" + ip)
 		recordFailedAttempt("user:" + username)
 		ShieldAuthFail(ip, username, r.UserAgent())

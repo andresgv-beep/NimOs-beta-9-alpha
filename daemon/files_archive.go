@@ -290,8 +290,19 @@ func filesUnzip(w http.ResponseWriter, r *http.Request, session *DBSession) {
 		return
 	}
 
+	// Presupuesto anti zip-bomb: tope de entradas, por-fichero y total expandido.
+	const (
+		unzipMaxEntries    = 20000
+		unzipMaxFileBytes  = 2 << 30 // 2 GiB por fichero descomprimido
+		unzipMaxTotalBytes = 5 << 30 // 5 GiB total expandido en la extracción
+	)
 	var count, skipped int
+	var totalBytes int64
 	for _, f := range zr.File {
+		if count >= unzipMaxEntries {
+			logMsg("unzip: alcanzado el tope de %d entradas; resto omitido", unzipMaxEntries)
+			break
+		}
 		// Defensa Zip Slip nivel 1: rechazar nombres con "..".
 		// (Nivel 2: os.Root ancla la escritura al share igualmente.)
 		entryRel, rerr := relWithinShare(joinRel(destRel, f.Name))
@@ -324,13 +335,22 @@ func filesUnzip(w http.ResponseWriter, r *http.Request, session *DBSession) {
 			skipped++
 			continue
 		}
-		_, copyErr := io.Copy(dst, rc)
+		// Copia ACOTADA: nunca más de unzipMaxFileBytes por fichero (pilla un
+		// fichero que se expande enorme aunque el zip venga pequeño = zip bomb).
+		n, copyErr := io.Copy(dst, io.LimitReader(rc, unzipMaxFileBytes+1))
 		dst.Close()
 		rc.Close()
-		if copyErr != nil {
+		if copyErr != nil || n > unzipMaxFileBytes {
 			root.Remove(entryRel)
 			skipped++
 			continue
+		}
+		totalBytes += n
+		if totalBytes > unzipMaxTotalBytes {
+			root.Remove(entryRel)
+			logMsg("unzip: presupuesto total de %d bytes excedido; abortando extracción", int64(unzipMaxTotalBytes))
+			skipped++
+			break
 		}
 		count++
 	}
