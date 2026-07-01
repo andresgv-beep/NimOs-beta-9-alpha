@@ -529,26 +529,19 @@ func startHTTPServer() {
 	// ── Static file serving (frontend) — must be last ──
 	mux.HandleFunc("/", serveStatic)
 
-	// ── Bind del daemon: LOOPBACK por defecto (SHIELD) ──
-	// El daemon NO debe ser alcanzable desde fuera del host: Caddy (en
-	// loopback) es la única puerta, y por delante vive NimShield. Bindear a
-	// 0.0.0.0 permitía saltarse TODA la defensa apuntando directo a :5000
-	// desde LAN/WAN, y por HTTP plano (credenciales en claro). Brecha
-	// verificada en producción. El socket Unix sigue para admin local, y un
-	// túnel SSH (ssh -L 5000:127.0.0.1:5000) es la puerta de rescate.
-	// NIMOS_HTTP_BIND permite override para topologías con Caddy externo.
-	// ── Bind del daemon: LAN por defecto ──
-	// Un NAS DEBE ser accesible en su propia red local — es la base de todo,
-	// incluso para poder configurar la exposición externa. Por eso el default
-	// es 0.0.0.0 (escucha en la LAN), como cualquier NAS (Synology, QNAP,
-	// TrueNAS). La IP local es privada (RFC1918) y NO es alcanzable desde
-	// internet por diseño de la red: el aislamiento del exterior lo dan el
-	// router (sin port-forward del :5000) y el firewall, NO cegar el bind.
+	// ── Bind del daemon: LAN por defecto (0.0.0.0) ──
+	// Decisión CONSCIENTE: un NAS debe ser accesible en su propia red local
+	// (gestionarlo, configurar la exposición externa), como cualquier NAS
+	// comercial (Synology/QNAP/TrueNAS). El aislamiento del EXTERIOR lo dan el
+	// router (sin port-forward del :5000) y el firewall, NO cegar el bind; para
+	// exponer a internet de forma segura está Caddy + NimShield (única puerta,
+	// con TLS). NimShield (rate-limit, honeypots, reputación) SÍ corre también
+	// en el acceso directo a :5000, porque el middleware vive en el daemon.
 	//
-	// Para exponer a internet de forma segura está Caddy + NimShield (única
-	// puerta, TLS). NIMOS_HTTP_BIND=127.0.0.1 queda como OPCIÓN para quien
-	// quiera forzar que solo Caddy (loopback) hable con el daemon — pero
-	// nunca como default, porque rompería el acceso local del propio NAS.
+	// TRADEOFF: el acceso DIRECTO a :5000 por LAN va en HTTP PLANO (sin el TLS de
+	// Caddy) — aceptable en una LAN de confianza, no para exponer a internet.
+	// NIMOS_HTTP_BIND=127.0.0.1 lo restringe a solo-loopback (que solo Caddy
+	// hable con el daemon); nunca como default porque rompería el acceso local.
 	bindAddr := os.Getenv("NIMOS_HTTP_BIND")
 	if bindAddr == "" {
 		bindAddr = "0.0.0.0"
@@ -561,7 +554,11 @@ func startHTTPServer() {
 	}
 
 	go func() {
-		logMsg("HTTP server listening on %s:%d", bindAddr, httpPort)
+		if bindAddr == "0.0.0.0" {
+			logMsg("HTTP server listening on 0.0.0.0:%d — accesible por LAN (acceso directo = HTTP plano; para solo-loopback: NIMOS_HTTP_BIND=127.0.0.1)", httpPort)
+		} else {
+			logMsg("HTTP server listening on %s:%d", bindAddr, httpPort)
+		}
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logMsg("HTTP server error: %v", err)
 		}
