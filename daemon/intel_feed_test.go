@@ -13,7 +13,7 @@ func setupIntelTest(t *testing.T) func() {
 	db = c.db
 	dbIntelInit()
 	// resetea el estado activo entre tests
-	intelActive = &IntelState{trie: newIntelTrie(), source: "none"}
+	intelActive.Store(&IntelState{trie: newIntelTrie(), source: "none"})
 	return func() {
 		db = prevDB
 		dbCleanup()
@@ -48,10 +48,10 @@ func TestIntelB_ApplyRealFeed(t *testing.T) {
 	if v != 1 {
 		t.Errorf("feed_version=%d, want 1", v)
 	}
-	if intelActive.trie.size() == 0 {
+	if intelActive.Load().trie.size() == 0 {
 		t.Error("trie vacío tras aplicar")
 	}
-	if !intelActive.observeOnly {
+	if !intelActive.Load().observeOnly {
 		t.Error("el feed real es observe → observeOnly debería ser true")
 	}
 }
@@ -123,11 +123,11 @@ func TestIntelB_TamperedRejected(t *testing.T) {
 	copy(bad, man)
 	bad[len(bad)/2] ^= 0xFF
 
-	sizeBefore := intelActive.trie.size()
+	sizeBefore := intelActive.Load().trie.size()
 	if _, err := applyFeed(bad, sig, loader, "network", false); err == nil {
 		t.Fatal("manifest manipulado debería rechazarse")
 	}
-	if intelActive.trie.size() != sizeBefore {
+	if intelActive.Load().trie.size() != sizeBefore {
 		t.Error("el trie vigente NO debe cambiar si el feed nuevo es rechazado")
 	}
 }

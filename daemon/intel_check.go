@@ -70,8 +70,12 @@ func intelShouldEmitObserve(ip string) bool {
 // Se llama desde shieldMiddleware, después del check de IP ya bloqueada y antes
 // de los honeypots.
 func shieldIntelCheck(r *http.Request) (block bool) {
+	// Snapshot atómico del estado del feed: toda la petición se decide con
+	// una vista CONSISTENTE (trie + observeOnly + feedVersion del mismo
+	// feed), aunque un refresco publique uno nuevo a mitad.
+	st := intelActive.Load()
 	// feed sin cargar → nada que hacer
-	if intelActive == nil || intelActive.trie.size() == 0 {
+	if st.trie.size() == 0 {
 		return false
 	}
 	ip := clientIP(r)
@@ -83,7 +87,7 @@ func shieldIntelCheck(r *http.Request) (block bool) {
 		return false
 	}
 
-	m := intelActive.trie.lookup(addr)
+	m := st.trie.lookup(addr)
 	if !m.Hit {
 		return false
 	}
@@ -91,7 +95,7 @@ func shieldIntelCheck(r *http.Request) (block bool) {
 	// Decisión: ¿bloqueamos de verdad o solo observamos?
 	//   · el feed debe traer action="block" (no "observe")
 	//   · Y el admin debe haber activado el enforcement (intelEnforce)
-	enforce := m.Action == "block" && intelEnforce.Load() && !intelActive.observeOnly
+	enforce := m.Action == "block" && intelEnforce.Load() && !st.observeOnly
 
 	if enforce {
 		intelBlockedTotal.Add(1)
@@ -104,7 +108,7 @@ func shieldIntelCheck(r *http.Request) (block bool) {
 			Method:    r.Method,
 			Details: map[string]interface{}{
 				"rule":         "INTEL-001",
-				"feed_version": intelActive.feedVersion,
+				"feed_version": st.feedVersion,
 				"mode":         "block",
 			},
 		})
@@ -126,7 +130,7 @@ func shieldIntelCheck(r *http.Request) (block bool) {
 			Method:    r.Method,
 			Details: map[string]interface{}{
 				"rule":         "INTEL-OBSERVE",
-				"feed_version": intelActive.feedVersion,
+				"feed_version": st.feedVersion,
 				"mode":         "observe",
 				"note":         "habría bloqueado (modo observación)",
 			},
@@ -158,19 +162,18 @@ func intelStatus() IntelStatus {
 		ObservedTotal: intelObservedTotal.Load(),
 		BlockedTotal:  intelBlockedTotal.Load(),
 	}
-	if intelActive != nil {
-		st.Loaded = intelActive.trie.size() > 0
-		st.FeedVersion = intelActive.feedVersion
-		st.SchemaVersion = intelActive.schemaVersion
-		st.SchemaSupported = intelSupportedSchema
-		st.SchemaAhead = intelActive.schemaVersion > intelSupportedSchema
-		st.Prefixes = intelActive.trie.size()
-		st.Source = intelActive.source
-		st.ObserveOnly = intelActive.observeOnly
-		st.GeneratedAt = intelActive.generatedAt
-		if !intelActive.loadedAt.IsZero() {
-			st.LoadedAt = intelActive.loadedAt.UTC().Format(time.RFC3339)
-		}
+	cur := intelActive.Load() // snapshot consistente del feed vigente
+	st.Loaded = cur.trie.size() > 0
+	st.FeedVersion = cur.feedVersion
+	st.SchemaVersion = cur.schemaVersion
+	st.SchemaSupported = intelSupportedSchema
+	st.SchemaAhead = cur.schemaVersion > intelSupportedSchema
+	st.Prefixes = cur.trie.size()
+	st.Source = cur.source
+	st.ObserveOnly = cur.observeOnly
+	st.GeneratedAt = cur.generatedAt
+	if !cur.loadedAt.IsZero() {
+		st.LoadedAt = cur.loadedAt.UTC().Format(time.RFC3339)
 	}
 	return st
 }

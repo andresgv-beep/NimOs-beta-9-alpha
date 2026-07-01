@@ -112,12 +112,7 @@ func (t *IntelTrie) size() int {
 	return t.count
 }
 
-// swapRoots reemplaza los árboles de forma atómica (al recargar el feed sin
-// cortar el hot path). Se construye un trie nuevo aparte y se intercambia.
-func (t *IntelTrie) swapFrom(other *IntelTrie) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.root4 = other.root4
-	t.root6 = other.root6
-	t.count = other.count
-}
+// Nota: el antiguo swapFrom (intercambiar raíces dentro del mismo trie) se
+// eliminó: el refresco del feed ahora publica un IntelState completo nuevo
+// vía atomic.Pointer (intelActive.Store), así que el trie nunca muta una vez
+// publicado — los lectores solo necesitan el RLock frente a la construcción.

@@ -12,18 +12,47 @@ func loadIntelWith(ip, action string, observeOnly bool) {
 	trie := newIntelTrie()
 	p, _ := parsePrefix(ip)
 	trie.insert(p, action)
-	intelActive = &IntelState{
+	intelActive.Store(&IntelState{
 		trie:        trie,
 		feedVersion: 1,
 		source:      "test",
 		observeOnly: observeOnly,
-	}
+	})
 }
 
 func intelReq(ip string) *http.Request {
 	r := httptest.NewRequest("GET", "/api/whatever", nil)
 	r.RemoteAddr = ip + ":12345"
 	return r
+}
+
+// TestIntelC_ConcurrentRefreshAndCheck_NoRace — regresión de la data race de
+// intelActive: el refresco publicaba los campos (feedVersion, observeOnly…)
+// uno a uno mientras el hot path los leía. Ahora es un atomic.Pointer con
+// snapshot por petición. Este test, corrido con -race, caza cualquier vuelta
+// atrás a escrituras sueltas.
+func TestIntelC_ConcurrentRefreshAndCheck_NoRace(t *testing.T) {
+	defer setupIntelTest(t)()
+	loadIntelWith("203.0.113.50", "observe", true)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 500; i++ {
+			// simula el refresco: publica un estado completo nuevo
+			loadIntelWith("203.0.113.50", "observe", true)
+		}
+	}()
+
+	r := intelReq("203.0.113.50")
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			shieldIntelCheck(r) // hot path leyendo mientras se publica
+		}
+	}
 }
 
 func TestIntelC_ObserveDoesNotBlock(t *testing.T) {

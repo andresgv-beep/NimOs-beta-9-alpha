@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync/atomic"
 	"time"
 )
 
@@ -31,8 +32,17 @@ type IntelState struct {
 	observeOnly   bool   // true mientras el feed esté en modo observación
 }
 
-// intelActive es el trie/estado en uso por el hot path. Arranca vacío.
-var intelActive = &IntelState{trie: newIntelTrie(), source: "none"}
+// intelActive es el trie/estado en uso por el hot path. Puntero ATÓMICO: el
+// refresco construye un IntelState completo nuevo y lo publica de un golpe
+// con Store; los lectores toman un snapshot con Load. Antes los campos
+// (feedVersion, observeOnly, source…) se escribían sueltos mientras el hot
+// path los leía → data race, y además el lector podía ver el trie nuevo con
+// el observeOnly del feed viejo. Nunca es nil (se siembra en init).
+var intelActive atomic.Pointer[IntelState]
+
+func init() {
+	intelActive.Store(&IntelState{trie: newIntelTrie(), source: "none"})
+}
 
 // ─── Caché en SQLite ───
 //
@@ -201,8 +211,8 @@ func applyFeed(manifestBytes, sigBytes []byte, fileLoader func(name string) ([]b
 	// hay anti-replay aunque db==nil y aunque la DB vaya por detrás de memoria.
 	if enforceNewer {
 		floor := dbIntelCurrentVersion()
-		if intelActive != nil && intelActive.feedVersion > floor {
-			floor = intelActive.feedVersion
+		if cur := intelActive.Load(); cur.feedVersion > floor {
+			floor = cur.feedVersion
 		}
 		if m.FeedVersion < floor {
 			return 0, fmt.Errorf("feed v%d es más viejo que el vigente v%d — ignorado (anti-replay)", m.FeedVersion, floor)
@@ -230,14 +240,18 @@ func applyFeed(manifestBytes, sigBytes []byte, fileLoader func(name string) ([]b
 			observeOnly = false
 		}
 	}
-	// 6. SWAP atómico: a partir de aquí el hot path usa el trie nuevo
-	intelActive.trie.swapFrom(trie)
-	intelActive.feedVersion = m.FeedVersion
-	intelActive.schemaVersion = m.SchemaVersion
-	intelActive.generatedAt = m.GeneratedAt
-	intelActive.loadedAt = time.Now()
-	intelActive.source = source
-	intelActive.observeOnly = observeOnly
+	// 6. SWAP atómico: se publica un estado COMPLETO nuevo (trie + metadatos)
+	// de un solo Store. El hot path que ya tomó su snapshot sigue con el feed
+	// anterior hasta su próxima petición; nunca ve una mezcla de los dos.
+	intelActive.Store(&IntelState{
+		trie:          trie,
+		feedVersion:   m.FeedVersion,
+		schemaVersion: m.SchemaVersion,
+		generatedAt:   m.GeneratedAt,
+		loadedAt:      time.Now(),
+		source:        source,
+		observeOnly:   observeOnly,
+	})
 
 	for _, s := range summary {
 		logMsg("intel: %s", s)
@@ -257,11 +271,11 @@ func intelRefresh() (int, error) {
 
 	manifestBytes, err := intelFetch(client, "manifest.json")
 	if err != nil {
-		return intelActive.feedVersion, fmt.Errorf("descargando manifest: %w", err)
+		return intelActive.Load().feedVersion, fmt.Errorf("descargando manifest: %w", err)
 	}
 	sigBytes, err := intelFetch(client, "manifest.json.sig")
 	if err != nil {
-		return intelActive.feedVersion, fmt.Errorf("descargando firma: %w", err)
+		return intelActive.Load().feedVersion, fmt.Errorf("descargando firma: %w", err)
 	}
 
 	// cache de ficheros descargados para guardarlos si todo va bien
@@ -277,7 +291,7 @@ func intelRefresh() (int, error) {
 
 	version, err := applyFeed(manifestBytes, sigBytes, loader, "network", true)
 	if err != nil {
-		return intelActive.feedVersion, err
+		return intelActive.Load().feedVersion, err
 	}
 
 	// persistir en caché (incluye manifest + sig + blocklists)
