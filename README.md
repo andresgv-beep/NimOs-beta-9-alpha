@@ -11,6 +11,35 @@ NimOS Beta 8.1 es un rewrite del **frontend** de NimOS usando un design system n
 
 Beta 7 queda congelada como la versión de producción mientras Beta 8.1 se construye en paralelo. Cuando Beta 8.1 alcance paridad funcional, se promociona a versión estable.
 
+## Instalación
+
+**Rápida** (una línea):
+```sh
+curl -fsSL https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9-alpha/main/install.sh | sudo bash
+```
+
+**Verificada** (recomendada — no ejecutes un script a ciegas con root):
+```sh
+# 1. Descarga el script y su checksum
+curl -fsSLO https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9-alpha/main/install.sh
+curl -fsSLO https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9-alpha/main/install.sh.sha256
+
+# 2. Verifica la integridad (debe decir "install.sh: OK")
+sha256sum -c install.sh.sha256
+
+# 3. Léelo antes de darle root
+less install.sh
+
+# 4. Ejecútalo
+sudo bash install.sh
+```
+
+> **Reproducibilidad total**: fija la URL a un **commit o tag** concreto en vez de `main`
+> (el raw de un commit es inmutable): `.../raw/<commit-sha>/install.sh`.
+>
+> El checksum protege contra manipulación en tránsito y te deja **revisar** el script antes
+> de ejecutarlo. `install.sh.sha256` se regenera con cada cambio de `install.sh`.
+
 ## Estado actual
 
 **✅ Listo**

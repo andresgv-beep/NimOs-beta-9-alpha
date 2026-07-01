@@ -696,8 +696,18 @@ start_nimos() {
     fi
 
     if [[ "$NODE_OK" != true ]]; then
-      log "Installing Node.js 20 LTS from NodeSource..."
-      curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>&1 | grep -v "^$" || true
+      log "Installing Node.js 20 LTS from NodeSource (repo firmado, sin curl|bash)..."
+      # SEGURIDAD (#5): en vez de 'curl … | bash' (ejecuta un script remoto a
+      # ciegas), añadimos el repo de NodeSource por el método keyring: bajamos
+      # SOLO la clave GPG, la verificamos como keyring, y fijamos el repo con
+      # signed-by (apt verifica cada paquete contra esa clave).
+      apt-get install -y -qq ca-certificates curl gnupg
+      mkdir -p /etc/apt/keyrings
+      curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+        | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+      echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" \
+        > /etc/apt/sources.list.d/nodesource.list
+      apt-get update -qq
       apt-get install -y -qq nodejs
       if command -v node &>/dev/null; then
         ok "Node.js $(node -v) installed"
