@@ -29,6 +29,7 @@ func dbShieldInit() {
 			status INTEGER,
 			rule TEXT,
 			details TEXT,
+			net_key TEXT,
 			created_at TEXT DEFAULT (datetime('now'))
 		);
 		CREATE INDEX IF NOT EXISTS idx_shield_events_ip ON shield_events(source_ip);
@@ -59,6 +60,13 @@ func dbShieldInit() {
 	if err != nil {
 		logMsg("shield DB init error: %v", err)
 	}
+
+	// net_key: la clave de red del evento (IPv6 → /64, ver shieldNetKey), para
+	// que la correlación agregue por red y no por IP exacta. source_ip conserva
+	// la IP real (forense). ALTER idempotente para BDs existentes (falla en
+	// silencio si la columna ya existe, mismo patrón que shield_reputation).
+	db.Exec(`ALTER TABLE shield_events ADD COLUMN net_key TEXT`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_shield_events_netkey ON shield_events(net_key)`)
 
 	dbShieldReputationInit()
 	dbShieldConfigInit()
@@ -152,12 +160,13 @@ func dbShieldEventInsert(event ShieldEvent) {
 		}
 	}
 
-	db.Exec(`INSERT INTO shield_events (timestamp, category, severity, source_ip, user_agent, endpoint, username, method, status, rule, details)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	db.Exec(`INSERT INTO shield_events (timestamp, category, severity, source_ip, user_agent, endpoint, username, method, status, rule, details, net_key)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		event.Timestamp.UTC().Format(time.RFC3339),
 		event.Category, event.Severity, event.SourceIP,
 		event.UserAgent, event.Endpoint, event.Username,
-		event.Method, event.Status, rule, detailsJSON)
+		event.Method, event.Status, rule, detailsJSON,
+		shieldNetKey(event.SourceIP))
 }
 
 func dbShieldEventsCleanup(maxAge time.Duration) {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"sync"
@@ -47,6 +48,38 @@ func shieldEmit(event ShieldEvent) {
 	}
 }
 
+// ── Clave de red (agregación anti-rotación) ─────────────────────────────────
+
+// shieldNetKey normaliza una IP a su CLAVE DE RED, la unidad sobre la que
+// NimShield bloquea, cuenta ventanas y acumula reputación/score:
+//
+//   - IPv4 → la propia IP canónica (des-mapeando la forma ::ffff:a.b.c.d,
+//     que antes generaba una identidad paralela para la misma dirección).
+//   - IPv6 → su prefijo /64 ("2001:db8:1:2::/64"). Un abonado IPv6 dispone
+//     de 2^64 direcciones dentro de su /64: bloquear o contar por IP exacta
+//     le regala rotación infinita gratis. El /64 es la unidad real de
+//     asignación, así que es la identidad correcta — y de paso beneficia al
+//     usuario legítimo: las privacy extensions le rotan el host part a
+//     diario, y con clave /64 su red acumula reputación aunque su IP cambie.
+//   - Entrada no parseable (o una clave /64 ya normalizada) → tal cual.
+//
+// Los EVENTOS (shield_events.source_ip) guardan siempre la IP real para el
+// análisis forense; la clave de red va aparte (columna net_key).
+func shieldNetKey(ip string) string {
+	addr, err := netip.ParseAddr(ip)
+	if err != nil {
+		return ip
+	}
+	if addr.Is4() || addr.Is4In6() {
+		return addr.Unmap().String()
+	}
+	p, err := addr.Prefix(64)
+	if err != nil {
+		return ip
+	}
+	return p.String()
+}
+
 // ── Blocklist ────────────────────────────────────────────────────────────────
 
 type BlockEntry struct {
@@ -71,10 +104,13 @@ func init() {
 	shieldEnabled.Store(true)
 }
 
+// shieldBlockIP bloquea la CLAVE DE RED de la IP (IPv4 exacta; IPv6 → /64,
+// ver shieldNetKey). Acepta indistintamente una IP o una clave ya normalizada.
 func shieldBlockIP(ip string, duration time.Duration, reason, rule string) {
+	key := shieldNetKey(ip)
 	shieldBlockMu.Lock()
-	shieldBlocklist[ip] = &BlockEntry{
-		IP:        ip,
+	shieldBlocklist[key] = &BlockEntry{
+		IP:        key,
 		Reason:    reason,
 		Rule:      rule,
 		ExpiresAt: time.Now().Add(duration),
@@ -82,29 +118,35 @@ func shieldBlockIP(ip string, duration time.Duration, reason, rule string) {
 	}
 	shieldBlockMu.Unlock()
 
-	logMsg("shield BLOCK: %s for %v — %s [%s]", ip, duration, reason, rule)
+	if key != ip {
+		logMsg("shield BLOCK: %s (disparado por %s) for %v — %s [%s]", key, ip, duration, reason, rule)
+	} else {
+		logMsg("shield BLOCK: %s for %v — %s [%s]", key, duration, reason, rule)
+	}
 
 	// Store in DB for persistence across restarts
-	dbShieldBlockInsert(ip, duration, reason, rule)
+	dbShieldBlockInsert(key, duration, reason, rule)
 
 	// Emit notification
 	addNotification("warning", "system",
-		fmt.Sprintf("IP bloqueada: %s", ip),
-		fmt.Sprintf("NimShield bloqueó %s por %v. Motivo: %s", ip, duration, reason))
+		fmt.Sprintf("IP bloqueada: %s", key),
+		fmt.Sprintf("NimShield bloqueó %s por %v. Motivo: %s", key, duration, reason))
 }
 
 func shieldUnblockIP(ip string) {
+	key := shieldNetKey(ip)
 	shieldBlockMu.Lock()
-	delete(shieldBlocklist, ip)
+	delete(shieldBlocklist, key)
 	shieldBlockMu.Unlock()
 
-	dbShieldBlockDelete(ip)
-	logMsg("shield UNBLOCK: %s", ip)
+	dbShieldBlockDelete(key)
+	logMsg("shield UNBLOCK: %s", key)
 }
 
 func shieldIsBlocked(ip string) (bool, string) {
+	key := shieldNetKey(ip)
 	shieldBlockMu.RLock()
-	entry, exists := shieldBlocklist[ip]
+	entry, exists := shieldBlocklist[key]
 	shieldBlockMu.RUnlock()
 
 	if !exists {
@@ -113,7 +155,7 @@ func shieldIsBlocked(ip string) (bool, string) {
 
 	// Check expiry
 	if time.Now().After(entry.ExpiresAt) {
-		shieldUnblockIP(ip)
+		shieldUnblockIP(key)
 		return false, ""
 	}
 
@@ -489,8 +531,12 @@ func shieldMiddleware(w http.ResponseWriter, r *http.Request) bool {
 
 	ip := clientIP(r)
 
-	// 1. Check if IP is blocked
-	if blocked, reason := shieldIsBlocked(ip); blocked {
+	// 1. Check if IP is blocked. La whitelist manda TAMBIÉN aquí: con bloqueo
+	// por clave de red (IPv6 → /64), una IP de otro equipo del mismo /64 puede
+	// haber bloqueado el rango entero — la IP whitelisteada del admin dentro
+	// de ese rango tiene que seguir entrando. (Antes este caso era imposible:
+	// bloqueo por IP exacta nunca creaba bloqueos de IPs whitelisteadas.)
+	if blocked, reason := shieldIsBlocked(ip); blocked && !shieldIsWhitelisted(ip) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Retry-After", "3600")
 		w.WriteHeader(403)

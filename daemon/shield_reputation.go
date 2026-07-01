@@ -69,10 +69,17 @@ func dbShieldReputationInit() {
 // ShieldAuthSuccess registra un login EXITOSO: +1 a la cuenta y borra la
 // racha de fallos. Gemelo de ShieldAuthFail. Se llama desde auth.go al
 // crear sesión válida.
+//
+// La reputación se acumula por CLAVE DE RED (IPv6 → /64, ver shieldNetKey):
+// las privacy extensions de IPv6 rotan el host part a diario, así que por IP
+// exacta un usuario legítimo IPv6 jamás pasaría de "unknown"; su /64 sí es
+// estable. Y en el otro sentido, un atacante no puede resetear su racha de
+// fallos saltando de IP dentro de su propio /64.
 func ShieldAuthSuccess(ip string) {
 	if db == nil || ip == "" {
 		return
 	}
+	ip = shieldNetKey(ip)
 	now := time.Now().UTC().Format(time.RFC3339)
 	db.Exec(`
 		INSERT INTO shield_reputation (ip, success_count, fail_streak, last_success)
@@ -91,6 +98,7 @@ func shieldRepRecordFail(ip string) (failStreak, successCount int) {
 	if db == nil || ip == "" {
 		return 0, 0
 	}
+	ip = shieldNetKey(ip) // reputación por clave de red (ver ShieldAuthSuccess)
 	now := time.Now().UTC()
 
 	var prevStreak, prevSuccess int
@@ -208,7 +216,9 @@ func shieldRepForget(ip string) error {
 	if db == nil {
 		return nil
 	}
-	_, err := db.Exec(`DELETE FROM shield_reputation WHERE ip = ?`, ip)
+	// Acepta una IP (se normaliza a su clave de red) o la clave tal cual,
+	// que es lo que muestra la UI en la lista de reputación.
+	_, err := db.Exec(`DELETE FROM shield_reputation WHERE ip = ?`, shieldNetKey(ip))
 	return err
 }
 
@@ -219,6 +229,7 @@ func shieldRepRecordBlock(ip string) int {
 	if db == nil || ip == "" {
 		return 0
 	}
+	ip = shieldNetKey(ip) // reincidencia por clave de red
 	var prev int
 	db.QueryRow(`SELECT block_count FROM shield_reputation WHERE ip = ?`, ip).Scan(&prev)
 	db.Exec(`

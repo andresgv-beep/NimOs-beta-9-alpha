@@ -113,6 +113,9 @@ func processRules(event ShieldEvent) {
 	if ip == "" || shieldIsWhitelisted(ip) {
 		return
 	}
+	// Las ventanas cuentan por CLAVE DE RED (IPv6 → /64): rotar de IP dentro
+	// del mismo /64 ya no resetea los contadores del atacante.
+	key := shieldNetKey(ip)
 
 	switch event.Category {
 
@@ -122,14 +125,14 @@ func processRules(event ShieldEvent) {
 	case "scan":
 		// SCAN-001: Port scan / 404 enumeration
 		if event.Status == 404 {
-			count := scanWindow.countAndAdd("ip:"+ip, 1*time.Minute)
+			count := scanWindow.countAndAdd("ip:"+key, 1*time.Minute)
 			if count >= 10 {
 				shieldBlockIP(ip, 30*time.Minute, "Port scan: 10+ 404s in 1min", "SCAN-001")
 			}
 		}
 		// SCAN-002: API enumeration
-		apiEnumWindow.countAndAdd("ip:"+ip+":"+event.Endpoint, 2*time.Minute)
-		distinctEndpoints := apiEnumWindow.count("ip:"+ip, 2*time.Minute)
+		apiEnumWindow.countAndAdd("ip:"+key+":"+event.Endpoint, 2*time.Minute)
+		distinctEndpoints := apiEnumWindow.count("ip:"+key, 2*time.Minute)
 		if distinctEndpoints >= 20 {
 			shieldBlockIP(ip, 30*time.Minute, "API enumeration: 20+ endpoints in 2min", "SCAN-002")
 		}
@@ -144,7 +147,7 @@ func processRules(event ShieldEvent) {
 			return
 		}
 		// TRAV-001: Path traversal
-		count := travWindow.countAndAdd("ip:"+ip, 1*time.Minute)
+		count := travWindow.countAndAdd("ip:"+key, 1*time.Minute)
 		if count >= 3 {
 			shieldBlockIP(ip, 2*time.Hour, "Path traversal: 3+ attempts in 1min", "TRAV-001")
 		}
@@ -164,12 +167,12 @@ func processRules(event ShieldEvent) {
 		rule, _ := event.Details["rule"].(string)
 		switch rule {
 		case "INJ-001":
-			count := sqliWindow.countAndAdd("ip:"+ip, 5*time.Minute)
+			count := sqliWindow.countAndAdd("ip:"+key, 5*time.Minute)
 			if count >= 3 {
 				shieldBlockIP(ip, 2*time.Hour, "SQL injection: 3+ attempts in 5min", "INJ-001")
 			}
 		case "CSP-001", "INJ-003":
-			count := xssWindow.countAndAdd("ip:"+ip, 5*time.Minute)
+			count := xssWindow.countAndAdd("ip:"+key, 5*time.Minute)
 			if count >= 5 {
 				shieldBlockIP(ip, 1*time.Hour, "XSS attack: 5+ attempts in 5min", "INJ-003")
 			}
@@ -194,6 +197,8 @@ func eventIsAuthenticated(event ShieldEvent) bool {
 
 func processAuthRules(event ShieldEvent) {
 	ip := event.SourceIP
+	// Igual que en processRules: contadores y reputación por clave de red.
+	key := shieldNetKey(ip)
 
 	detailType, _ := event.Details["type"].(string)
 
@@ -206,7 +211,7 @@ func processAuthRules(event ShieldEvent) {
 		// robado) pierde el margen al instante (modo desconfianza).
 		failStreak, successCount := shieldRepRecordFail(ip)
 		cfg := getShieldConfig()
-		windowCount := authFailWindow.countAndAdd("ip:"+ip, 5*time.Minute)
+		windowCount := authFailWindow.countAndAdd("ip:"+key, 5*time.Minute)
 		block, distrust := shieldAuthDecision(cfg, successCount, failStreak, windowCount)
 		if block {
 			// Escalado por reincidencia: cada bloqueo previo de esta IP sube
@@ -224,9 +229,9 @@ func processAuthRules(event ShieldEvent) {
 		// AUTH-002: Credential stuffing — 3+ different users / 2min / IP
 		username, _ := event.Details["username"].(string)
 		if username != "" {
-			authUserWindow.countAndAdd("ip:"+ip+":user:"+username, 2*time.Minute)
+			authUserWindow.countAndAdd("ip:"+key+":user:"+username, 2*time.Minute)
 			// Count distinct users from this IP
-			distinctUsers := countDistinctUsers(ip, 2*time.Minute)
+			distinctUsers := countDistinctUsers(key, 2*time.Minute)
 			if distinctUsers >= 3 {
 				shieldBlockIP(ip, 1*time.Hour, "Credential stuffing: 3+ users in 2min", "AUTH-002")
 			}
@@ -234,20 +239,21 @@ func processAuthRules(event ShieldEvent) {
 
 	case "token_invalid":
 		// AUTH-003: Token spray — 10+ invalid tokens / 1min / IP
-		count := tokenFailWindow.countAndAdd("ip:"+ip, 1*time.Minute)
+		count := tokenFailWindow.countAndAdd("ip:"+key, 1*time.Minute)
 		if count >= 10 {
 			shieldBlockIP(ip, 1*time.Hour, "Token spray: 10+ invalid tokens in 1min", "AUTH-003")
 		}
 	}
 }
 
-// countDistinctUsers counts unique usernames tried from an IP in a window
-func countDistinctUsers(ip string, window time.Duration) int {
+// countDistinctUsers counts unique usernames tried from a NET KEY in a window
+// (la clave de red ya normalizada — ver shieldNetKey).
+func countDistinctUsers(netKey string, window time.Duration) int {
 	authUserWindow.mu.Lock()
 	defer authUserWindow.mu.Unlock()
 
 	cutoff := time.Now().Add(-window)
-	prefix := "ip:" + ip + ":user:"
+	prefix := "ip:" + netKey + ":user:"
 	seen := map[string]bool{}
 
 	for key, entry := range authUserWindow.entries {

@@ -63,11 +63,13 @@ func scoreApplyDecay(score int, lastUpdate string) int {
 }
 
 // shieldScoreRead devuelve el score ACTUAL de una IP (recuperación por tiempo ya
-// aplicada). scoreStart si la IP no tiene historial.
+// aplicada). scoreStart si la IP no tiene historial. El score vive en la tabla
+// de reputación, así que agrega por CLAVE DE RED (IPv6 → /64, shieldNetKey).
 func shieldScoreRead(ip string) int {
 	if db == nil || ip == "" {
 		return scoreStart
 	}
+	ip = shieldNetKey(ip)
 	score := scoreStart
 	var last string
 	if err := db.QueryRow(
@@ -79,7 +81,11 @@ func shieldScoreRead(ip string) int {
 }
 
 // shieldScoreCorrelate cuenta cuántas CATEGORÍAS de ataque distintas ha generado
-// una IP en la ventana de correlación. ≥ scoreCorrelationMin = multi-vector.
+// una CLAVE DE RED en la ventana de correlación. ≥ scoreCorrelationMin =
+// multi-vector. Correlar por net_key (no por source_ip) evita que un atacante
+// IPv6 disperse sus vectores entre IPs de su /64 para no correlar nunca.
+// (Eventos anteriores a la columna net_key tienen NULL y no correlan; expiran
+// con la retención de 7 días.)
 func shieldScoreCorrelate(ip string) int {
 	if db == nil || ip == "" {
 		return 0
@@ -87,8 +93,8 @@ func shieldScoreCorrelate(ip string) int {
 	var n int
 	db.QueryRow(
 		`SELECT COUNT(DISTINCT category) FROM shield_events
-		 WHERE source_ip = ? AND created_at >= datetime('now', ?)`,
-		ip, scoreCorrelationWindow).Scan(&n)
+		 WHERE net_key = ? AND created_at >= datetime('now', ?)`,
+		shieldNetKey(ip), scoreCorrelationWindow).Scan(&n)
 	return n
 }
 
@@ -100,6 +106,7 @@ func shieldScorePenalize(event ShieldEvent) {
 	if db == nil || ip == "" {
 		return
 	}
+	ip = shieldNetKey(ip) // el score agrega por clave de red
 
 	old := shieldScoreRead(ip) // score actual, con decay aplicado
 

@@ -42,8 +42,11 @@ var (
 )
 
 // intelShouldEmitObserve devuelve true si toca emitir evento para esta IP
-// (no se ha emitido uno en la última ventana de cooldown).
+// (no se ha emitido uno en la última ventana de cooldown). El cooldown va por
+// CLAVE DE RED (IPv6 → /64): el feed lista rangos, así que una red listada
+// rotando de IP no debe poder inflar la tabla de eventos saltándose la ventana.
 func intelShouldEmitObserve(ip string) bool {
+	ip = shieldNetKey(ip)
 	now := time.Now()
 	intelObserveSeenMu.Lock()
 	defer intelObserveSeenMu.Unlock()
