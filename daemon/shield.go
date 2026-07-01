@@ -600,22 +600,41 @@ func startShieldEngine() {
 	loadShieldEnabled()
 
 	if !shieldEnabled.Load() {
-		logMsg("shield: disabled (persisted state)")
+		logMsg("shield: disabled (persisted state) — el motor arrancará si el admin lo activa")
 		return
 	}
 
-	// Load persisted blocks
-	loadPersistedBlocks()
-	loadPersistedWhitelist()
+	shieldEnsureEngine()
+}
 
-	logMsg("shield: engine started (honeypots: %d, scanner UAs: %d, XSS patterns: %d)",
-		len(honeypotPaths), len(scannerUAs), len(xssPatterns))
+// shieldEngineOnce garantiza que las piezas vivas del motor arrancan UNA vez,
+// venga la orden del boot o del toggle del admin.
+var shieldEngineOnce sync.Once
 
-	// Process events
-	go shieldEventLoop()
+// shieldEnsureEngine arranca las piezas vivas del motor: bloqueos y whitelist
+// persistidos, event loop (reglas + scoring) y feed de inteligencia. Idempotente.
+//
+// Se llama desde startShieldEngine (boot con shield activado) y desde el toggle
+// al pasar a ON. Antes, activar el shield tras arrancar desactivado lo dejaba
+// "medio vivo": el middleware corría, pero sin la whitelist de BD (riesgo de
+// auto-bloqueo del admin), sin bloqueos persistidos, sin feed intel, y con los
+// eventos acumulándose en el canal sin que nadie los procesara (reglas AUTH/
+// SCAN y motor de comportamiento muertos) hasta el siguiente reinicio.
+func shieldEnsureEngine() {
+	shieldEngineOnce.Do(func() {
+		// Load persisted blocks
+		loadPersistedBlocks()
+		loadPersistedWhitelist()
 
-	// NimShield Intelligence: carga el feed y refresca cada 2 días (no bloquea).
-	startIntel()
+		logMsg("shield: engine started (honeypots: %d, scanner UAs: %d, XSS patterns: %d)",
+			len(honeypotPaths), len(scannerUAs), len(xssPatterns))
+
+		// Process events
+		go shieldEventLoop()
+
+		// NimShield Intelligence: carga el feed y refresca cada 2 días (no bloquea).
+		startIntel()
+	})
 }
 
 func shieldEventLoop() {
@@ -665,5 +684,19 @@ func startShieldCleanup() {
 
 		// Also clean old events from DB (keep 7 days)
 		dbShieldEventsCleanup(7 * 24 * time.Hour)
+
+		// Poda de las ventanas deslizantes del motor de reglas. countAndAdd
+		// expira los timestamps DENTRO de una key, pero las keys en sí nunca
+		// se borraban → fuga de memoria con cardinalidad controlada por el
+		// atacante (apiEnumWindow usa ip:endpoint, authUserWindow ip:usuario).
+		// La ventana más larga de las reglas es 5min; 10min de margen sobra.
+		// La lista se construye en cada tick para seguir a los punteros
+		// vigentes (los tests reasignan estas variables).
+		for _, sw := range []*SlidingWindow{
+			authFailWindow, authUserWindow, tokenFailWindow,
+			scanWindow, apiEnumWindow, travWindow, sqliWindow, xssWindow,
+		} {
+			sw.cleanup(10 * time.Minute)
+		}
 	}
 }

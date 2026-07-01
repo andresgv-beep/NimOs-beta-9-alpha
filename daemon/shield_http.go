@@ -308,6 +308,14 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 		newState := !shieldEnabled.Load()
 		shieldEnabled.Store(newState)
 		dbShieldSetEnabled(newState)
+		if newState {
+			// Si el daemon arrancó con el shield desactivado, el motor (event
+			// loop, whitelist/bloqueos persistidos, feed intel) nunca llegó a
+			// arrancar: hay que levantarlo ahora. Idempotente — si ya corre,
+			// no hace nada. Al desactivar no se para nada: el middleware deja
+			// de actuar con el flag y el event loop en marcha es inocuo.
+			shieldEnsureEngine()
+		}
 		logMsg("shield: %s by %s", map[bool]string{true: "enabled", false: "disabled"}[newState], session.Username)
 		jsonOk(w, map[string]interface{}{"ok": true, "enabled": newState})
 
