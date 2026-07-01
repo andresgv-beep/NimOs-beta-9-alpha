@@ -358,9 +358,10 @@ func resolvePoolRecoveryResume(ctx context.Context, poolID string) error {
 // errores irreparables. Inyectable para tests (lee btrfs en producción).
 //
 // Devuelve:
-//   clean=true  → último scrub finished con 0 uncorrectable → corrupción NO activa
-//   clean=false → hay errores en el último scrub, o nunca se hizo scrub, o
-//                 no se pudo determinar (en la duda, NO ocultamos el WARN)
+//
+//	clean=true  → último scrub finished con 0 uncorrectable → corrupción NO activa
+//	clean=false → hay errores en el último scrub, o nunca se hizo scrub, o
+//	              no se pudo determinar (en la duda, NO ocultamos el WARN)
 var lastScrubWasClean = func(mountPoint string) bool {
 	if mountPoint == "" {
 		return false

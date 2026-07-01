@@ -29,8 +29,8 @@ import (
 
 type dockerImagePruneTask struct{}
 
-func (t *dockerImagePruneTask) ID() string   { return "docker_image_prune" }
-func (t *dockerImagePruneTask) Name() string { return "Limpieza de imágenes Docker huérfanas" }
+func (t *dockerImagePruneTask) ID() string       { return "docker_image_prune" }
+func (t *dockerImagePruneTask) Name() string     { return "Limpieza de imágenes Docker huérfanas" }
 func (t *dockerImagePruneTask) Category() string { return MaintCategoryDocker }
 func (t *dockerImagePruneTask) Description() string {
 	return "Borra imágenes Docker 'dangling' (sin etiqueta, restos de actualizaciones de apps) que no usa ningún container. Recupera disco. No toca imágenes etiquetadas ni en uso."

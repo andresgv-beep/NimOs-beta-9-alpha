@@ -10,10 +10,10 @@ import "testing"
 
 func TestLayoutHasDrifted_Validation(t *testing.T) {
 	cases := []struct {
-		name       string
-		expected   string
-		real       string
-		wantDrift  bool
+		name      string
+		expected  string
+		real      string
+		wantDrift bool
 	}{
 		// ── Validación: drift real detectado ──
 		{"raid1 a raid10 (balance interrumpido)", "raid1", "raid10", true},
@@ -66,9 +66,9 @@ func TestReadRealDataProfile_ParsesDataLine(t *testing.T) {
 	// Verifica que parseProfileFromDfLine (reusada por readRealDataProfile)
 	// extrae el profile de la línea Data correctamente.
 	cases := map[string]string{
-		"Data, RAID1: total=1.00GiB, used=408.00KiB":    "raid1",
-		"Data, single: total=1.00GiB, used=408.00KiB":   "single",
-		"Data, RAID10: total=2.00GiB, used=1.00GiB":     "raid10",
+		"Data, RAID1: total=1.00GiB, used=408.00KiB":     "raid1",
+		"Data, single: total=1.00GiB, used=408.00KiB":    "single",
+		"Data, RAID10: total=2.00GiB, used=1.00GiB":      "raid10",
 		"Metadata, RAID1: total=1.00GiB, used=128.00KiB": "raid1", // también parsea, aunque readReal solo mira Data
 	}
 	for line, want := range cases {

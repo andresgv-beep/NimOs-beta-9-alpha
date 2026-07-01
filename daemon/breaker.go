@@ -214,10 +214,10 @@ func NewCircuitBreakerWithState(cfg BreakerConfig, savedState CircuitState, save
 //
 //   - state CLOSED:    ejecuta fn(), contabiliza el resultado.
 //   - state OPEN:      rechaza con ErrCircuitOpen sin invocar fn(), salvo
-//                      que el cooldown haya expirado (en cuyo caso pasa
-//                      a HALF_OPEN y prueba).
+//     que el cooldown haya expirado (en cuyo caso pasa
+//     a HALF_OPEN y prueba).
 //   - state HALF_OPEN: ejecuta fn(). Si OK → CLOSED. Si KO → OPEN con
-//                      cooldown reseteado.
+//     cooldown reseteado.
 //
 // El callback Persist se invoca fuera del lock, así que un SQLite lento
 // no serializa Calls. El error del callback se descarta (best-effort).

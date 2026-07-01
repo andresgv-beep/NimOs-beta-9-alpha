@@ -227,10 +227,10 @@ func TestAppImagesRepo_CountAppsWithUpdates(t *testing.T) {
 
 func TestAppImage_HasUpdate(t *testing.T) {
 	cases := []struct {
-		name         string
-		local        string
-		remote       string
-		wantHas      bool
+		name    string
+		local   string
+		remote  string
+		wantHas bool
 	}{
 		{"both empty", "", "", false},
 		{"only local", "sha256:abc", "", false}, // sin remoto, no se puede afirmar

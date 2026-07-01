@@ -6,10 +6,10 @@ import "testing"
 
 func TestBuildExternalURL(t *testing.T) {
 	cases := []struct {
-		sub, base   string
-		port        int
-		landing     string
-		want        string
+		sub, base string
+		port      int
+		landing   string
+		want      string
 	}{
 		// Pi-hole con puerto 444 y /admin
 		{"pihole", "nimosbarraca1.duckdns.org", 444, "/admin",

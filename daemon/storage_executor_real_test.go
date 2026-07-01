@@ -119,7 +119,7 @@ func TestAllDigits(t *testing.T) {
 		{"123", true},
 		{"0", true},
 		{"99999", true},
-		{"", false},        // vacía no cuenta como "todo dígitos"
+		{"", false}, // vacía no cuenta como "todo dígitos"
 		{"12a", false},
 		{"a12", false},
 		{"1.2", false},

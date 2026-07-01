@@ -154,7 +154,7 @@ func processRules(event ShieldEvent) {
 			if count >= 5 {
 				shieldBlockIP(ip, 1*time.Hour, "XSS attack: 5+ attempts in 5min", "INJ-003")
 			}
-		// INJ-002 (command injection) is handled in middleware — instant block
+			// INJ-002 (command injection) is handled in middleware — instant block
 		}
 
 	case "honeypot":
@@ -267,12 +267,12 @@ func ShieldAuthTokenFail(ip, ua, endpoint string) {
 // Shield404 emits a 404 event for scan detection.
 func Shield404(ip, ua, path string) {
 	shieldEmit(ShieldEvent{
-		Category: "scan",
-		Severity: "low",
-		SourceIP: ip,
+		Category:  "scan",
+		Severity:  "low",
+		SourceIP:  ip,
 		UserAgent: ua,
-		Endpoint: path,
-		Status:   404,
-		Details:  map[string]interface{}{"type": "not_found"},
+		Endpoint:  path,
+		Status:    404,
+		Details:   map[string]interface{}{"type": "not_found"},
 	})
 }

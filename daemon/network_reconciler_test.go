@@ -31,17 +31,17 @@ type fakeReconciler struct {
 	tier     ReconcilerTier
 	interval time.Duration
 
-	mu       sync.Mutex
-	calls    int64
-	lastErr  error
-	doPanic  bool
-	doErr    error
-	blockCh  chan struct{} // si !nil, Reconcile bloquea hasta que se cierra
+	mu      sync.Mutex
+	calls   int64
+	lastErr error
+	doPanic bool
+	doErr   error
+	blockCh chan struct{} // si !nil, Reconcile bloquea hasta que se cierra
 }
 
-func (f *fakeReconciler) Name() string             { return f.name }
-func (f *fakeReconciler) Tier() ReconcilerTier     { return f.tier }
-func (f *fakeReconciler) Interval() time.Duration  { return f.interval }
+func (f *fakeReconciler) Name() string            { return f.name }
+func (f *fakeReconciler) Tier() ReconcilerTier    { return f.tier }
+func (f *fakeReconciler) Interval() time.Duration { return f.interval }
 
 func (f *fakeReconciler) Reconcile(ctx context.Context) error {
 	atomic.AddInt64(&f.calls, 1)

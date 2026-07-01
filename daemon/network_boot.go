@@ -31,18 +31,18 @@ import (
 
 // Singletons globales del módulo network.
 var (
-	networkRepo             *NetworkRepo
-	networkEventEmitter     *EventEmitter
-	networkSecretsStore     *SecretsStore
-	networkCapabilities     *CapabilitiesStore
-	networkProbe            NetworkProbe
-	networkObserver         *NetworkObserver
-	networkDDNSReconciler   *DDNSReconciler
-	networkRouterProvider   RouterProvider
-	networkRouterReconciler *RouterReconciler
+	networkRepo               *NetworkRepo
+	networkEventEmitter       *EventEmitter
+	networkSecretsStore       *SecretsStore
+	networkCapabilities       *CapabilitiesStore
+	networkProbe              NetworkProbe
+	networkObserver           *NetworkObserver
+	networkDDNSReconciler     *DDNSReconciler
+	networkRouterProvider     RouterProvider
+	networkRouterReconciler   *RouterReconciler
 	networkExposureReconciler *NetworkExposureReconciler
-	networkRetentionRunner  *RetentionRunner
-	networkReconcilers      *ReconcilerScheduler
+	networkRetentionRunner    *RetentionRunner
+	networkReconcilers        *ReconcilerScheduler
 )
 
 // initNetworkModule inicializa el módulo network v4.

@@ -159,9 +159,9 @@ func (p *UPnPRouterProvider) Detect(ctx context.Context) (*RouterStatus, error) 
 // ListMappings implementa RouterProvider. Ejecuta `upnpc -l` y parsea
 // el output. Formato típico de una línea con mapping:
 //
-//   "  0 TCP  8080->192.168.1.50:8080  'NimOS HTTPS' '' 0"
+//	"  0 TCP  8080->192.168.1.50:8080  'NimOS HTTPS' '' 0"
 //
-//   índice protocol  external->internal_ip:internal_port  'desc' '' lease
+//	índice protocol  external->internal_ip:internal_port  'desc' '' lease
 func (p *UPnPRouterProvider) ListMappings(ctx context.Context) ([]RouterPortMapping, error) {
 	out, err := p.runUnderBreaker(ctx, "-l")
 	if err != nil {
@@ -240,7 +240,8 @@ func parseUPnPList(out string) []RouterPortMapping {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // AddMapping implementa RouterProvider. Ejecuta:
-//   upnpc -a LOCAL_IP EXT_PORT INT_PORT PROTOCOL [DURATION] [DESCRIPTION]
+//
+//	upnpc -a LOCAL_IP EXT_PORT INT_PORT PROTOCOL [DURATION] [DESCRIPTION]
 //
 // Usamos DURATION=0 (persistente) y DESCRIPTION del mapping.
 //
@@ -288,7 +289,8 @@ func (p *UPnPRouterProvider) AddMapping(ctx context.Context, m RouterPortMapping
 // ─────────────────────────────────────────────────────────────────────────────
 
 // RemoveMapping implementa RouterProvider. Ejecuta:
-//   upnpc -d EXT_PORT PROTOCOL
+//
+//	upnpc -d EXT_PORT PROTOCOL
 //
 // Idempotente: si el mapping no existe, upnpc puede devolver error.
 // Lo tratamos como no-error porque el resultado deseado (mapping no

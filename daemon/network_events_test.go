@@ -66,10 +66,10 @@ func TestEmit_RejectsEmptyFields(t *testing.T) {
 	defer cleanup()
 
 	cases := []EventInput{
-		{Event: "x", Level: EventLevelInfo, Message: "m"},                       // no category
-		{Category: CategoryDdns, Level: EventLevelInfo, Message: "m"},           // no event
-		{Category: CategoryDdns, Event: "x", Message: "m"},                       // no level
-		{Category: CategoryDdns, Event: "x", Level: EventLevelInfo},              // no message
+		{Event: "x", Level: EventLevelInfo, Message: "m"},             // no category
+		{Category: CategoryDdns, Level: EventLevelInfo, Message: "m"}, // no event
+		{Category: CategoryDdns, Event: "x", Message: "m"},            // no level
+		{Category: CategoryDdns, Event: "x", Level: EventLevelInfo},   // no message
 	}
 	for i, in := range cases {
 		_, err := em.Emit(context.Background(), in)

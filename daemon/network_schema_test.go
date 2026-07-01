@@ -411,12 +411,12 @@ func TestNetworkSchema_OperationsRejectsAdHocTriggeredBy(t *testing.T) {
 	defer cleanup()
 
 	invalidCases := []string{
-		"random",                  // sin prefijo
-		"cli:something",            // categoría no permitida
-		"webhook:incoming",         // categoría no permitida
-		"reconciler",               // sin nombre
-		"system:custom",            // system: solo 'boot' o 'scheduler'
-		"",                         // vacío
+		"random",           // sin prefijo
+		"cli:something",    // categoría no permitida
+		"webhook:incoming", // categoría no permitida
+		"reconciler",       // sin nombre
+		"system:custom",    // system: solo 'boot' o 'scheduler'
+		"",                 // vacío
 	}
 	for _, tb := range invalidCases {
 		_, err := c.db.Exec(`

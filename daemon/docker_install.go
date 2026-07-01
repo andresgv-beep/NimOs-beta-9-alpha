@@ -525,7 +525,6 @@ func runDockerInstallWork(ctx context.Context, body map[string]interface{}, opID
 	return map[string]interface{}{"ok": true, "path": dockerPath, "dockerAvailable": dockerAvailable}, nil
 }
 
-
 func dockerUninstall(w http.ResponseWriter, r *http.Request) {
 	session := requireAdmin(w, r)
 	if session == nil {

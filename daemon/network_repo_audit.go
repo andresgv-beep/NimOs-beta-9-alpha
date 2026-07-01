@@ -55,16 +55,16 @@ var (
 // PublicIP, etc.) son métricas pre-extraídas que permiten queries sin
 // parsear el JSON.
 type NetworkObservedSnapshot struct {
-	ID               string          `json:"id"`
-	Generation       int64           `json:"generation"`
-	SnapshotAt       time.Time       `json:"snapshot_at"`
-	SnapshotType     string          `json:"snapshot_type"`
-	SnapshotData     json.RawMessage `json:"snapshot_data"`
-	OverallHealth    string          `json:"overall_health"`
-	PublicIP         *string         `json:"public_ip,omitempty"`
-	DdnsSynced       *bool           `json:"ddns_synced,omitempty"`
-	DivergenceCount  int             `json:"divergence_count"`
-	ScanDurationMs   int64           `json:"scan_duration_ms"`
+	ID              string          `json:"id"`
+	Generation      int64           `json:"generation"`
+	SnapshotAt      time.Time       `json:"snapshot_at"`
+	SnapshotType    string          `json:"snapshot_type"`
+	SnapshotData    json.RawMessage `json:"snapshot_data"`
+	OverallHealth   string          `json:"overall_health"`
+	PublicIP        *string         `json:"public_ip,omitempty"`
+	DdnsSynced      *bool           `json:"ddns_synced,omitempty"`
+	DivergenceCount int             `json:"divergence_count"`
+	ScanDurationMs  int64           `json:"scan_duration_ms"`
 }
 
 const observedColumns = `

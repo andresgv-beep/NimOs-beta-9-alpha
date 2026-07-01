@@ -44,18 +44,21 @@ import (
 // como pool gestionado por NimOS.
 //
 // Inputs:
-//   uuid     — UUID BTRFS del filesystem a importar (de /observed)
-//   name     — nombre que tendrá el pool en NimOS (slug)
+//
+//	uuid     — UUID BTRFS del filesystem a importar (de /observed)
+//	name     — nombre que tendrá el pool en NimOS (slug)
 //
 // Validaciones:
-//   · UUID debe existir en el observer snapshot
-//   · UUID NO debe estar ya gestionado (storage_pools.btrfs_uuid)
-//   · Nombre debe ser válido y único
-//   · Devices del FS deben estar online (todos)
+//
+//	· UUID debe existir en el observer snapshot
+//	· UUID NO debe estar ya gestionado (storage_pools.btrfs_uuid)
+//	· Nombre debe ser válido y único
+//	· Devices del FS deben estar online (todos)
 //
 // Devuelve un map con la misma forma que createPoolBtrfs:
-//   { "ok": true, "pool": {...} }
-//   { "error": "...", "code": "...", "details": {...} }
+//
+//	{ "ok": true, "pool": {...} }
+//	{ "error": "...", "code": "...", "details": {...} }
 func importPoolBtrfs(body map[string]interface{}) map[string]interface{} {
 	uuid := strings.TrimSpace(bodyStr(body, "uuid"))
 	name := strings.TrimSpace(bodyStr(body, "name"))

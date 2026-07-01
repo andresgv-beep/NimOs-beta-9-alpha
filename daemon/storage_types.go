@@ -25,27 +25,27 @@ import (
 // Pool representa un filesystem BTRFS gestionado u observado por NimOS.
 // El ID interno es estable; el Name puede cambiar sin romper foreign keys.
 type Pool struct {
-	ID            string       `json:"id"`             // UUID interno, estable, nunca cambia
-	Name          string       `json:"name"`           // Nombre legible, único, puede cambiar (rename)
-	BtrfsUUID     string       `json:"btrfs_uuid"`     // UUID del filesystem (de blkid)
-	Profile       Profile      `json:"profile"`        // single | raid1 | raid1c3 | raid10
-	MountPoint    string       `json:"mount_point"`    // /nimos/pools/<name>
-	Role          Role         `json:"role"`           // Beta 8 siempre "data". Consumers futuros.
-	Compression   string       `json:"compression"`    // none | lzo | zstd:1..15
-	ControlState  ControlState `json:"control_state"`  // managed | observed (Beta 8)
-	DiscoveredAt  *time.Time   `json:"discovered_at"`  // primera vez que se vio, nullable
-	CreatedAt     time.Time    `json:"created_at"`
-	Generation    int64        `json:"generation"`     // incrementa en cada mutación
+	ID           string       `json:"id"`            // UUID interno, estable, nunca cambia
+	Name         string       `json:"name"`          // Nombre legible, único, puede cambiar (rename)
+	BtrfsUUID    string       `json:"btrfs_uuid"`    // UUID del filesystem (de blkid)
+	Profile      Profile      `json:"profile"`       // single | raid1 | raid1c3 | raid10
+	MountPoint   string       `json:"mount_point"`   // /nimos/pools/<name>
+	Role         Role         `json:"role"`          // Beta 8 siempre "data". Consumers futuros.
+	Compression  string       `json:"compression"`   // none | lzo | zstd:1..15
+	ControlState ControlState `json:"control_state"` // managed | observed (Beta 8)
+	DiscoveredAt *time.Time   `json:"discovered_at"` // primera vez que se vio, nullable
+	CreatedAt    time.Time    `json:"created_at"`
+	Generation   int64        `json:"generation"` // incrementa en cada mutación
 
 	// Campos cargados bajo demanda (no siempre presentes)
 	Capabilities []string `json:"capabilities,omitempty"` // ["snapshots", "balance", "replace_device", ...]
 	Devices      []Device `json:"devices,omitempty"`      // miembros del pool
 
 	// Campos enriquecidos por ListPools (no almacenados en DB)
-	Usage     *PoolUsage  `json:"usage,omitempty"`      // Capacidad runtime (de btrfs filesystem usage)
-	Health    *PoolHealth `json:"health,omitempty"`     // Estado de salud computado
-	IsPrimary bool        `json:"is_primary"`           // true si es el primary_pool
-	Mounted   bool        `json:"mounted"`              // true si está montado en MountPoint
+	Usage     *PoolUsage  `json:"usage,omitempty"`  // Capacidad runtime (de btrfs filesystem usage)
+	Health    *PoolHealth `json:"health,omitempty"` // Estado de salud computado
+	IsPrimary bool        `json:"is_primary"`       // true si es el primary_pool
+	Mounted   bool        `json:"mounted"`          // true si está montado en MountPoint
 
 	// Conteo REAL de devices según el kernel (observer btrfs), NO la BD. Permite
 	// a la UI no mentir cuando el filesystem tiene discos que la BD no conoce
@@ -163,11 +163,11 @@ func (p *Pool) HasCapability(cap string) bool {
 //
 // see docs/storage_invariants.md#3
 type Device struct {
-	ID          string    `json:"id"`              // UUID interno
-	Serial      string    `json:"serial"`          // IDENTIDAD ABSOLUTA
-	ByIDPath    string    `json:"by_id_path"`      // /dev/disk/by-id/ata-...
-	CurrentPath string    `json:"current_path"`    // /dev/sdb (cache, cambia entre reboots)
-	WWN         string    `json:"wwn,omitempty"`   // identificador adicional, puede ser vacío
+	ID          string    `json:"id"`            // UUID interno
+	Serial      string    `json:"serial"`        // IDENTIDAD ABSOLUTA
+	ByIDPath    string    `json:"by_id_path"`    // /dev/disk/by-id/ata-...
+	CurrentPath string    `json:"current_path"`  // /dev/sdb (cache, cambia entre reboots)
+	WWN         string    `json:"wwn,omitempty"` // identificador adicional, puede ser vacío
 	Model       string    `json:"model"`
 	SizeBytes   int64     `json:"size_bytes"`
 	LastSeenAt  time.Time `json:"last_seen_at"`
@@ -190,15 +190,15 @@ type Device struct {
 //
 // see docs/storage_state_machines.md §4
 type Operation struct {
-	ID          string          `json:"id"`                     // UUID
-	Type        OperationType   `json:"type"`                   // create_pool | rename_pool | ...
-	PoolID      *string         `json:"pool_id,omitempty"`      // nullable
-	Status      OperationStatus `json:"status"`                 // pending | in_progress | completed | failed | rolled_back | cancelled
+	ID          string          `json:"id"`                // UUID
+	Type        OperationType   `json:"type"`              // create_pool | rename_pool | ...
+	PoolID      *string         `json:"pool_id,omitempty"` // nullable
+	Status      OperationStatus `json:"status"`            // pending | in_progress | completed | failed | rolled_back | cancelled
 	StartedAt   time.Time       `json:"started_at"`
 	CompletedAt *time.Time      `json:"completed_at,omitempty"`
-	Error       *string         `json:"error,omitempty"`        // mensaje libre del error si falló
-	ErrorCode   *string         `json:"error_code,omitempty"`   // código semántico (ErrCode*) si falló
-	Data        json.RawMessage `json:"data,omitempty"`         // payload temporal (parámetros + progreso)
+	Error       *string         `json:"error,omitempty"`      // mensaje libre del error si falló
+	ErrorCode   *string         `json:"error_code,omitempty"` // código semántico (ErrCode*) si falló
+	Data        json.RawMessage `json:"data,omitempty"`       // payload temporal (parámetros + progreso)
 
 	// Eventos cargados bajo demanda
 	Events []Event `json:"events,omitempty"`
@@ -209,13 +209,13 @@ type OperationType string
 
 const (
 	// Sync ops (metadata mutations)
-	OpTypeRenamePool      OperationType = "rename_pool"
-	OpTypeChangeRole      OperationType = "change_role"
-	OpTypeSetCompression  OperationType = "set_compression"
-	OpTypeSetScrubPolicy  OperationType = "set_scrub_policy"
-	OpTypeControlChange   OperationType = "control_state_change"
-	OpTypeBalancePause    OperationType = "balance_pause"
-	OpTypeBalanceResume   OperationType = "balance_resume"
+	OpTypeRenamePool     OperationType = "rename_pool"
+	OpTypeChangeRole     OperationType = "change_role"
+	OpTypeSetCompression OperationType = "set_compression"
+	OpTypeSetScrubPolicy OperationType = "set_scrub_policy"
+	OpTypeControlChange  OperationType = "control_state_change"
+	OpTypeBalancePause   OperationType = "balance_pause"
+	OpTypeBalanceResume  OperationType = "balance_resume"
 
 	// Async ops (long-running)
 	OpTypeCreatePool     OperationType = "create_pool"
@@ -327,29 +327,29 @@ const (
 // El frontend puede reaccionar al código sin parsear el mensaje libre.
 // see docs/storage_http_api.md §5 para la lista completa con códigos HTTP.
 const (
-	ErrCodePoolNotFound          = "pool_not_found"
-	ErrCodePoolNameTaken         = "pool_name_taken"
-	ErrCodePoolObserved          = "pool_observed"
-	ErrCodePoolRecovery          = "pool_recovery" // STOR-01-B: pool en recovery, solo ops de salida
-	ErrCodeCapabilityMissing     = "capability_missing"
-	ErrCodeOperationInProgress   = "operation_in_progress"
-	ErrCodeOperationNotFound     = "operation_not_found"
+	ErrCodePoolNotFound            = "pool_not_found"
+	ErrCodePoolNameTaken           = "pool_name_taken"
+	ErrCodePoolObserved            = "pool_observed"
+	ErrCodePoolRecovery            = "pool_recovery" // STOR-01-B: pool en recovery, solo ops de salida
+	ErrCodeCapabilityMissing       = "capability_missing"
+	ErrCodeOperationInProgress     = "operation_in_progress"
+	ErrCodeOperationNotFound       = "operation_not_found"
 	ErrCodeOperationNotCancellable = "operation_not_cancellable"
-	ErrCodeDeviceNotFound        = "device_not_found"
-	ErrCodeDeviceInUse           = "device_in_use"
-	ErrCodeDeviceMissing         = "device_missing"
-	ErrCodeDeviceNotEligible     = "device_not_eligible"
-	ErrCodeProfileInvalid        = "profile_invalid"
-	ErrCodeInsufficientDisks     = "insufficient_disks"
-	ErrCodeMinDisksReached       = "min_disks_reached"
-	ErrCodeServicesActive        = "services_active"
-	ErrCodeMountFailed           = "mount_failed"
-	ErrCodeUnmountFailed         = "unmount_failed"
-	ErrCodeBtrfsCommandFailed    = "btrfs_command_failed"
-	ErrCodeTransitionNotPermitted = "transition_not_permitted"
-	ErrCodeCrashedDuringOperation = "crashed_during_operation"
-	ErrCodeBadRequest            = "bad_request"
-	ErrCodeInternal              = "internal"
+	ErrCodeDeviceNotFound          = "device_not_found"
+	ErrCodeDeviceInUse             = "device_in_use"
+	ErrCodeDeviceMissing           = "device_missing"
+	ErrCodeDeviceNotEligible       = "device_not_eligible"
+	ErrCodeProfileInvalid          = "profile_invalid"
+	ErrCodeInsufficientDisks       = "insufficient_disks"
+	ErrCodeMinDisksReached         = "min_disks_reached"
+	ErrCodeServicesActive          = "services_active"
+	ErrCodeMountFailed             = "mount_failed"
+	ErrCodeUnmountFailed           = "unmount_failed"
+	ErrCodeBtrfsCommandFailed      = "btrfs_command_failed"
+	ErrCodeTransitionNotPermitted  = "transition_not_permitted"
+	ErrCodeCrashedDuringOperation  = "crashed_during_operation"
+	ErrCodeBadRequest              = "bad_request"
+	ErrCodeInternal                = "internal"
 
 	// ─── Recovery (Fase 4) ───────────────────────────────────────────────
 	// Se aplica a operations marcadas failed por el recovery al arranque,

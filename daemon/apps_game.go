@@ -9,9 +9,10 @@
 // GET /api/apps/{id}/game-info → GameInfo JSON
 //
 // Reusa piezas existentes (sin reinventar):
-//   · getStackHostIP()          · IP local del NAS (docker_async.go)
-//   · networkRepo.GetExposureConfig() · dominio DuckDNS base (si está configurado)
-//   · app.parsedPorts()         · puerto(s) del juego (db_apps.go)
+//
+//	· getStackHostIP()          · IP local del NAS (docker_async.go)
+//	· networkRepo.GetExposureConfig() · dominio DuckDNS base (si está configurado)
+//	· app.parsedPorts()         · puerto(s) del juego (db_apps.go)
 package main
 
 import (
@@ -24,16 +25,16 @@ import (
 
 // GameInfo es la vista que consume el Modal de Juego del frontend.
 type GameInfo struct {
-	AppID          string `json:"app_id"`
-	Name           string `json:"name"`
-	Port           int    `json:"port"`            // puerto del juego (host)
-	Protocol       string `json:"protocol"`        // "tcp" | "udp"
-	LocalAddress   string `json:"local_address"`   // ej. "192.168.1.131:25565"
+	AppID           string `json:"app_id"`
+	Name            string `json:"name"`
+	Port            int    `json:"port"`                       // puerto del juego (host)
+	Protocol        string `json:"protocol"`                   // "tcp" | "udp"
+	LocalAddress    string `json:"local_address"`              // ej. "192.168.1.131:25565"
 	ExternalAddress string `json:"external_address,omitempty"` // ej. "nimbarraca.duckdns.org:25565" (vacío si no hay dominio)
-	FilesPath      string `json:"files_path"`      // ruta absoluta de la carpeta del server
-	FilesShare      string `json:"files_share,omitempty"`     // share que CONTIENE esa carpeta (vacío si ninguno)
-	FilesRelPath    string `json:"files_rel_path,omitempty"`  // ruta relativa dentro del share (ej. "/minecraft-java")
-	RconEnabled    bool   `json:"rcon_enabled"`    // si la app soporta consola RCON
+	FilesPath       string `json:"files_path"`                 // ruta absoluta de la carpeta del server
+	FilesShare      string `json:"files_share,omitempty"`      // share que CONTIENE esa carpeta (vacío si ninguno)
+	FilesRelPath    string `json:"files_rel_path,omitempty"`   // ruta relativa dentro del share (ej. "/minecraft-java")
+	RconEnabled     bool   `json:"rcon_enabled"`               // si la app soporta consola RCON
 }
 
 // composeGameAddress compone una dirección de conexión "host:puerto".
@@ -75,8 +76,9 @@ func gamePortFromApp(app *DBDockerApp) (int, string) {
 // tienen prioridad en el mux. Aquí van las que llevan {id} en medio.
 //
 // Rutas soportadas:
-//   GET  /api/apps/{id}/game-info  · info del Panel de Juego (direcciones, puerto)
-//   POST /api/apps/{id}/rcon       · ejecuta un comando RCON en el servidor
+//
+//	GET  /api/apps/{id}/game-info  · info del Panel de Juego (direcciones, puerto)
+//	POST /api/apps/{id}/rcon       · ejecuta un comando RCON en el servidor
 func handleAppsSubRoutes(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasSuffix(r.URL.Path, "/game-info"):

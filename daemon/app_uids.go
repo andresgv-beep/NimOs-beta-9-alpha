@@ -252,10 +252,10 @@ func ensureAppSystemUser(appID string, uid, gid int) {
 	runSafe("useradd",
 		"-u", strconv.Itoa(uid),
 		"-g", strconv.Itoa(gid),
-		"-M",                              // sin crear home
-		"-N",                              // no crear grupo propio (usamos el nuestro)
+		"-M",                                       // sin crear home
+		"-N",                                       // no crear grupo propio (usamos el nuestro)
 		"-K", "UID_MAX="+strconv.Itoa(appUIDMax+1), // rango válido para esta op
-		"-s", "/usr/sbin/nologin",         // sin shell
+		"-s", "/usr/sbin/nologin", // sin shell
 		userName,
 	)
 	logMsg("app_uids: usuario de sistema %s creado (uid=%d gid=%d) para app %s",
@@ -288,17 +288,17 @@ type volPermPlan struct {
 // decideVolumePlan decide los permisos de UN volumen dado el UID asignado a la
 // app y el UID que la imagen declara. Lógica PURA (testeable sin tocar disco).
 //
-//   appUID/appGID · el UID/GID único asignado por NimOS a la app (Fase 1).
-//   imageUIDStr   · lo que devuelve imageUID(image): "", "0", "root", "999"...
-//   containerPath · lado-container del volumen (para detectar si es BD).
+//	appUID/appGID · el UID/GID único asignado por NimOS a la app (Fase 1).
+//	imageUIDStr   · lo que devuelve imageUID(image): "", "0", "root", "999"...
+//	containerPath · lado-container del volumen (para detectar si es BD).
 //
 // Reglas:
-//   1. Volumen de BD → 0700, dueño = UID fijo de imagen (o 999 por defecto).
-//      Las BBDD hardcodean su UID; NO se les puede forzar el asignado.
-//   2. Imagen con UID fijo NO-root (synapse 991, etc.) → 0750, dueño = ese UID.
-//      La imagen ignoraría un UID forzado; respetamos el suyo, confinado.
-//   3. Imagen sin UID o root → 0750, dueño = UID ASIGNADO por NimOS. La app es
-//      flexible (o linuxserver vía PUID); le imponemos su UID único.
+//  1. Volumen de BD → 0700, dueño = UID fijo de imagen (o 999 por defecto).
+//     Las BBDD hardcodean su UID; NO se les puede forzar el asignado.
+//  2. Imagen con UID fijo NO-root (synapse 991, etc.) → 0750, dueño = ese UID.
+//     La imagen ignoraría un UID forzado; respetamos el suyo, confinado.
+//  3. Imagen sin UID o root → 0750, dueño = UID ASIGNADO por NimOS. La app es
+//     flexible (o linuxserver vía PUID); le imponemos su UID único.
 func decideVolumePlan(appUID, appGID int, imageUIDStr, containerPath, hostPath string) volPermPlan {
 	isDB := isDBContainerPath(containerPath)
 
@@ -351,16 +351,16 @@ func applyVolPermPlan(p volPermPlan) {
 // flujo de instalación ANTES del `compose up`. Reemplaza al viejo
 // applyUIDPermissions.
 //
-//   appID    · id de la app (para asignar/buscar su UID único).
-//   compose  · texto del compose.
-//   envVars  · el .env ya resuelto (para expandir rutas de volúmenes).
-//   nowISO   · timestamp para el registro del UID.
+//	appID    · id de la app (para asignar/buscar su UID único).
+//	compose  · texto del compose.
+//	envVars  · el .env ya resuelto (para expandir rutas de volúmenes).
+//	nowISO   · timestamp para el registro del UID.
 //
 // Hace:
-//   1. Asigna (o reusa) el UID único de la app + crea el usuario de sistema.
-//   2. Para cada volumen bajo el pool, decide y aplica los permisos.
-//   3. Devuelve las rutas-host de TODOS los volúmenes tratados, para que el
-//      modelo de shares posterior los EXCLUYA (no los pise).
+//  1. Asigna (o reusa) el UID único de la app + crea el usuario de sistema.
+//  2. Para cada volumen bajo el pool, decide y aplica los permisos.
+//  3. Devuelve las rutas-host de TODOS los volúmenes tratados, para que el
+//     modelo de shares posterior los EXCLUYA (no los pise).
 //
 // No falla la instalación si algo va mal · loguea y sigue (devuelve lo tratado).
 func applyAppPermissions(appID, compose string, envVars map[string]interface{}, nowISO string) []string {
@@ -416,10 +416,11 @@ func applyAppPermissions(appID, compose string, envVars map[string]interface{}, 
 //
 // Tras compose up, Docker puede haber creado subcarpetas/volúmenes nuevos bajo
 // containerPath que la Fase 2 (que corre ANTES del up) no trató. Esta función:
-//   · Pone la raíz containerPath con el UID de la app y 0750 (sin grupo).
-//   · Recorre las entradas de primer nivel: las que NO fueron tratadas como
-//     volumen (no están en treatedVolumes) reciben el UID de la app + 0750.
-//   · Las ya tratadas (volúmenes de la Fase 2, incl. BD con 0700) se respetan.
+//
+//	· Pone la raíz containerPath con el UID de la app y 0750 (sin grupo).
+//	· Recorre las entradas de primer nivel: las que NO fueron tratadas como
+//	  volumen (no están en treatedVolumes) reciben el UID de la app + 0750.
+//	· Las ya tratadas (volúmenes de la Fase 2, incl. BD con 0700) se respetan.
 //
 // No falla la instalación · loguea.
 func finalizeAppContainerPerms(appID, containerPath string, treatedVolumes []string) {
@@ -503,9 +504,9 @@ func appHasFilesOnDisk(uid int, searchRoot string) bool {
 // usuario de sistema ("clean") o conservarlo ("preserve"). Lógica PURA,
 // testeable. Recibe si la app está activa y si tiene archivos en disco.
 //
-//   · Activa (reinstalada) → preserve (no tocar)
-//   · Tiene archivos (desinstalada-normal, datos conservados) → preserve
-//   · Sin archivos (desinstalada-total) → clean (userdel)
+//	· Activa (reinstalada) → preserve (no tocar)
+//	· Tiene archivos (desinstalada-normal, datos conservados) → preserve
+//	· Sin archivos (desinstalada-total) → clean (userdel)
 func reconcileDecision(isActive, hasFiles bool) string {
 	if isActive || hasFiles {
 		return "preserve"

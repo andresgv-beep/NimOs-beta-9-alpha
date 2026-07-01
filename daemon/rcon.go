@@ -4,15 +4,18 @@
 // externas · coherente con la filosofía minimalista de deps de NimOS.
 //
 // Protocolo Source RCON · cada paquete es:
-//   [Size int32 LE][ID int32 LE][Type int32 LE][Body string null-term][null pad]
+//
+//	[Size int32 LE][ID int32 LE][Type int32 LE][Body string null-term][null pad]
 //
 // Tipos de paquete:
-//   3 = SERVERDATA_AUTH          (login con password)
-//   2 = SERVERDATA_AUTH_RESPONSE / SERVERDATA_EXECCOMMAND
-//   0 = SERVERDATA_RESPONSE_VALUE (respuesta a un comando)
+//
+//	3 = SERVERDATA_AUTH          (login con password)
+//	2 = SERVERDATA_AUTH_RESPONSE / SERVERDATA_EXECCOMMAND
+//	0 = SERVERDATA_RESPONSE_VALUE (respuesta a un comando)
 //
 // Uso:
-//   resp, err := rconExecute("127.0.0.1", 25575, "password", "list", 5*time.Second)
+//
+//	resp, err := rconExecute("127.0.0.1", 25575, "password", "list", 5*time.Second)
 package main
 
 import (

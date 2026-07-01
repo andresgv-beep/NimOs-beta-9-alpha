@@ -94,10 +94,10 @@ func getComposeServices(ctx context.Context, composePath, stackDir string) ([]Co
 // inyectar las rows iniciales en docker_app_images.
 //
 // Para cada servicio del compose:
-//   1. Extrae imagen del compose
-//   2. Obtiene digest local con docker image inspect
-//   3. Hace UPSERT en docker_app_images con local == remote
-//      (acabamos de descargar lo último, asumimos al día)
+//  1. Extrae imagen del compose
+//  2. Obtiene digest local con docker image inspect
+//  3. Hace UPSERT en docker_app_images con local == remote
+//     (acabamos de descargar lo último, asumimos al día)
 //
 // No es bloqueante: si algo falla para un servicio individual, se logea
 // pero no aborta el deploy. La tabla puede actualizarse después con

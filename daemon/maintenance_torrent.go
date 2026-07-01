@@ -23,8 +23,8 @@ import (
 
 type torrentTmpSweepTask struct{}
 
-func (t *torrentTmpSweepTask) ID() string   { return "torrent_tmp_sweep" }
-func (t *torrentTmpSweepTask) Name() string { return "Limpieza de temporales de torrent" }
+func (t *torrentTmpSweepTask) ID() string       { return "torrent_tmp_sweep" }
+func (t *torrentTmpSweepTask) Name() string     { return "Limpieza de temporales de torrent" }
 func (t *torrentTmpSweepTask) Category() string { return MaintCategoryStorage }
 func (t *torrentTmpSweepTask) Description() string {
 	return "Borra ficheros .torrent temporales que ya fueron procesados por el motor de descargas."

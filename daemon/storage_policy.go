@@ -46,9 +46,9 @@ func initStoragePolicy() {
 // simple. Para conocer la razón del rechazo, usar AllowsWithReason.
 //
 // Reglas Beta 8:
-//   1. Si el pool está en estado != managed → todo rechazado (observed
-//      no muta, los otros estados son Beta 9+).
-//   2. Si la op requiere una capability, el pool debe tenerla.
+//  1. Si el pool está en estado != managed → todo rechazado (observed
+//     no muta, los otros estados son Beta 9+).
+//  2. Si la op requiere una capability, el pool debe tenerla.
 //
 // Beta 9+ añadirá: comprobar operaciones en curso (no permitir dos balances
 // concurrentes... aunque el schema ya lo enforce), comprobar shares activos

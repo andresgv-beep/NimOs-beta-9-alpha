@@ -248,7 +248,7 @@ func TestRunPostInstallAction_Success(t *testing.T) {
 
 func TestRunPostInstallAction_MissingToken(t *testing.T) {
 	action := PostInstallAction{
-		ID:      "x", Type: "exec", Container: "c",
+		ID: "x", Type: "exec", Container: "c",
 		Command: "cmd -u {{ADMIN_USER}} -p {{ADMIN_PASS}}",
 	}
 	values := map[string]string{"ADMIN_USER": "andres"} // falta ADMIN_PASS

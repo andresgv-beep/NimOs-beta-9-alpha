@@ -88,9 +88,9 @@ func writeAsyncAccepted(w http.ResponseWriter, op *DBOperation) {
 // runWorkerAsync envuelve la ejecución de un worker en una goroutine que
 // reporta el resultado a operationsRepo. Centraliza el patrón:
 //
-//   1. MarkRunning
-//   2. invocar worker
-//   3. MarkSucceeded(resultJSON) ó MarkFailed(error)
+//  1. MarkRunning
+//  2. invocar worker
+//  3. MarkSucceeded(resultJSON) ó MarkFailed(error)
 //
 // El worker recibe ctx (context.Background, dado que el request HTTP ya
 // terminó) y devuelve (result map, error). Si result no es nil al success,

@@ -89,17 +89,19 @@ func computeFingerprint() [32]byte {
 //
 // Usa `btrfs filesystem show` que enumera filesystems registrados en el
 // kernel (montados o no). Para cada uno, parseamos:
-//   · Label
-//   · UUID
-//   · Lista de devices (con paths reales)
-//   · "Total devices" expected
-//   · "missing" devices si los hay
+//
+//	· Label
+//	· UUID
+//	· Lista de devices (con paths reales)
+//	· "Total devices" expected
+//	· "missing" devices si los hay
 //
 // Después enriquecemos cada FS con:
-//   · Mount status via findmnt
-//   · Profile via btrfs filesystem df (si está montado)
-//   · Capacity via btrfs filesystem usage (si está montado)
-//   · IO errors via btrfs device stats
+//
+//	· Mount status via findmnt
+//	· Profile via btrfs filesystem df (si está montado)
+//	· Capacity via btrfs filesystem usage (si está montado)
+//	· IO errors via btrfs device stats
 //
 // Si btrfs no responde, devuelve ([], false). El observer lo marca como
 // can_probe=false en lugar de panic.

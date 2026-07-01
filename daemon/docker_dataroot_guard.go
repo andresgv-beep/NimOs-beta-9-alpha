@@ -71,7 +71,8 @@ var checkDockerDataRoot = func() DockerDataRootStatus {
 }
 
 // dockerDataRootToPoolMount deriva el mountpoint del pool desde el data-root.
-//   /nimos/pools/data8/docker/data → /nimos/pools/data8
+//
+//	/nimos/pools/data8/docker/data → /nimos/pools/data8
 func dockerDataRootToPoolMount(dataRoot string) string {
 	if !strings.HasPrefix(dataRoot, nimosPoolsDir+"/") {
 		return ""

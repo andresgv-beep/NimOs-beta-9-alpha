@@ -44,8 +44,8 @@ func TestAssertPoolWritable_NotMounted(t *testing.T) {
 func TestAssertPoolWritable_ReadOnly(t *testing.T) {
 	// Pool montado pero read-only (btrfs detectó daño) → no escribible.
 	checks := poolWritableChecks{
-		mountedPool: func(string) bool { return true },  // montado
-		readOnly:    func(string) bool { return true },  // pero RO
+		mountedPool: func(string) bool { return true }, // montado
+		readOnly:    func(string) bool { return true }, // pero RO
 	}
 	err := assertPoolWritableWith("/nimos/pools/data8/shares/foo", checks)
 	if err == nil {

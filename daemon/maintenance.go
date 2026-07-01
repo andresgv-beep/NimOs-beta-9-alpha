@@ -40,7 +40,7 @@ type MaintenanceTask interface {
 // Categorías de mantenimiento · agrupan tareas afines en la UI (subcategorías).
 // Son strings legibles (se muestran tal cual); usar las constantes evita typos.
 const (
-	MaintCategoryDocker  = "Docker"        // imágenes, redes, higiene de apps Docker
+	MaintCategoryDocker  = "Docker"         // imágenes, redes, higiene de apps Docker
 	MaintCategoryStorage = "Almacenamiento" // directorios huérfanos, temporales
 	MaintCategoryGeneral = "General"        // sin grupo específico
 )

@@ -43,11 +43,13 @@ const (
 // instalada en este sistema. Si la imagen no está, devuelve string vacío.
 //
 // Ejemplo:
-//   getLocalImageDigest("jellyfin/jellyfin:latest")
-//   → "sha256:abc123..." (si está) o "" (si no está descargada)
+//
+//	getLocalImageDigest("jellyfin/jellyfin:latest")
+//	→ "sha256:abc123..." (si está) o "" (si no está descargada)
 //
 // El comando es:
-//   docker image inspect <image> --format '{{index .RepoDigests 0}}'
+//
+//	docker image inspect <image> --format '{{index .RepoDigests 0}}'
 //
 // El output viene como "image@sha256:abc..." · extraemos la parte tras el @.
 func getLocalImageDigest(ctx context.Context, image string) (string, error) {
@@ -105,21 +107,22 @@ type RemoteCheckOutcome struct {
 // actual del tag. NO descarga la imagen · solo metadatos.
 //
 // Ejemplos:
-//   getRemoteImageDigest("jellyfin/jellyfin:latest")  → "sha256:..."
-//   getRemoteImageDigest("private/repo:v1")           → "", status='unauthorized'
-//   getRemoteImageDigest("typo/imagen:latest")        → "", status='unsupported'
+//
+//	getRemoteImageDigest("jellyfin/jellyfin:latest")  → "sha256:..."
+//	getRemoteImageDigest("private/repo:v1")           → "", status='unauthorized'
+//	getRemoteImageDigest("typo/imagen:latest")        → "", status='unsupported'
 //
 // IMPORTANTE · qué digest comparamos:
 //
 // Para imágenes multi-arch (la mayoría hoy día), hay DOS niveles de digests:
 //
-//   1. INDEX MANIFEST DIGEST · hash del JSON del manifest list completo.
-//      Es lo que `docker image inspect --format '{{index .RepoDigests 0}}'`
-//      devuelve para el local · es estable entre arquitecturas porque
-//      todas las arqs ven el MISMO index del registry.
+//  1. INDEX MANIFEST DIGEST · hash del JSON del manifest list completo.
+//     Es lo que `docker image inspect --format '{{index .RepoDigests 0}}'`
+//     devuelve para el local · es estable entre arquitecturas porque
+//     todas las arqs ven el MISMO index del registry.
 //
-//   2. ARCH-SPECIFIC MANIFEST DIGEST · hash del manifest dentro del index
-//      para una arch concreta (amd64, arm64). Este SÍ es distinto por arq.
+//  2. ARCH-SPECIFIC MANIFEST DIGEST · hash del manifest dentro del index
+//     para una arch concreta (amd64, arm64). Este SÍ es distinto por arq.
 //
 // El comando `docker image inspect` devuelve el INDEX digest (nivel 1).
 // El comando `docker manifest inspect` devuelve el INDEX JSON con manifests

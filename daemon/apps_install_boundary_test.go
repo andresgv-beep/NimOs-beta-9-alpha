@@ -131,7 +131,7 @@ func TestInstallCommandBoundary_CatalogIsStatic(t *testing.T) {
 // y un install a ciegas como root es justo lo que no queremos.
 func TestInstallCommandBoundary_CatalogIntegrity(t *testing.T) {
 	if len(knownNativeApps) == 0 {
-		t.Fatal("knownNativeApps está vacío — los tests de frontera pasarían en "+
+		t.Fatal("knownNativeApps está vacío — los tests de frontera pasarían en " +
 			"falso. Si esto es intencional, elimina este fichero a conciencia.")
 	}
 

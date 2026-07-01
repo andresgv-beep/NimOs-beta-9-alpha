@@ -134,10 +134,10 @@ func TestDuckDNS_SubdomainExtraction(t *testing.T) {
 		{"my-host.duckdns.org", "my-host", false},
 		{"", "", true},
 		{".duckdns.org", "", true},
-		{"-bad", "", true},     // leading hyphen
-		{"bad-", "", true},     // trailing hyphen
+		{"-bad", "", true}, // leading hyphen
+		{"bad-", "", true}, // trailing hyphen
 		{"has space", "", true},
-		{"has.dot", "", true},  // dots inside subdomain (we already stripped suffix)
+		{"has.dot", "", true}, // dots inside subdomain (we already stripped suffix)
 		{"has/slash", "", true},
 		{"with$symbol", "", true},
 	}

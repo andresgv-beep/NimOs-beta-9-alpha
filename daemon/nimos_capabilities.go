@@ -233,13 +233,13 @@ func NewCapabilitiesStore(db *sql.DB, clock Clock, detect DetectFunc) (*Capabili
 //
 // Comportamiento por maxAge:
 //
-//   maxAge == 0  → devuelve la persistencia tal cual.
-//                  Si no hay nada, ErrCapabilitiesNotPersisted.
-//   maxAge > 0   → si stale → refresca. Si no hay nada → refresca.
+//	maxAge == 0  → devuelve la persistencia tal cual.
+//	               Si no hay nada, ErrCapabilitiesNotPersisted.
+//	maxAge > 0   → si stale → refresca. Si no hay nada → refresca.
 //
 // Pattern típico de uso desde un endpoint:
 //
-//   caps, err := store.Get(1 * time.Hour)  // refresh si > 1h
+//	caps, err := store.Get(1 * time.Hour)  // refresh si > 1h
 func (s *CapabilitiesStore) Get(maxAge time.Duration) (*SystemCapabilities, error) {
 	caps, err := s.readFromDB()
 	if errors.Is(err, ErrCapabilitiesNotPersisted) {

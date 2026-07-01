@@ -69,7 +69,7 @@ type RouterStatus struct {
 // RouterPortMapping representa una regla de port forwarding existente
 // en el router.
 type RouterPortMapping struct {
-	Protocol     string `json:"protocol"`      // "TCP" | "UDP"
+	Protocol     string `json:"protocol"` // "TCP" | "UDP"
 	ExternalPort int    `json:"external_port"`
 	InternalIP   string `json:"internal_ip"`
 	InternalPort int    `json:"internal_port"`

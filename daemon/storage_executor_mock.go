@@ -21,41 +21,41 @@ import (
 //
 // Uso típico en un test:
 //
-//   mock := NewMockBtrfsExecutor()
-//   mock.CreateFilesystemFn = func(ctx, req) (*FilesystemInfo, error) {
-//       return &FilesystemInfo{BtrfsUUID: "fake-uuid"}, nil
-//   }
-//   service := NewStorageService(db, repo, policy, mock)
-//   ... service.CreatePool(...) ...
-//   assertEqual(t, 1, len(mock.CreateFilesystemCalls))
+//	mock := NewMockBtrfsExecutor()
+//	mock.CreateFilesystemFn = func(ctx, req) (*FilesystemInfo, error) {
+//	    return &FilesystemInfo{BtrfsUUID: "fake-uuid"}, nil
+//	}
+//	service := NewStorageService(db, repo, policy, mock)
+//	... service.CreatePool(...) ...
+//	assertEqual(t, 1, len(mock.CreateFilesystemCalls))
 type MockBtrfsExecutor struct {
 	mu sync.Mutex
 
 	// Funciones inyectables: si están a nil, el mock devuelve el default.
-	CreateFilesystemFn  func(ctx context.Context, req CreateFilesystemRequest) (*FilesystemInfo, error)
-	MountFilesystemFn   func(ctx context.Context, byIDPath, mountPoint string) error
-	UnmountFilesystemFn func(ctx context.Context, mountPoint string) error
-	DestroyFilesystemFn func(ctx context.Context, req DestroyFilesystemRequest) error
-	AddDeviceFn         func(ctx context.Context, mountPoint, byIDPath string) error
-	RemoveDeviceFn      func(ctx context.Context, mountPoint, byIDPath string) error
-	ReplaceDeviceFn     func(ctx context.Context, mountPoint, oldByIDPath, newByIDPath string) error
-	ConvertProfileFn    func(ctx context.Context, mountPoint string, newProfile Profile) error
-	WipeDeviceFn        func(ctx context.Context, byIDPath string) error
-	GetFilesystemInfoFn func(ctx context.Context, mountPoint string) (*FilesystemInfo, error)
+	CreateFilesystemFn       func(ctx context.Context, req CreateFilesystemRequest) (*FilesystemInfo, error)
+	MountFilesystemFn        func(ctx context.Context, byIDPath, mountPoint string) error
+	UnmountFilesystemFn      func(ctx context.Context, mountPoint string) error
+	DestroyFilesystemFn      func(ctx context.Context, req DestroyFilesystemRequest) error
+	AddDeviceFn              func(ctx context.Context, mountPoint, byIDPath string) error
+	RemoveDeviceFn           func(ctx context.Context, mountPoint, byIDPath string) error
+	ReplaceDeviceFn          func(ctx context.Context, mountPoint, oldByIDPath, newByIDPath string) error
+	ConvertProfileFn         func(ctx context.Context, mountPoint string, newProfile Profile) error
+	WipeDeviceFn             func(ctx context.Context, byIDPath string) error
+	GetFilesystemInfoFn      func(ctx context.Context, mountPoint string) (*FilesystemInfo, error)
 	FilesystemExistsByUUIDFn func(ctx context.Context, btrfsUUID string) (bool, error)
 
 	// Registros de llamadas. Los tests inspeccionan estas listas para
 	// verificar que el SUT (System Under Test) hizo lo correcto.
-	CreateFilesystemCalls  []CreateFilesystemRequest
-	MountFilesystemCalls   []MockMountCall
-	UnmountFilesystemCalls []string // mount points
-	DestroyFilesystemCalls []DestroyFilesystemRequest
-	AddDeviceCalls         []MockDeviceCall
-	RemoveDeviceCalls      []MockDeviceCall
-	ReplaceDeviceCalls     []MockReplaceCall
-	ConvertProfileCalls    []MockConvertProfileCall
-	WipeDeviceCalls        []string // by-id paths
-	GetFilesystemInfoCalls []string // mount points
+	CreateFilesystemCalls       []CreateFilesystemRequest
+	MountFilesystemCalls        []MockMountCall
+	UnmountFilesystemCalls      []string // mount points
+	DestroyFilesystemCalls      []DestroyFilesystemRequest
+	AddDeviceCalls              []MockDeviceCall
+	RemoveDeviceCalls           []MockDeviceCall
+	ReplaceDeviceCalls          []MockReplaceCall
+	ConvertProfileCalls         []MockConvertProfileCall
+	WipeDeviceCalls             []string // by-id paths
+	GetFilesystemInfoCalls      []string // mount points
 	FilesystemExistsByUUIDCalls []string // UUIDs consultados
 }
 
@@ -73,9 +73,9 @@ type MockDeviceCall struct {
 
 // MockReplaceCall captura los argumentos de ReplaceDevice.
 type MockReplaceCall struct {
-	MountPoint    string
-	OldByIDPath   string
-	NewByIDPath   string
+	MountPoint  string
+	OldByIDPath string
+	NewByIDPath string
 }
 
 // MockConvertProfileCall captura los argumentos de ConvertProfile.

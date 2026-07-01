@@ -69,10 +69,10 @@ func TestImportPoolBtrfs_RejectsInvalidName(t *testing.T) {
 	defer cleanup()
 
 	cases := []string{
-		"",                          // vacío
-		"pool with spaces",          // espacios
-		"pool/with/slashes",         // slashes
-		"system",                    // reservado
+		"",                                     // vacío
+		"pool with spaces",                     // espacios
+		"pool/with/slashes",                    // slashes
+		"system",                               // reservado
 		"thisistoolongtobeapoolnamebecausefxs", // >32
 	}
 	for _, name := range cases {
@@ -227,10 +227,10 @@ func TestIsValidPoolName(t *testing.T) {
 func TestImportPoolBtrfs_ConcurrentSnapshotReads(t *testing.T) {
 	cleanup := setupImportTest(t, []ObservedBtrfs{
 		{
-			UUID:             "test-uuid-concurrent",
-			IsManaged:        false,
-			DevicesExpected:  1,
-			DevicesOnline:    1,
+			UUID:            "test-uuid-concurrent",
+			IsManaged:       false,
+			DevicesExpected: 1,
+			DevicesOnline:   1,
 		},
 	})
 	defer cleanup()

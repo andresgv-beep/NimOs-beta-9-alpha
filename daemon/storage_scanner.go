@@ -45,16 +45,16 @@ type DeviceScanner interface {
 // ScannedDevice es la representación cruda de un disco tras escanear.
 // Contiene SOLO datos observables (no clasificación, no inferencia).
 type ScannedDevice struct {
-	Name        string // sd, nvme0n1, etc.
-	DevicePath  string // /dev/sdb
-	ByIDPath    string // /dev/disk/by-id/ata-... (vacío si no existe)
-	Serial      string // del firmware
-	Model       string
-	WWN         string // World Wide Name (puede ser vacío)
-	SizeBytes   int64
-	Transport   string // sata, nvme, usb, virtio, ...
-	Rotational  bool
-	Removable   bool
+	Name       string // sd, nvme0n1, etc.
+	DevicePath string // /dev/sdb
+	ByIDPath   string // /dev/disk/by-id/ata-... (vacío si no existe)
+	Serial     string // del firmware
+	Model      string
+	WWN        string // World Wide Name (puede ser vacío)
+	SizeBytes  int64
+	Transport  string // sata, nvme, usb, virtio, ...
+	Rotational bool
+	Removable  bool
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

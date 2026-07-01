@@ -30,10 +30,11 @@ var tokenRe = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
 // acción postInstall a partir de los valores del modal (ADMIN_USER, etc.).
 //
 // Comportamiento:
-//   · {{ADMIN_USER}} con values["ADMIN_USER"]="andres" → "andres"
-//   · token sin valor en el mapa → se deja LITERAL ("{{X}}") · señal de que
-//     falta un valor (mejor que sustituir por vacío y ejecutar algo a medias)
-//   · valores no-string se convierten con fmt (defensivo)
+//
+//	· {{ADMIN_USER}} con values["ADMIN_USER"]="andres" → "andres"
+//	· token sin valor en el mapa → se deja LITERAL ("{{X}}") · señal de que
+//	  falta un valor (mejor que sustituir por vacío y ejecutar algo a medias)
+//	· valores no-string se convierten con fmt (defensivo)
 //
 // @param command  el comando con tokens, ej. "register ... -u {{ADMIN_USER}}"
 // @param values   { "ADMIN_USER": "andres", "ADMIN_PASS": "secreto" }
@@ -99,11 +100,11 @@ func ofuscateSecretsInCommand(command string, secretValues []string) string {
 
 // Estados de salud que devuelve containerHealth.
 const (
-	healthHealthy  = "healthy"
+	healthHealthy   = "healthy"
 	healthUnhealthy = "unhealthy"
-	healthStarting = "starting"
-	healthNone     = "none" // el container no declara healthcheck
-	healthUnknown  = "unknown" // no se pudo determinar (container no existe, etc.)
+	healthStarting  = "starting"
+	healthNone      = "none"    // el container no declara healthcheck
+	healthUnknown   = "unknown" // no se pudo determinar (container no existe, etc.)
 )
 
 // parseHealthOutput interpreta la salida cruda de `docker inspect` del health.
@@ -132,11 +133,13 @@ func parseHealthOutput(out string, ok bool) string {
 // `docker inspect` (ON-DEMAND · no periódico · respeta la regla de NimHealth).
 //
 // El formato distingue limpio el caso "sin healthcheck":
-//   {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}
+//
+//	{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}
 //
 // Devuelve: "healthy" | "unhealthy" | "starting" | "none" | "unknown".
-//   · none    → el container existe pero su imagen/compose no declara healthcheck
-//   · unknown → docker inspect falló (container no existe, docker caído...)
+//
+//	· none    → el container existe pero su imagen/compose no declara healthcheck
+//	· unknown → docker inspect falló (container no existe, docker caído...)
 //
 // @param container  nombre o id del container
 // @returns          uno de los health* const
@@ -232,13 +235,13 @@ const postInstallHealthTimeout = 120 * time.Second
 // runPostInstallAction ejecuta UNA acción postInstall.
 //
 // Flujo:
-//   1. (si WaitFor=="healthy") esperar a que el container esté healthy.
-//      · si no tiene healthcheck → ERROR claro (decisión D4 · estricto).
-//   2. sustituir {{TOKENS}} en el comando con los valores.
-//      · si quedan tokens sin resolver → error (falta un valor).
-//   3. docker exec <container> sh -c "<comando>".
-//   4. si idempotent y la salida dice "ya existe" → OK (skipped).
-//   5. NUNCA loguear el comando con secretos en claro (se ofusca).
+//  1. (si WaitFor=="healthy") esperar a que el container esté healthy.
+//     · si no tiene healthcheck → ERROR claro (decisión D4 · estricto).
+//  2. sustituir {{TOKENS}} en el comando con los valores.
+//     · si quedan tokens sin resolver → error (falta un valor).
+//  3. docker exec <container> sh -c "<comando>".
+//  4. si idempotent y la salida dice "ya existe" → OK (skipped).
+//  5. NUNCA loguear el comando con secretos en claro (se ofusca).
 //
 // @param ctx          contexto
 // @param action       la acción a ejecutar

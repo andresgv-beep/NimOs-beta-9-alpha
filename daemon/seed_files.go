@@ -53,8 +53,8 @@ type SeedFile struct {
 // confirmación final contra un qbit real en el Pi).
 const (
 	qbtPBKDF2Iterations = 100000
-	qbtPBKDF2KeyLen      = 64
-	qbtSaltLen           = 16
+	qbtPBKDF2KeyLen     = 64
+	qbtSaltLen          = 16
 )
 
 // qbtPasswordHashWithSalt genera el hash de contraseña de qBittorrent en el

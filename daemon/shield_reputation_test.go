@@ -53,13 +53,13 @@ func TestRep_ThresholdsByLevel(t *testing.T) {
 		wantThreshold   int
 		wantDistrust    bool
 	}{
-		{0, 0, repThresholdUnknown, false},    // desconocida
-		{0, 5, repThresholdUnknown, false},    // desconocida en racha sigue dura (sin distrust: no tiene éxitos)
-		{1, 0, repThresholdKnown, false},      // conocida
-		{10, 0, repThresholdHabitual, false},  // habitual
-		{10, 2, repThresholdHabitual, false},  // habitual con 2 fallos: aún margen
-		{10, 3, repThresholdDistrust, true},   // habitual en racha 3 → DESCONFIANZA
-		{50, 4, repThresholdDistrust, true},   // muy habitual, da igual: racha manda
+		{0, 0, repThresholdUnknown, false},   // desconocida
+		{0, 5, repThresholdUnknown, false},   // desconocida en racha sigue dura (sin distrust: no tiene éxitos)
+		{1, 0, repThresholdKnown, false},     // conocida
+		{10, 0, repThresholdHabitual, false}, // habitual
+		{10, 2, repThresholdHabitual, false}, // habitual con 2 fallos: aún margen
+		{10, 3, repThresholdDistrust, true},  // habitual en racha 3 → DESCONFIANZA
+		{50, 4, repThresholdDistrust, true},  // muy habitual, da igual: racha manda
 	}
 	for _, c := range cases {
 		gotT, gotD := shieldLoginFailThreshold(c.success, c.streak)

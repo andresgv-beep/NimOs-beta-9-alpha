@@ -15,15 +15,15 @@ func TestCheckFolderRelPath(t *testing.T) {
 	}
 
 	invalid := []string{
-		"",                  // vacía
-		"a/b",               // anidada (no primer nivel)
-		"../escape",         // traversal
-		"..",                // padre
-		".",                 // actual
-		".oculta",           // empieza por punto
-		"sub/../otra",       // traversal disfrazado
-		"con\\barra",        // backslash
-		"/absoluta",         // absoluta
+		"",            // vacía
+		"a/b",         // anidada (no primer nivel)
+		"../escape",   // traversal
+		"..",          // padre
+		".",           // actual
+		".oculta",     // empieza por punto
+		"sub/../otra", // traversal disfrazado
+		"con\\barra",  // backslash
+		"/absoluta",   // absoluta
 	}
 	for _, iv := range invalid {
 		if err := checkFolderRelPath(iv); err == nil {

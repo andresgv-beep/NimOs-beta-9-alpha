@@ -26,8 +26,8 @@ import (
 
 type appUIDsHygieneTask struct{}
 
-func (t *appUIDsHygieneTask) ID() string   { return "app_uids_hygiene" }
-func (t *appUIDsHygieneTask) Name() string { return "Higiene de usuarios de apps Docker" }
+func (t *appUIDsHygieneTask) ID() string       { return "app_uids_hygiene" }
+func (t *appUIDsHygieneTask) Name() string     { return "Higiene de usuarios de apps Docker" }
 func (t *appUIDsHygieneTask) Category() string { return MaintCategoryDocker }
 func (t *appUIDsHygieneTask) Description() string {
 	return "Elimina los usuarios de sistema sobrantes de apps Docker desinstaladas por completo. " +

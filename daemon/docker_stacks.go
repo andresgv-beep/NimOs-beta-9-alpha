@@ -418,23 +418,24 @@ func dockerStackDeploy(w http.ResponseWriter, r *http.Request) {
 
 	jsonOk(w, map[string]interface{}{"ok": true, "stack": id, "path": stackPath})
 }
+
 // dockerStackDelete · DELETE /api/docker/stack/<id>[?wipe=true]
 //
 // Dos modos de operación según query param `wipe`:
 //
-//   wipe=false (default · recomendado para el user) · "DESINSTALACIÓN SUAVE"
-//     · docker compose down --remove-orphans · containers fuera
-//     · NO se borran volúmenes Docker (-v) · datos en containers/{id} intactos
-//     · NO se borra stackPath ni containers/{id} · compose YAML, .env y datos
-//       de la app se conservan
-//     · Resultado: si reinstalas la app más tarde, todo vuelve donde estaba.
-//       Postgres encuentra su data dir, Immich su BD, Jellyfin su biblioteca.
+//	wipe=false (default · recomendado para el user) · "DESINSTALACIÓN SUAVE"
+//	  · docker compose down --remove-orphans · containers fuera
+//	  · NO se borran volúmenes Docker (-v) · datos en containers/{id} intactos
+//	  · NO se borra stackPath ni containers/{id} · compose YAML, .env y datos
+//	    de la app se conservan
+//	  · Resultado: si reinstalas la app más tarde, todo vuelve donde estaba.
+//	    Postgres encuentra su data dir, Immich su BD, Jellyfin su biblioteca.
 //
-//   wipe=true · "DESINSTALACIÓN COMPLETA · DESTRUCTIVA"
-//     · docker compose down -v --remove-orphans · containers + volúmenes Docker
-//     · Borra stackPath (docker-compose.yml + .env)
-//     · Borra containers/{id} (uploads, postgres data, configs de la app)
-//     · NO se puede deshacer.
+//	wipe=true · "DESINSTALACIÓN COMPLETA · DESTRUCTIVA"
+//	  · docker compose down -v --remove-orphans · containers + volúmenes Docker
+//	  · Borra stackPath (docker-compose.yml + .env)
+//	  · Borra containers/{id} (uploads, postgres data, configs de la app)
+//	  · NO se puede deshacer.
 //
 // En ambos casos: la row en docker_apps se elimina · la app deja de aparecer
 // como instalada en el AppStore.
@@ -551,10 +552,11 @@ func dockerStackDelete(w http.ResponseWriter, r *http.Request, id string) {
 // Wrapper sync/async sobre runDockerPullWork.
 
 // composeVarPattern captura referencias a variables en un compose:
-//   ${VAR}        → grupo 1 = "VAR", grupo 2 = ""        (sin default)
-//   ${VAR:-foo}   → grupo 1 = "VAR", grupo 2 = ":-foo"   (con default · NO tocar)
-//   ${VAR-foo}    → grupo 1 = "VAR", grupo 2 = "-foo"    (con default · NO tocar)
-//   $VAR          → grupo 1 = "VAR", grupo 2 = ""        (forma sin llaves)
+//
+//	${VAR}        → grupo 1 = "VAR", grupo 2 = ""        (sin default)
+//	${VAR:-foo}   → grupo 1 = "VAR", grupo 2 = ":-foo"   (con default · NO tocar)
+//	${VAR-foo}    → grupo 1 = "VAR", grupo 2 = "-foo"    (con default · NO tocar)
+//	$VAR          → grupo 1 = "VAR", grupo 2 = ""        (forma sin llaves)
 var composeVarPattern = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)(:?-[^}]*)?\}|\$([A-Za-z_][A-Za-z0-9_]*)`)
 
 // volumeHostVarPattern captura SOLO variables usadas en el lado-host de un
@@ -624,7 +626,8 @@ func fillUnresolvedPathVars(compose string, autoEnv map[string]interface{}, cont
 
 // defaultDirNameForVar deriva un nombre de directorio limpio del nombre de una
 // variable: minúsculas y sin sufijos _PATH/_DIR/_LOCATION.
-//   MUSIC_PATH → "music"  ·  PHOTOS_DIR → "photos"  ·  MEDIA → "media"
+//
+//	MUSIC_PATH → "music"  ·  PHOTOS_DIR → "photos"  ·  MEDIA → "media"
 func defaultDirNameForVar(varName string) string {
 	n := strings.ToLower(varName)
 	for _, suffix := range []string{"_path", "_dir", "_location", "_folder"} {
@@ -738,9 +741,10 @@ func imageUID(image string) string {
 
 // volumeContainerPath extrae el lado-container de un volumen
 // "host:container[:opts]". Devuelve "" si no se puede determinar.
-//   "${DB_DATA}:/var/lib/postgresql/data"     → "/var/lib/postgresql/data"
-//   "${CONFIG}/data:/var/lib/grafana"          → "/var/lib/grafana"
-//   "${UPLOAD}:/usr/src/app/upload:rw"         → "/usr/src/app/upload"
+//
+//	"${DB_DATA}:/var/lib/postgresql/data"     → "/var/lib/postgresql/data"
+//	"${CONFIG}/data:/var/lib/grafana"          → "/var/lib/grafana"
+//	"${UPLOAD}:/usr/src/app/upload:rw"         → "/usr/src/app/upload"
 func volumeContainerPath(vol string) string {
 	parts := strings.Split(vol, ":")
 	if len(parts) < 2 {
@@ -792,4 +796,3 @@ func expandComposeVars(s string, envVars map[string]interface{}) string {
 func nimosPoolsRoot() string {
 	return "/nimos/pools/"
 }
-

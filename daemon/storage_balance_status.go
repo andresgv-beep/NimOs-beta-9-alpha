@@ -39,9 +39,10 @@ var chunksRe = regexp.MustCompile(`(\d+)\s+out of about\s+(\d+)\s+chunks balance
 // Función pura, testeable sin discos.
 //
 // Salidas posibles de btrfs:
-//   "No balance found on '/mnt'"                          → inactivo
-//   "Balance on '/mnt' is running\n3 out of about 10..."  → activo, % calculable
-//   "Balance on '/mnt' is paused\n..."                    → activo + pausado
+//
+//	"No balance found on '/mnt'"                          → inactivo
+//	"Balance on '/mnt' is running\n3 out of about 10..."  → activo, % calculable
+//	"Balance on '/mnt' is paused\n..."                    → activo + pausado
 func parseBalanceStatus(out string) BalanceStatus {
 	st := BalanceStatus{}
 	low := strings.ToLower(out)

@@ -18,12 +18,12 @@ import (
 type mockRouterProvider struct {
 	mu sync.Mutex
 
-	detectStatus  *RouterStatus
-	detectErr     error
-	listMappings  []RouterPortMapping
-	listErr       error
-	addErr        error
-	removeErr     error
+	detectStatus *RouterStatus
+	detectErr    error
+	listMappings []RouterPortMapping
+	listErr      error
+	addErr       error
+	removeErr    error
 
 	addedCalls   []RouterPortMapping
 	removedCalls []struct {

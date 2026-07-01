@@ -28,13 +28,13 @@ import (
 
 // MountReconcileResult resume lo que hizo reconcileMountState.
 type MountReconcileResult struct {
-	Inspected   int // pools examinados
-	Mounted     int // pools que estaban sin montar y se montaron
-	Unstacked   int // pools con capas apiladas que se desapilaron
-	Relocated   int // pools montados en sitio equivocado, remontados
-	ReadOnly    int // pools detectados en read-only (reportados, no corregidos)
-	AlreadyOK   int // pools ya correctos (1 capa, sitio correcto, rw)
-	Failed      int // pools que no se pudieron corregir
+	Inspected int // pools examinados
+	Mounted   int // pools que estaban sin montar y se montaron
+	Unstacked int // pools con capas apiladas que se desapilaron
+	Relocated int // pools montados en sitio equivocado, remontados
+	ReadOnly  int // pools detectados en read-only (reportados, no corregidos)
+	AlreadyOK int // pools ya correctos (1 capa, sitio correcto, rw)
+	Failed    int // pools que no se pudieron corregir
 }
 
 // reconcileMountState examina cada pool de la BD y corrige divergencias entre

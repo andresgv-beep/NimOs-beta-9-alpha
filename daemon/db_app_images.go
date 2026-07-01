@@ -175,10 +175,10 @@ func (r *AppImagesRepo) DeleteByApp(ctx context.Context, appID string) error {
 // AppUpdateSummary resume el estado de actualizaciones de una app.
 // Usado por el endpoint updates-summary que alimenta el sidebar.
 type AppUpdateSummary struct {
-	AppID             string `json:"appId"`
-	ServicesTotal     int    `json:"servicesTotal"`
-	ServicesWithUpdate int   `json:"servicesWithUpdate"`
-	OldestCheckAt     string `json:"oldestCheckAt"` // el remote_checked_at más antiguo
+	AppID              string `json:"appId"`
+	ServicesTotal      int    `json:"servicesTotal"`
+	ServicesWithUpdate int    `json:"servicesWithUpdate"`
+	OldestCheckAt      string `json:"oldestCheckAt"` // el remote_checked_at más antiguo
 }
 
 // ListAppsWithUpdates devuelve solo las apps que tienen al menos un servicio

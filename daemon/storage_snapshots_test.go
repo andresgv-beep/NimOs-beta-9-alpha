@@ -70,11 +70,11 @@ func TestIsValidSnapshotName_TooLong(t *testing.T) {
 
 func TestCreateSnapshot_RejectsBadInput(t *testing.T) {
 	cases := []map[string]interface{}{
-		{},                                          // sin pool ni name
-		{"pool": "data1"},                           // sin name
-		{"name": "snap"},                            // sin pool
-		{"pool": "data1", "name": "../escape"},      // nombre inválido
-		{"pool": "data1", "name": "with space"},     // nombre inválido
+		{},                                      // sin pool ni name
+		{"pool": "data1"},                       // sin name
+		{"name": "snap"},                        // sin pool
+		{"pool": "data1", "name": "../escape"},  // nombre inválido
+		{"pool": "data1", "name": "with space"}, // nombre inválido
 	}
 	for i, body := range cases {
 		res := createSnapshot(body)

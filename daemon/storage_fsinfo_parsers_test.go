@@ -29,10 +29,10 @@ func TestParseDeviceStats(t *testing.T) {
 
 func TestParseTrailingInt(t *testing.T) {
 	cases := map[string]int64{
-		"Device size:		  1000204886016": 1000204886016,
-		"Used:			   123456789":         123456789,
-		"no number here":                    0,
-		"[/dev/sda].write_io_errs    22":    22,
+		"Device size:		  1000204886016":  1000204886016,
+		"Used:			   123456789":           123456789,
+		"no number here":                 0,
+		"[/dev/sda].write_io_errs    22": 22,
 	}
 	for in, want := range cases {
 		if got := parseTrailingInt(in); got != want {

@@ -127,11 +127,11 @@ func requireBtrfs(t *testing.T) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // TestStorageIntegrationCreateAndDestroyPool ejecuta el ciclo completo:
-//   1. Setup: 2 discos loopback de 256MB
-//   2. Crear pool raid1 sobre ellos
-//   3. Verificar que el pool está montado y la DB está actualizada
-//   4. Destruir el pool
-//   5. Verificar que el filesystem está desmontado y los discos limpios
+//  1. Setup: 2 discos loopback de 256MB
+//  2. Crear pool raid1 sobre ellos
+//  3. Verificar que el pool está montado y la DB está actualizada
+//  4. Destruir el pool
+//  5. Verificar que el filesystem está desmontado y los discos limpios
 func TestStorageIntegrationCreateAndDestroyPool(t *testing.T) {
 	requireBtrfs(t)
 
@@ -413,10 +413,10 @@ func TestStorageIntegrationAddRemoveDevice(t *testing.T) {
 // de WipeDevice rechaza wipear el disco de boot del sistema.
 //
 // El test verifica DOS cosas:
-//   1. Se rechaza (err != nil)
-//   2. Se rechaza por la razón CORRECTA ("refusing to wipe boot disk"),
-//      no por un error secundario como "cannot resolve symlink".
-//      Esto detecta regresiones en parentDeviceOf / isBootDisk.
+//  1. Se rechaza (err != nil)
+//  2. Se rechaza por la razón CORRECTA ("refusing to wipe boot disk"),
+//     no por un error secundario como "cannot resolve symlink".
+//     Esto detecta regresiones en parentDeviceOf / isBootDisk.
 func TestStorageIntegrationWipeDeviceRejectsBootDisk(t *testing.T) {
 	requireBtrfs(t)
 

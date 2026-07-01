@@ -152,14 +152,14 @@ var isPoolMounted = func(mountPoint string) bool {
 // desperdicia el resto del mayor). Reparte copias mientras pueda colocarlas en
 // discos distintos. La capacidad usable resultante por profile:
 //
-//   single  : suma de todos (sin redundancia)
-//   raid1   : 2 copias en 2 discos distintos →
-//             usable = min(suma/2, suma − disco_mayor)
-//             (el disco mayor no puede emparejarse consigo mismo: el cuello de
-//              botella es cuánto pueden absorber "los demás")
-//   raid1c3 : 3 copias → usable = min(suma/3, suma − (mayor1 + mayor2))... pero
-//             se generaliza como suma/copias con el límite de los menores.
-//   raid10  : stripe sobre mirrors → ~suma/2 (requiere ≥4 discos balanceados)
+//	single  : suma de todos (sin redundancia)
+//	raid1   : 2 copias en 2 discos distintos →
+//	          usable = min(suma/2, suma − disco_mayor)
+//	          (el disco mayor no puede emparejarse consigo mismo: el cuello de
+//	           botella es cuánto pueden absorber "los demás")
+//	raid1c3 : 3 copias → usable = min(suma/3, suma − (mayor1 + mayor2))... pero
+//	          se generaliza como suma/copias con el límite de los menores.
+//	raid10  : stripe sobre mirrors → ~suma/2 (requiere ≥4 discos balanceados)
 //
 // Para raid1, la fórmula min(suma/2, suma−mayor) captura exactamente el caso
 // asimétrico: con 120+320, suma=440, mayor=320 → min(220, 120)=120 GiB usables.
@@ -292,9 +292,9 @@ func getPrimaryPoolName() string {
 // deviceIsPresent comprueba si un disco registrado en la BD sigue presente
 // físicamente. Inyectable para tests. Regla 16: el kernel manda sobre la BD.
 //
-//   1. by-id estable existe → presente (lo más fiable).
-//   2. CurrentPath existe Y serial coincide → presente.
-//   3. en otro caso → ausente (missing).
+//  1. by-id estable existe → presente (lo más fiable).
+//  2. CurrentPath existe Y serial coincide → presente.
+//  3. en otro caso → ausente (missing).
 //
 // El serial es la identidad absoluta: /dev/sdb puede existir pero ser OTRO
 // disco (uno nuevo), así que se confirma el serial, no solo el path.

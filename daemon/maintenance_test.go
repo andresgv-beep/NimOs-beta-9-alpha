@@ -9,11 +9,13 @@ import (
 
 type panicTask struct{}
 
-func (panicTask) ID() string                            { return "test_panic" }
-func (panicTask) Name() string                          { return "panic" }
-func (panicTask) Description() string                   { return "" }
-func (panicTask) Category() string                      { return MaintCategoryGeneral }
-func (panicTask) DefaultSchedule() Schedule             { return Schedule{Kind: ScheduleInterval, IntervalMinutes: 60} }
+func (panicTask) ID() string          { return "test_panic" }
+func (panicTask) Name() string        { return "panic" }
+func (panicTask) Description() string { return "" }
+func (panicTask) Category() string    { return MaintCategoryGeneral }
+func (panicTask) DefaultSchedule() Schedule {
+	return Schedule{Kind: ScheduleInterval, IntervalMinutes: 60}
+}
 func (panicTask) Run(ctx context.Context) MaintenanceResult {
 	panic("boom")
 }

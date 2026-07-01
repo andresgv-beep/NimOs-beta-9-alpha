@@ -13,8 +13,8 @@ package main
 
 import (
 	"context"
-	"errors"
 	"database/sql"
+	"errors"
 	"testing"
 )
 

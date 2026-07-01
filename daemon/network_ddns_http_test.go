@@ -136,7 +136,7 @@ func TestValidateDomain_Cases(t *testing.T) {
 		{"sub.dom.example.net", false},
 		{"", true},
 		{"   ", true},
-		{"a", true},                  // too short - failed by regex
+		{"a", true}, // too short - failed by regex
 		{"has space.com", true},
 		{"-leadinghyphen.com", true},
 		{"trailinghyphen-.com", true},

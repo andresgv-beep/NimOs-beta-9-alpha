@@ -324,8 +324,9 @@ func (e *RealBtrfsExecutor) ReplaceDevice(ctx context.Context, mountPoint, oldBy
 // si no hay disco missing o no se puede determinar.
 //
 // Salida típica:
-//   devid    1 size 111.79GiB used 44.03GiB path /dev/sda
-//   devid    2 size 0 used 0 path <missing disk> MISSING
+//
+//	devid    1 size 111.79GiB used 44.03GiB path /dev/sda
+//	devid    2 size 0 used 0 path <missing disk> MISSING
 func missingDevidForPool(mountPoint string) string {
 	out, ok := runSafe("btrfs", "filesystem", "show", mountPoint)
 	if !ok {
@@ -384,8 +385,9 @@ func (e *RealBtrfsExecutor) ConvertProfile(ctx context.Context, mountPoint strin
 
 // WipeDevice borra firmas del device. Implementa los guards documentados
 // en storage_invariants.md#4.2:
-//   1. Verifica que el device no es el boot disk
-//   2. Verifica que no está montado
+//  1. Verifica que el device no es el boot disk
+//  2. Verifica que no está montado
+//
 // Solo entonces hace wipefs.
 func (e *RealBtrfsExecutor) WipeDevice(ctx context.Context, byIDPath string) error {
 	if byIDPath == "" {

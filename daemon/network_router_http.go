@@ -40,13 +40,13 @@ import (
 // RouterStatusResponse es la respuesta combinada del endpoint:
 // status (de Detect) + mappings (de ListMappings si Detected).
 type RouterStatusResponse struct {
-	Available  bool                 `json:"available"`
-	Detected   bool                 `json:"detected"`
-	LocalIP    string               `json:"local_ip,omitempty"`
-	ExternalIP string               `json:"external_ip,omitempty"`
-	Desc       string               `json:"description,omitempty"`
-	Message    string               `json:"message,omitempty"` // hint legible para el usuario
-	Mappings   []RouterPortMapping  `json:"mappings"`
+	Available  bool                `json:"available"`
+	Detected   bool                `json:"detected"`
+	LocalIP    string              `json:"local_ip,omitempty"`
+	ExternalIP string              `json:"external_ip,omitempty"`
+	Desc       string              `json:"description,omitempty"`
+	Message    string              `json:"message,omitempty"` // hint legible para el usuario
+	Mappings   []RouterPortMapping `json:"mappings"`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

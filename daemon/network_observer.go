@@ -65,13 +65,13 @@ type PortDivergence struct {
 // Inmutable una vez creado; el observer publica nuevas instancias
 // atomicamente con atomic.Pointer.
 type ObserverSnapshot struct {
-	ObservedAt       time.Time         `json:"observed_at"`
-	Generation       int64             `json:"generation"` // monotónico, +1 cada Probe completo
-	OverallHealth    HealthStatus      `json:"overall_health"`
-	DivergenceCount  int               `json:"divergence_count"`
-	PortDivergences  []PortDivergence  `json:"port_divergences"`
-	ScanDurationMs   int64             `json:"scan_duration_ms"`
-	ProbeResult      ProbeResult       `json:"-"` // raw del probe; no serializar a JSON externo
+	ObservedAt      time.Time        `json:"observed_at"`
+	Generation      int64            `json:"generation"` // monotónico, +1 cada Probe completo
+	OverallHealth   HealthStatus     `json:"overall_health"`
+	DivergenceCount int              `json:"divergence_count"`
+	PortDivergences []PortDivergence `json:"port_divergences"`
+	ScanDurationMs  int64            `json:"scan_duration_ms"`
+	ProbeResult     ProbeResult      `json:"-"` // raw del probe; no serializar a JSON externo
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -187,10 +187,11 @@ func escalatedBlockDuration(cfg ShieldConfig, offenseCount int) time.Duration {
 
 // shieldAuthDecision decide, ante un fallo de login, si toca bloquear y si es
 // por desconfianza. Lee la política de config.
-//   · DESCONFIANZA: una IP conocida cuya racha de fallos seguidos alcanza
-//     DistrustStreak → bloqueo INMEDIATO (caso "dispositivo robado").
-//   · Si no, bloqueo cuando los fallos en la ventana de 5min alcanzan el
-//     umbral del nivel de reputación.
+//
+//	· DESCONFIANZA: una IP conocida cuya racha de fallos seguidos alcanza
+//	  DistrustStreak → bloqueo INMEDIATO (caso "dispositivo robado").
+//	· Si no, bloqueo cuando los fallos en la ventana de 5min alcanzan el
+//	  umbral del nivel de reputación.
 func shieldAuthDecision(cfg ShieldConfig, successCount, failStreak, windowCount int) (block, distrust bool) {
 	distrust = successCount > 0 && failStreak >= cfg.DistrustStreak
 	threshold := cfg.FailUnknown

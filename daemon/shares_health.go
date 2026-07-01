@@ -63,11 +63,11 @@ var DefaultSharesHealthThresholds = SharesHealthThresholds{
 // ComputeShareHealth evalúa la salud de un ShareView.
 //
 // Orden de evaluación (primero = más prioritario):
-//   1. orphan_pool  (pool no existe → degraded crítico)
-//   2. not_mounted  (pool existe pero no montado → degraded crítico)
-//   3. over_quota   (usando >=100% del límite → degraded)
-//   4. near_quota   (usando >=NearQuotaPercent% → degraded preventivo)
-//   5. healthy      (nada de lo anterior aplica)
+//  1. orphan_pool  (pool no existe → degraded crítico)
+//  2. not_mounted  (pool existe pero no montado → degraded crítico)
+//  3. over_quota   (usando >=100% del límite → degraded)
+//  4. near_quota   (usando >=NearQuotaPercent% → degraded preventivo)
+//  5. healthy      (nada de lo anterior aplica)
 //
 // La función es PURA: dado el ShareView, siempre devuelve lo mismo.
 // No tiene efectos secundarios. Testeable sin BTRFS ni SQLite.

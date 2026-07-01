@@ -51,9 +51,10 @@ func dockerContainersList(w http.ResponseWriter, r *http.Request) {
 // filtrar por type="docker-app" o consumir /api/services?app=docker.
 //
 // Headers de deprecación según RFC 8594:
-//   Deprecation: true
-//   Sunset: ... (fecha estimada de retirada, una vez completado el port frontend)
-//   Link: </api/services>; rel="successor-version"
+//
+//	Deprecation: true
+//	Sunset: ... (fecha estimada de retirada, una vez completado el port frontend)
+//	Link: </api/services>; rel="successor-version"
 //
 // APP-017 · refactorizado para usar matchContainerForAppID (single source
 func dockerContainerCreate(w http.ResponseWriter, r *http.Request) {

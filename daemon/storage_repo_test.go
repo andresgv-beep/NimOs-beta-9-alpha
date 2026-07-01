@@ -280,7 +280,8 @@ func TestStorageRepoDeviceUpsert(t *testing.T) {
 
 	// Insert nuevo
 	withTx(t, conn, func(tx *sql.Tx) error {
-		_, err := repo.UpsertDevice(ctx, tx, dev); return err
+		_, err := repo.UpsertDevice(ctx, tx, dev)
+		return err
 	})
 
 	got, err := repo.GetDeviceBySerial(ctx, "WD-WCC4N1234567")
@@ -299,12 +300,13 @@ func TestStorageRepoDeviceUpsert(t *testing.T) {
 		ID:          "dev-1", // mismo ID lógico, pero UpsertDevice usa serial
 		Serial:      "WD-WCC4N1234567",
 		ByIDPath:    "/dev/disk/by-id/ata-WDC_WD40EFRX", // by_id_path estable
-		CurrentPath: "/dev/sdc",                          // cambió la letra
+		CurrentPath: "/dev/sdc",                         // cambió la letra
 		Model:       "WDC WD40EFRX-68N32N0",
 		SizeBytes:   4000000000000,
 	}
 	withTx(t, conn, func(tx *sql.Tx) error {
-		_, err := repo.UpsertDevice(ctx, tx, dev2); return err
+		_, err := repo.UpsertDevice(ctx, tx, dev2)
+		return err
 	})
 
 	got, _ = repo.GetDeviceBySerial(ctx, "WD-WCC4N1234567")
@@ -350,7 +352,8 @@ func TestStorageRepoListAvailableDevices(t *testing.T) {
 	}
 	for _, d := range devs {
 		withTx(t, conn, func(tx *sql.Tx) error {
-			_, err := repo.UpsertDevice(ctx, tx, d); return err
+			_, err := repo.UpsertDevice(ctx, tx, d)
+			return err
 		})
 	}
 

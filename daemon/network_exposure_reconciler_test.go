@@ -20,13 +20,13 @@ import (
 
 // mockCaddySyncer captura las últimas rutas/TLS recibidas y puede simular fallo.
 type mockCaddySyncer struct {
-	lastRoutes  []caddyRoute
-	calls       int
-	failWith    error
-	lastDomains []string
-	lastPolicy  caddyTLSPolicy
-	tlsCalls    int
-	tlsFailWith error
+	lastRoutes     []caddyRoute
+	calls          int
+	failWith       error
+	lastDomains    []string
+	lastPolicy     caddyTLSPolicy
+	tlsCalls       int
+	tlsFailWith    error
 	listenCalls    int
 	lastHTTPPort   int
 	lastHTTPSPort  int

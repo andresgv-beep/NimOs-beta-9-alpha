@@ -34,7 +34,7 @@ func (e *PoolWritableError) Error() string {
 
 // poolWritableChecks agrupa las comprobaciones inyectables (para tests).
 type poolWritableChecks struct {
-	mountedPool func(path string) bool   // ¿el path está sobre un pool montado?
+	mountedPool func(path string) bool       // ¿el path está sobre un pool montado?
 	readOnly    func(mountPoint string) bool // ¿el pool está montado read-only?
 }
 

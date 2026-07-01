@@ -414,7 +414,7 @@ func TestExpandStackEnvRefs_CircularStopsAfterMaxPasses(t *testing.T) {
 
 func TestExpandStackEnvRefs_NonStringValuesUntouched(t *testing.T) {
 	env := map[string]interface{}{
-		"PORT":         8080,
+		"PORT":          8080,
 		"PROJECTS_PATH": "${PORT}/projects", // ref a un value numérico
 	}
 	result := expandStackEnvRefs(env, 4)
@@ -439,9 +439,9 @@ func TestResolveRandomPlaceholders_FreshInstall(t *testing.T) {
 	// .env no existe · primera instalación
 
 	env := map[string]interface{}{
-		"DB_PASSWORD":  "{RANDOM}",
-		"OTHER_VAR":    "literal_value",
-		"CONFIG_PATH":  "/data/x",
+		"DB_PASSWORD": "{RANDOM}",
+		"OTHER_VAR":   "literal_value",
+		"CONFIG_PATH": "/data/x",
 	}
 
 	result := resolveRandomPlaceholders(env, envPath)
@@ -477,8 +477,8 @@ func TestResolveRandomPlaceholders_ReinstallWithLiteral(t *testing.T) {
 	}
 
 	env := map[string]interface{}{
-		"DB_PASSWORD":  "{RANDOM}",
-		"DB_USERNAME":  "postgres",
+		"DB_PASSWORD": "{RANDOM}",
+		"DB_USERNAME": "postgres",
 	}
 
 	result := resolveRandomPlaceholders(env, envPath)

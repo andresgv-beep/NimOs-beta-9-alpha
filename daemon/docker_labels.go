@@ -136,11 +136,12 @@ func NewNimOSLabels(appID, appVersion, installedBy string, isStack bool) NimOSLa
 // directamente en `docker run`. Usado por docker_containers.go.
 //
 // Ejemplo:
-//   labels := NewNimOSLabels("jellyfin", "10.11", "andres", false)
-//   args := append([]string{"run", "-d", "--name", "jellyfin"},
-//                  labels.ToDockerLabelArgs()...)
-//   args = append(args, "jellyfin:latest")
-//   exec.Command("docker", args...)
+//
+//	labels := NewNimOSLabels("jellyfin", "10.11", "andres", false)
+//	args := append([]string{"run", "-d", "--name", "jellyfin"},
+//	               labels.ToDockerLabelArgs()...)
+//	args = append(args, "jellyfin:latest")
+//	exec.Command("docker", args...)
 func (l NimOSLabels) ToDockerLabelArgs() []string {
 	stackVal := "false"
 	if l.IsStack {
@@ -313,10 +314,10 @@ func mergeLabelsIntoServiceNode(service *yaml.Node, labelMap map[string]string) 
 // buildLabelsMappingNode construye un MappingNode con los labels dados.
 // Salida YAML típica:
 //
-//   labels:
-//     com.nimos.app_id: "nextcloud"
-//     com.nimos.managed: "true"
-//     ...
+//	labels:
+//	  com.nimos.app_id: "nextcloud"
+//	  com.nimos.managed: "true"
+//	  ...
 //
 // Orden alfabético para output reproducible (facilita tests deterministas).
 func buildLabelsMappingNode(labels map[string]string) *yaml.Node {

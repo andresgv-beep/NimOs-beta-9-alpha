@@ -11,9 +11,9 @@ func TestPoolJSONShapeEnriched(t *testing.T) {
 		ID: "p1", Name: "test1", BtrfsUUID: "abc",
 		Profile: ProfileRaid1, MountPoint: "/x",
 		ControlState: "managed",
-		Usage: &PoolUsage{TotalBytes: 100, UsedBytes: 20, AvailableBytes: 80, UsagePercent: 20},
-		Health: &PoolHealth{Status: "healthy"},
-		IsPrimary: true, Mounted: true,
+		Usage:        &PoolUsage{TotalBytes: 100, UsedBytes: 20, AvailableBytes: 80, UsagePercent: 20},
+		Health:       &PoolHealth{Status: "healthy"},
+		IsPrimary:    true, Mounted: true,
 	}
 	data, _ := json.Marshal(p)
 	s := string(data)

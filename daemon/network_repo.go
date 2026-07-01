@@ -189,9 +189,9 @@ func isValidPortID(id string) bool {
 
 func scanPort(rs rowScanner) (*NetworkPort, error) {
 	var (
-		p             NetworkPort
-		enabledInt    int
-		updatedAtStr  string
+		p            NetworkPort
+		enabledInt   int
+		updatedAtStr string
 	)
 	err := rs.Scan(
 		&p.ID, &p.Port, &p.BindAddress, &enabledInt,
@@ -436,12 +436,12 @@ const ddnsColumns = `
 
 func scanDdns(rs rowScanner) (*NetworkDdns, error) {
 	var (
-		d              NetworkDdns
-		enabledInt     int
-		autoUpdateInt  int
-		lastRunAt      sql.NullString
-		lastRunResult  sql.NullString
-		lastIP         sql.NullString
+		d             NetworkDdns
+		enabledInt    int
+		autoUpdateInt int
+		lastRunAt     sql.NullString
+		lastRunResult sql.NullString
+		lastIP        sql.NullString
 	)
 	err := rs.Scan(
 		&d.ID, &d.Provider, &d.Domain, &d.TokenSecretID,

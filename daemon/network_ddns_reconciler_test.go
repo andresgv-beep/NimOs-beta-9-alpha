@@ -28,10 +28,10 @@ import (
 type mockDDNSProvider struct {
 	name string
 
-	mu       sync.Mutex
-	calls    []mockDDNSCall
-	result   *DDNSUpdateResult
-	callErr  error
+	mu      sync.Mutex
+	calls   []mockDDNSCall
+	result  *DDNSUpdateResult
+	callErr error
 }
 
 type mockDDNSCall struct {
@@ -152,7 +152,7 @@ func TestDDNSReconciler_NeedsUpdate_Pending(t *testing.T) {
 	defer cleanup()
 
 	d := &NetworkDdns{
-		AutoUpdate: false,
+		AutoUpdate:  false,
 		Convergence: Convergence{Desired: 2, Applied: 1},
 	}
 	if !rec.needsUpdate(d) {

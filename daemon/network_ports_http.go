@@ -84,10 +84,10 @@ type portView struct {
 	Enabled     bool   `json:"enabled"`
 
 	// Estado de convergencia derivado.
-	Status      string `json:"status"` // converged | pending | drifted
-	Desired     int64  `json:"desired_generation"`
-	Observed    int64  `json:"observed_generation"`
-	Applied     int64  `json:"applied_generation"`
+	Status   string `json:"status"` // converged | pending | drifted
+	Desired  int64  `json:"desired_generation"`
+	Observed int64  `json:"observed_generation"`
+	Applied  int64  `json:"applied_generation"`
 
 	UpdatedAt string `json:"updated_at"` // RFC3339
 }

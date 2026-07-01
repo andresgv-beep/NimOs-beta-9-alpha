@@ -419,9 +419,10 @@ func (r *AppsRepo) CountDockerApps(ctx context.Context) (int, error) {
 // "side-effect free" respecto al input.
 //
 // Defaults aplicados aquí (única fuente de verdad):
-//   · Category vacía → "system"
-//   · InstalledAt vacío → now
-//   · IsNative no se defaultea (es bool obligatorio, evita ambigüedad)
+//
+//	· Category vacía → "system"
+//	· InstalledAt vacío → now
+//	· IsNative no se defaultea (es bool obligatorio, evita ambigüedad)
 func (r *AppsRepo) CreateOrUpdateNativeApp(ctx context.Context, app *DBNativeApp) error {
 	if app.ID == "" {
 		return fmt.Errorf("native app: ID required")

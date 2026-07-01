@@ -130,10 +130,10 @@ type BtrfsExecutor interface {
 
 // CreateFilesystemRequest es el payload de CreateFilesystem.
 type CreateFilesystemRequest struct {
-	Label       string   // se convierte en label del filesystem
-	Profile     Profile  // single, raid1, raid1c3, raid10
-	ByIDPaths   []string // /dev/disk/by-id/... uno por device
-	WipeFirst   bool     // si true, hace wipefs de cada device antes de mkfs
+	Label     string   // se convierte en label del filesystem
+	Profile   Profile  // single, raid1, raid1c3, raid10
+	ByIDPaths []string // /dev/disk/by-id/... uno por device
+	WipeFirst bool     // si true, hace wipefs de cada device antes de mkfs
 }
 
 // DestroyFilesystemRequest es el payload de DestroyFilesystem.

@@ -33,8 +33,8 @@ func TestResolveDeviceState_SwappedDisk(t *testing.T) {
 	// El path existe pero es OTRO disco (serial distinto) → swapped.
 	withDeviceProbes(
 		func(*Device) bool { return true },
-		func(string) bool { return true },          // path existe
-		func(string) string { return "SSD-NEW" },   // pero otro serial
+		func(string) bool { return true },        // path existe
+		func(string) string { return "SSD-NEW" }, // pero otro serial
 		func() {
 			d := &Device{CurrentPath: "/dev/sdb", Serial: "9YG142"}
 			st := resolveDeviceState(d, "ok")

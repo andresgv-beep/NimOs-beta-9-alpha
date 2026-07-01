@@ -119,9 +119,9 @@ func (r *DDNSReconciler) RegisterProvider(p DDNSProvider) {
 // Reconciler interface impl
 // ─────────────────────────────────────────────────────────────────────────────
 
-func (r *DDNSReconciler) Name() string             { return "ddns_updater" }
-func (r *DDNSReconciler) Tier() ReconcilerTier     { return TierMedium }
-func (r *DDNSReconciler) Interval() time.Duration  { return r.config.Interval }
+func (r *DDNSReconciler) Name() string            { return "ddns_updater" }
+func (r *DDNSReconciler) Tier() ReconcilerTier    { return TierMedium }
+func (r *DDNSReconciler) Interval() time.Duration { return r.config.Interval }
 
 // ForceUpdate dispara una actualización inmediata de un DDNS concreto por ID,
 // fuera del ciclo periódico. Lo usa el endpoint "Actualizar ahora".

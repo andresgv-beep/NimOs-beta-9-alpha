@@ -67,10 +67,10 @@ const (
 // EventInput es lo que el caller pasa a Emit. Los campos opcionales
 // pueden quedar zero/nil.
 type EventInput struct {
-	OperationID *string         // FK a network_operations, opcional
+	OperationID *string // FK a network_operations, opcional
 	Category    EventCategory
-	Event       string          // 'update_started', 'cert_issued', etc.
-	TargetID    *string         // entidad afectada (ddns_id, cert_id, ...)
+	Event       string  // 'update_started', 'cert_issued', etc.
+	TargetID    *string // entidad afectada (ddns_id, cert_id, ...)
 	Level       EventLevel
 	Message     string
 	Details     json.RawMessage // JSON opcional
@@ -579,11 +579,11 @@ func (e *EventEmitter) AggregateRoutineEventsForDay(ctx context.Context, tx *sql
 		// Insertar evento sintético compactado.
 		syntheticID := uuid.New().String()
 		details, _ := json.Marshal(map[string]interface{}{
-			"first_seen":     g.firstTs,
-			"last_seen":      g.lastTs,
-			"original_rows":  g.rowCount,
+			"first_seen":        g.firstTs,
+			"last_seen":         g.lastTs,
+			"original_rows":     g.rowCount,
 			"total_occurrences": g.totalOcc,
-			"aggregated_at":  e.clock.Now().UTC().Format(time.RFC3339),
+			"aggregated_at":     e.clock.Now().UTC().Format(time.RFC3339),
 		})
 		var targetArg interface{}
 		if g.targetID.Valid {

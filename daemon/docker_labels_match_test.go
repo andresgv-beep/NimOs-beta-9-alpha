@@ -40,7 +40,7 @@ func TestMatchContainerForAppID_LabelFirst(t *testing.T) {
 
 	// El label tiene prioridad sobre un match por NOMBRE de otro container.
 	mixed := map[string]dockerContainer{
-		"sonarr":      {Name: "sonarr"},                      // nombre coincide, sin label
+		"sonarr":      {Name: "sonarr"},                       // nombre coincide, sin label
 		"sonarr_real": {Name: "sonarr_real", AppID: "sonarr"}, // este lleva el label
 	}
 	if name, _ := matchContainerForAppID("sonarr", mixed); name != "sonarr_real" {

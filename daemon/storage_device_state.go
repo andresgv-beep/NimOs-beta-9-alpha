@@ -30,10 +30,10 @@ const (
 // la AUSENCIA y la IDENTIDAD ganan al SMART (un disco ausente nunca es "ok",
 // aunque su SMART cacheado lo diga).
 //
-//   1. ¿El path existe pero es OTRO disco (serial distinto)? → swapped
-//   2. ¿El disco no está presente?                          → missing
-//   3. ¿Presente pero SMART crítico/warning?                → critical/warning
-//   4. Presente y sano                                      → present
+//  1. ¿El path existe pero es OTRO disco (serial distinto)? → swapped
+//  2. ¿El disco no está presente?                          → missing
+//  3. ¿Presente pero SMART crítico/warning?                → critical/warning
+//  4. Presente y sano                                      → present
 //
 // smartStatus es el estado SMART cacheado del disco (de getSmartDetailsForDisk).
 // Inyectable vía deviceIsPresent/readDeviceSerial (ya existentes).

@@ -217,12 +217,12 @@ func TestFillUnresolvedPathVars_OnlyVolumeVars(t *testing.T) {
 // TestDefaultDirNameForVar · derivación de nombre de directorio.
 func TestDefaultDirNameForVar(t *testing.T) {
 	cases := map[string]string{
-		"MUSIC_PATH":     "music",
-		"PHOTOS_DIR":     "photos",
-		"MEDIA_LOCATION": "media",
+		"MUSIC_PATH":       "music",
+		"PHOTOS_DIR":       "photos",
+		"MEDIA_LOCATION":   "media",
 		"DOWNLOADS_FOLDER": "downloads",
-		"MEDIA":          "media",
-		"DATA":           "data",
+		"MEDIA":            "media",
+		"DATA":             "data",
 	}
 	for varName, want := range cases {
 		got := defaultDirNameForVar(varName)
@@ -250,9 +250,9 @@ func TestResolveVolumeHostPath(t *testing.T) {
 		{"grafana data", "${CONFIG_PATH}/data:/var/lib/grafana", "/nimos/pools/data8/docker/containers/grafana/data"},
 		{"postgres", "${DB_DATA_LOCATION}:/var/lib/postgresql/data", "/nimos/pools/data8/docker/containers/immich/postgres"},
 		{"upload con opts", "${UPLOAD_LOCATION}:/usr/src/app/upload:rw", "/nimos/pools/data8/docker/containers/immich/upload"},
-		{"volumen con nombre", "model-cache:/cache", ""},                 // no bind mount
+		{"volumen con nombre", "model-cache:/cache", ""},                                   // no bind mount
 		{"localtime fuera del pool", "/etc/localtime:/etc/localtime:ro", "/etc/localtime"}, // resuelve pero fuera del pool (se filtra luego)
-		{"var no resuelta", "${UNKNOWN_VAR}:/data", ""},                  // queda con $ → no resoluble
+		{"var no resuelta", "${UNKNOWN_VAR}:/data", ""},                                    // queda con $ → no resoluble
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -327,7 +327,7 @@ func TestDecideVolumePlan_DBvsNormal(t *testing.T) {
 func TestIsDBContainerPath(t *testing.T) {
 	dbPaths := map[string]bool{
 		"/var/lib/postgresql/data":  true,
-		"/var/lib/postgresql/data/": true,  // con barra final
+		"/var/lib/postgresql/data/": true, // con barra final
 		"/var/lib/mysql":            true,
 		"/var/lib/mariadb":          true,
 		"/data/db":                  true,
@@ -346,12 +346,12 @@ func TestIsDBContainerPath(t *testing.T) {
 // TestVolumeContainerPath · extracción del lado-container del volumen.
 func TestVolumeContainerPath(t *testing.T) {
 	cases := map[string]string{
-		"${DB_DATA}:/var/lib/postgresql/data":   "/var/lib/postgresql/data",
-		"${CONFIG}/data:/var/lib/grafana":        "/var/lib/grafana",
-		"${UPLOAD}:/usr/src/app/upload:rw":       "/usr/src/app/upload",
-		"model-cache:/cache":                     "/cache",
-		"/etc/localtime:/etc/localtime:ro":       "/etc/localtime",
-		"singlepart":                             "",
+		"${DB_DATA}:/var/lib/postgresql/data": "/var/lib/postgresql/data",
+		"${CONFIG}/data:/var/lib/grafana":     "/var/lib/grafana",
+		"${UPLOAD}:/usr/src/app/upload:rw":    "/usr/src/app/upload",
+		"model-cache:/cache":                  "/cache",
+		"/etc/localtime:/etc/localtime:ro":    "/etc/localtime",
+		"singlepart":                          "",
 	}
 	for vol, want := range cases {
 		if got := volumeContainerPath(vol); got != want {

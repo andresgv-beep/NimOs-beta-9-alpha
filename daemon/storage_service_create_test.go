@@ -468,8 +468,6 @@ func TestCreatePool_Concurrent(t *testing.T) {
 	}
 }
 
-
-
 func assertErrorCode(t *testing.T, err error, expectedCode string) {
 	t.Helper()
 	if err == nil {

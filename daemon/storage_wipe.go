@@ -113,26 +113,27 @@ var (
 // decidir: importar el pool existente, destruir explícitamente, o cancelar.
 //
 // Modelo Managed/Observed (docs/storage_observer_design.md):
-//   · Observed: lo que detectamos físicamente en el disco
-//   · Managed:  si NimOS ya gestiona el pool (IsManaged=true)
+//
+//	· Observed: lo que detectamos físicamente en el disco
+//	· Managed:  si NimOS ya gestiona el pool (IsManaged=true)
 //
 // El JSON output sigue el patrón de StorageError pero con campos extra:
 //
-//   {
-//     "code": "DISK_HAS_FILESYSTEM",
-//     "msg": "Disk /dev/sdb has an existing BTRFS filesystem",
-//     "disk": "/dev/sdb",
-//     "fs_type": "btrfs",
-//     "fs_uuid": "884ec939-...",
-//     "fs_label": "DATOS4",
-//     "fs_profile": "raid1",
-//     "is_managed": true,
-//     "pool_name": "DATOS4",
-//     "observation_health": "healthy",
-//     "size_bytes": 119000000000,
-//     "used_bytes": 552000,
-//     "last_seen": "2026-05-17T18:00:00Z"
-//   }
+//	{
+//	  "code": "DISK_HAS_FILESYSTEM",
+//	  "msg": "Disk /dev/sdb has an existing BTRFS filesystem",
+//	  "disk": "/dev/sdb",
+//	  "fs_type": "btrfs",
+//	  "fs_uuid": "884ec939-...",
+//	  "fs_label": "DATOS4",
+//	  "fs_profile": "raid1",
+//	  "is_managed": true,
+//	  "pool_name": "DATOS4",
+//	  "observation_health": "healthy",
+//	  "size_bytes": 119000000000,
+//	  "used_bytes": 552000,
+//	  "last_seen": "2026-05-17T18:00:00Z"
+//	}
 type ErrDiskHasFilesystem struct {
 	Disk    string `json:"disk"`
 	FSType  string `json:"fs_type"`
@@ -517,29 +518,31 @@ func parseBlkidExport(out string) map[string]string {
 // when WipeFirst=true.
 //
 // Order of operations:
-//   0. Pre-flight safety check (boot disk, holders)
-//   1. Unmount partitions cleanly
-//   2. Kill processes using the disk (fuser fallback)
-//   3. Clear ZFS labels
-//   4. Zero first 32MB (MBR, GPT, superblocks)
-//   5. Zero last 32MB (GPT backup, ZFS tail labels)
-//   6. Destroy GPT with sgdisk
-//   7. Clear remaining signatures with wipefs
-//   8. Force kernel to re-read partition table
-//   9. VERIFY: lsblk must show zero partitions
+//  0. Pre-flight safety check (boot disk, holders)
+//  1. Unmount partitions cleanly
+//  2. Kill processes using the disk (fuser fallback)
+//  3. Clear ZFS labels
+//  4. Zero first 32MB (MBR, GPT, superblocks)
+//  5. Zero last 32MB (GPT backup, ZFS tail labels)
+//  6. Destroy GPT with sgdisk
+//  7. Clear remaining signatures with wipefs
+//  8. Force kernel to re-read partition table
+//  9. VERIFY: lsblk must show zero partitions
 func wipeDiskGo(diskPath string) map[string]interface{} {
 	return wipeDiskWithOptions(diskPath, false)
 }
 
 // wipeDiskForce permite wipear discos con filesystem detectado SIEMPRE
 // QUE NO estén managed por NimOS. Casos legítimos:
-//   · Destroy intencional de un orphan_filesystem desde la UI
-//   · Limpieza de un disco con BTRFS abandonado de una instalación previa
+//
+//	· Destroy intencional de un orphan_filesystem desde la UI
+//	· Limpieza de un disco con BTRFS abandonado de una instalación previa
 //
 // SIEMPRE bloquea si:
-//   · Es el disco de boot
-//   · Tiene holders del kernel activos (LVM, dm, RAID)
-//   · Pertenece a un pool managed (protección dura contra borrado accidental)
+//
+//	· Es el disco de boot
+//	· Tiene holders del kernel activos (LVM, dm, RAID)
+//	· Pertenece a un pool managed (protección dura contra borrado accidental)
 func wipeDiskForce(diskPath string) map[string]interface{} {
 	return wipeDiskWithOptions(diskPath, true)
 }

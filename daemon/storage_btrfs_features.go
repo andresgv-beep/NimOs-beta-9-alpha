@@ -118,10 +118,11 @@ func createSnapshot(body map[string]interface{}) map[string]interface{} {
 //
 // OPERACIÓN DELICADA: toca datos vivos. BTRFS no tiene un "rollback" atómico
 // nativo para el subvolumen raíz montado, así que la estrategia segura es:
-//   1. Verificar que el snapshot existe.
-//   2. Crear un snapshot de seguridad del estado ACTUAL antes de revertir
-//      (red de seguridad: si el rollback sale mal, el usuario puede volver).
-//   3. Sincronizar a disco (sync).
+//  1. Verificar que el snapshot existe.
+//  2. Crear un snapshot de seguridad del estado ACTUAL antes de revertir
+//     (red de seguridad: si el rollback sale mal, el usuario puede volver).
+//  3. Sincronizar a disco (sync).
+//
 // El "swap" real del subvolumen requiere remontar y es disruptivo; en 8.1
 // dejamos el rollback como "restaurable vía snapshot de seguridad + aviso",
 // que es honesto y no arriesga datos. El swap completo es Beta 8.2.
@@ -159,8 +160,8 @@ func rollbackSnapshot(body map[string]interface{}) map[string]interface{} {
 
 	logMsg("Rollback preparado: pool=%s snapshot=%s, seguridad=%s", poolName, snapName, safetyName)
 	return map[string]interface{}{
-		"ok":             true,
-		"snapshot":       snapName,
+		"ok":              true,
+		"snapshot":        snapName,
 		"safety_snapshot": safetyName,
 		"note": "Estado actual guardado en snapshot de seguridad. El intercambio " +
 			"completo del subvolumen activo (rollback total) requiere remontar el " +

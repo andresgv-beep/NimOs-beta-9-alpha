@@ -44,8 +44,8 @@ type NetworkExposureReconciler struct {
 	secrets  *SecretsStore   // para descifrar el token DuckDNS (puede ser nil)
 	firewall firewallEnsurer // abre los puertos de exposición en ufw (puede ser nil)
 	emitter  *EventEmitter
-	clock   Clock
-	config  NetworkExposureReconcilerConfig
+	clock    Clock
+	config   NetworkExposureReconcilerConfig
 
 	// caddyClientFor crea un cliente para la URL admin dada. Inyectable
 	// para tests (mock). En producción usa NewCaddyAdminClient real.

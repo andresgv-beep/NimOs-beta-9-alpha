@@ -20,7 +20,7 @@ import (
 
 var (
 	validShareName = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]{0,63}$`)
-	validUsername   = regexp.MustCompile(`^[a-z][a-z0-9_]{1,31}$`)
+	validUsername  = regexp.MustCompile(`^[a-z][a-z0-9_]{1,31}$`)
 	systemUsers    = map[string]bool{
 		"root": true, "daemon": true, "nobody": true, "www-data": true,
 		"sshd": true, "nimos": true, "systemd-network": true,
@@ -98,29 +98,30 @@ func checkPermission(perm string) error {
 	}
 	return nil
 }
+
 // ═══════════════════════════════════
 // Input validation helpers
 // ═══════════════════════════════════
 
 var (
-	reAlphanumDash    = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
-	reDomain          = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$`)
-	reEmail           = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
-	reSnapshotName    = regexp.MustCompile(`^[a-zA-Z0-9._-]{1,128}$`)
-	reZfsDatasetSnap  = regexp.MustCompile(`^[a-zA-Z0-9_-]+(/[a-zA-Z0-9._-]+)*@[a-zA-Z0-9._-]{1,128}$`)
-	reDevName         = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
-	reUnixUser        = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-	reContainerId     = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
-	reWgInterface     = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,15}$`)
-	reAbsPath         = regexp.MustCompile(`^/[a-zA-Z0-9/._ -]+$`)
+	reAlphanumDash   = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
+	reDomain         = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$`)
+	reEmail          = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	reSnapshotName   = regexp.MustCompile(`^[a-zA-Z0-9._-]{1,128}$`)
+	reZfsDatasetSnap = regexp.MustCompile(`^[a-zA-Z0-9_-]+(/[a-zA-Z0-9._-]+)*@[a-zA-Z0-9._-]{1,128}$`)
+	reDevName        = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
+	reUnixUser       = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
+	reContainerId    = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
+	reWgInterface    = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,15}$`)
+	reAbsPath        = regexp.MustCompile(`^/[a-zA-Z0-9/._ -]+$`)
 )
 
-func isValidDomain(s string) bool   { return reDomain.MatchString(s) && len(s) <= 253 }
-func isValidEmail(s string) bool    { return reEmail.MatchString(s) && len(s) <= 254 }
-func isValidSnap(s string) bool     { return reZfsDatasetSnap.MatchString(s) }
-func isValidSnapName(s string) bool { return reSnapshotName.MatchString(s) }
-func isValidDev(s string) bool      { return reDevName.MatchString(s) && len(s) <= 64 }
-func isValidUnixUser(s string) bool { return reUnixUser.MatchString(s) && len(s) <= 32 }
+func isValidDomain(s string) bool    { return reDomain.MatchString(s) && len(s) <= 253 }
+func isValidEmail(s string) bool     { return reEmail.MatchString(s) && len(s) <= 254 }
+func isValidSnap(s string) bool      { return reZfsDatasetSnap.MatchString(s) }
+func isValidSnapName(s string) bool  { return reSnapshotName.MatchString(s) }
+func isValidDev(s string) bool       { return reDevName.MatchString(s) && len(s) <= 64 }
+func isValidUnixUser(s string) bool  { return reUnixUser.MatchString(s) && len(s) <= 32 }
 func isValidContainer(s string) bool { return reContainerId.MatchString(s) && len(s) <= 128 }
-func isValidWgIface(s string) bool  { return reWgInterface.MatchString(s) }
-func isValidSafePath(s string) bool { return reAbsPath.MatchString(s) && !strings.Contains(s, "..") }
+func isValidWgIface(s string) bool   { return reWgInterface.MatchString(s) }
+func isValidSafePath(s string) bool  { return reAbsPath.MatchString(s) && !strings.Contains(s, "..") }

@@ -333,13 +333,13 @@ func TestSanitizeAppUserName_LongTruncated(t *testing.T) {
 // TestReconcileDecision · la lógica pura de decisión.
 func TestReconcileDecision(t *testing.T) {
 	cases := []struct {
-		name             string
-		isActive         bool
-		hasFiles         bool
-		want             string
+		name     string
+		isActive bool
+		hasFiles bool
+		want     string
 	}{
 		{"activa con datos", true, true, "preserve"},
-		{"activa sin datos", true, false, "preserve"},   // activa → nunca tocar
+		{"activa sin datos", true, false, "preserve"},                         // activa → nunca tocar
 		{"inactiva con datos (desinstalada-normal)", false, true, "preserve"}, // CRÍTICO
 		{"inactiva sin datos (desinstalada-total)", false, false, "clean"},
 	}

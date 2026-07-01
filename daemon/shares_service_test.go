@@ -84,31 +84,31 @@ func TestValidateShareName_MaxLength(t *testing.T) {
 func TestValidateShareName_InvalidChars(t *testing.T) {
 	// Caracteres NO permitidos
 	invalidCases := []string{
-		"foto/test",     // slash
-		"foto..test",    // dots (path traversal risk)
-		"foto;test",     // semicolon
-		"foto*test",     // wildcard
-		"foto'test",     // quote
-		"foto\"test",    // double quote
-		"foto`test",     // backtick
-		"foto$test",     // dollar
-		"foto&test",     // ampersand
-		"foto|test",     // pipe
-		"foto<test",     // redirect
-		"foto>test",     // redirect
-		"foto\\test",    // backslash
-		"foto:test",     // colon
-		"foto?test",     // question
-		"foto@test",     // at
-		"foto#test",     // hash
-		"foto%test",     // percent
-		"foto+test",     // plus
-		"foto=test",     // equals
-		"foto(test)",    // parentheses
-		"foto[test]",    // brackets
-		"foto{test}",    // braces
-		"foto!test",     // exclamation
-		"foto~test",     // tilde
+		"foto/test",  // slash
+		"foto..test", // dots (path traversal risk)
+		"foto;test",  // semicolon
+		"foto*test",  // wildcard
+		"foto'test",  // quote
+		"foto\"test", // double quote
+		"foto`test",  // backtick
+		"foto$test",  // dollar
+		"foto&test",  // ampersand
+		"foto|test",  // pipe
+		"foto<test",  // redirect
+		"foto>test",  // redirect
+		"foto\\test", // backslash
+		"foto:test",  // colon
+		"foto?test",  // question
+		"foto@test",  // at
+		"foto#test",  // hash
+		"foto%test",  // percent
+		"foto+test",  // plus
+		"foto=test",  // equals
+		"foto(test)", // parentheses
+		"foto[test]", // brackets
+		"foto{test}", // braces
+		"foto!test",  // exclamation
+		"foto~test",  // tilde
 	}
 	for _, c := range invalidCases {
 		_, err := validateShareName(c)
@@ -273,9 +273,9 @@ func TestPermissionDiff_MultipleUsers(t *testing.T) {
 		"bob":   "ro",
 	}
 	new_ := map[string]string{
-		"alice":   "rw",       // sin cambio
-		"bob":     "rw",       // cambio ro → rw
-		"charlie": "ro",       // nuevo usuario
+		"alice":   "rw", // sin cambio
+		"bob":     "rw", // cambio ro → rw
+		"charlie": "ro", // nuevo usuario
 		// dave NO está → ningún cambio para él
 	}
 	ops := calculatePermissionDiff(old, new_)

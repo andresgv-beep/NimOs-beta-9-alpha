@@ -61,8 +61,8 @@ func initStorageModule() error {
 // runStorageStartupTasks ejecuta las tareas de arranque del módulo storage
 // que requieren al servicio ya inicializado:
 //
-//   1. RecoverPendingOperations — resuelve operations huérfanas tras crash
-//   2. ReconcileDevicesAtBoot   — scan inicial, actualiza last_seen_at
+//  1. RecoverPendingOperations — resuelve operations huérfanas tras crash
+//  2. ReconcileDevicesAtBoot   — scan inicial, actualiza last_seen_at
 //
 // Llamar DESPUÉS de initStorageModule() y ANTES de servir tráfico HTTP.
 //

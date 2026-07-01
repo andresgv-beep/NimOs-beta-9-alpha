@@ -175,10 +175,10 @@ func TestStorageRecoveryDestroyPoolCompleted(t *testing.T) {
 	tx, _ := service.db.BeginTx(ctx, nil)
 	poolID := newUUID()
 	service.repo.CreatePool(ctx, tx, &Pool{
-		ID:        poolID,
-		Name:      "doomed",
-		BtrfsUUID: "uuid-to-destroy",
-		Profile:   ProfileRaid1,
+		ID:         poolID,
+		Name:       "doomed",
+		BtrfsUUID:  "uuid-to-destroy",
+		Profile:    ProfileRaid1,
 		MountPoint: "/nimos/pools/doomed",
 	})
 	tx.Commit()
@@ -232,10 +232,10 @@ func TestStorageRecoveryDestroyPoolInconclusive(t *testing.T) {
 	tx, _ := service.db.BeginTx(ctx, nil)
 	poolID := newUUID()
 	service.repo.CreatePool(ctx, tx, &Pool{
-		ID:        poolID,
-		Name:      "halfdestroyed",
-		BtrfsUUID: "uuid-halfdestroyed",
-		Profile:   ProfileRaid1,
+		ID:         poolID,
+		Name:       "halfdestroyed",
+		BtrfsUUID:  "uuid-halfdestroyed",
+		Profile:    ProfileRaid1,
 		MountPoint: "/nimos/pools/halfdestroyed",
 	})
 	tx.Commit()

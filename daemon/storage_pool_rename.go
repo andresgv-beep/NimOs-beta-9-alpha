@@ -41,7 +41,7 @@ var applyPoolRenamePhysicalFn = func(s *StorageService, ctx context.Context, poo
 //  3. Crear el nuevo directorio de montaje.
 //  4. Reescribir la entrada de fstab (vieja ruta → nueva ruta).
 //  5. Remontar: desmontar la vieja, montar la nueva.
-//  Si 4/5 fallan, se intenta revertir fstab para no dejar el boot roto.
+//     Si 4/5 fallan, se intenta revertir fstab para no dejar el boot roto.
 func (s *StorageService) applyPoolRenamePhysical(ctx context.Context, pool *Pool, newName, oldMountPoint, newMountPoint string) error {
 	// 1. El pool debe estar montado. Renombrar un pool desmontado es
 	//    justamente cómo se llega al estado roto; exigimos que esté sano.

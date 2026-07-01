@@ -24,8 +24,8 @@ import "context"
 
 type orphanDirSweepTask struct{}
 
-func (t *orphanDirSweepTask) ID() string   { return "orphan_dir_sweep" }
-func (t *orphanDirSweepTask) Name() string { return "Limpieza de directorios huérfanos" }
+func (t *orphanDirSweepTask) ID() string       { return "orphan_dir_sweep" }
+func (t *orphanDirSweepTask) Name() string     { return "Limpieza de directorios huérfanos" }
 func (t *orphanDirSweepTask) Category() string { return MaintCategoryStorage }
 func (t *orphanDirSweepTask) Description() string {
 	return "Borra carpetas en /nimos/pools/ que quedaron de pools destruidos o renombrados (no asociadas a ningún pool actual y sin nada montado)."

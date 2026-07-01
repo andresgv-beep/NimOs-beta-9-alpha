@@ -52,9 +52,9 @@ type NetworkExposedApp struct {
 	// las tablas de Network · es un enriquecimiento del DTO que el handler añade
 	// leyéndolo de docker_apps.config (read model · ver enrichExposureDTO).
 	// omitempty: solo aparece si la app tiene landing_path.
-	LandingPath  string      `json:"landing_path,omitempty"`
-	CreatedAt    time.Time   `json:"created_at"`
-	UpdatedAt    time.Time   `json:"updated_at"`
+	LandingPath string    `json:"landing_path,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 const exposedAppColumns = `
