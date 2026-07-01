@@ -541,6 +541,17 @@ func shieldMiddleware(w http.ResponseWriter, r *http.Request) bool {
 
 	// 4. Check request payload for XSS/SQLi/CMDi (CSP compensation)
 	if rule := checkRequestPayload(r); rule != "" && !shieldIsWhitelisted(ip) {
+		// Con SESIÓN VÁLIDA el match se degrada a evento + score, sin bloqueo
+		// por IP (ni instantáneo ni por acumulación — ver processRules). Los
+		// patrones son heurísticos y el tráfico legítimo del dueño los pisa:
+		// un backtick en un rename, "$(" en un compose que se itera, "-- " en
+		// markdown. Bloquear la IP de alguien que YA tiene sesión no defiende
+		// nada que la revocación de sesión no defienda mejor, y sí puede dejar
+		// al dueño 24h fuera de su NAS. Todo queda registrado en la BD y
+		// puntuado por el motor de comportamiento (Fase 1) — el auto-bloqueo
+		// por score de la Fase 2 será la respuesta graduada para sesiones.
+		// Para ANÓNIMOS no cambia nada: INJ-002 instantáneo, resto acumula.
+		authenticated := hasValidSession(r)
 		shieldEmit(ShieldEvent{
 			Category:  categoryForRule(rule),
 			Severity:  severityForRule(rule),
@@ -548,11 +559,13 @@ func shieldMiddleware(w http.ResponseWriter, r *http.Request) bool {
 			UserAgent: r.UserAgent(),
 			Endpoint:  r.URL.Path,
 			Method:    r.Method,
-			Details:   map[string]interface{}{"rule": rule, "query": r.URL.RawQuery},
+			Details: map[string]interface{}{
+				"rule": rule, "query": r.URL.RawQuery, "authenticated": authenticated,
+			},
 		})
 		// Don't block on first offense for injection — let the rule engine accumulate
-		// But DO block immediately for command injection (INJ-002)
-		if rule == "INJ-002" {
+		// But DO block immediately for command injection (INJ-002) from anonymous
+		if rule == "INJ-002" && !authenticated {
 			shieldBlockIP(ip, 24*time.Hour, "Command injection attempt", rule)
 			http.NotFound(w, r)
 			return true

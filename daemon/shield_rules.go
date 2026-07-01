@@ -135,6 +135,14 @@ func processRules(event ShieldEvent) {
 		}
 
 	case "traversal":
+		// Con sesión válida NO acumula hacia bloqueo (ver la nota de
+		// "injection" abajo; además el middleware ya rechaza con 400 toda
+		// petición con ".." antes de llegar a ningún handler, así que el
+		// intento en sí es inofensivo). El evento ya quedó registrado y
+		// puntuado en el score.
+		if eventIsAuthenticated(event) {
+			return
+		}
 		// TRAV-001: Path traversal
 		count := travWindow.countAndAdd("ip:"+ip, 1*time.Minute)
 		if count >= 3 {
@@ -142,6 +150,17 @@ func processRules(event ShieldEvent) {
 		}
 
 	case "injection":
+		// Los matches de payload de peticiones AUTENTICADAS no acumulan
+		// hacia bloqueo por IP: son heurísticas con falsos positivos reales
+		// sobre el tráfico del dueño ("-- " en markdown, "$(" en un compose,
+		// "1=1" en texto normal), y contra una sesión ya establecida el
+		// bloqueo por IP no aporta nada frente a revocar la sesión. El evento
+		// ya quedó en la BD y puntuado por el motor de comportamiento (la
+		// Fase 2 dará la respuesta graduada). Los ANÓNIMOS siguen acumulando
+		// exactamente igual que antes.
+		if eventIsAuthenticated(event) {
+			return
+		}
 		rule, _ := event.Details["rule"].(string)
 		switch rule {
 		case "INJ-001":
@@ -160,6 +179,15 @@ func processRules(event ShieldEvent) {
 	case "honeypot":
 		// Already handled in middleware — instant block
 	}
+}
+
+// eventIsAuthenticated lee el flag "authenticated" que el middleware fija en
+// los eventos de payload (inyección/traversal) cuando la petición traía una
+// sesión válida. Eventos sin el flag (emisores antiguos u otras categorías)
+// cuentan como anónimos: el trato estricto es el default.
+func eventIsAuthenticated(event ShieldEvent) bool {
+	auth, _ := event.Details["authenticated"].(bool)
+	return auth
 }
 
 // ── Auth Rules ───────────────────────────────────────────────────────────────
