@@ -1,7 +1,6 @@
 import { writable, derived } from 'svelte/store';
 
 const API = '/api/auth';
-const TOKEN_KEY = 'nimos_token';
 
 // Core state
 export const appState = writable('loading'); // 'loading' | 'wizard' | 'login' | 'desktop'
@@ -12,22 +11,13 @@ export const token = writable('');
 export const isLoggedIn = derived(appState, $s => $s === 'desktop');
 export const isAdmin = derived(user, $u => $u?.role === 'admin');
 
-// Leer localStorage de forma segura (evita SSR y race conditions)
-function readToken() {
-  try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
-}
-
+// SEGURIDAD (#1 crítico): el token de sesión NO se persiste en JS. El servidor
+// pone una cookie HttpOnly (invisible a JS) y la auth va por ella. Antes se
+// guardaba el token en localStorage y en un document.cookie legible por JS, lo
+// que convertía cualquier XSS en robo de sesión. Aquí solo lo mantenemos en
+// memoria de forma transitoria (login → reload); tras el reload es cookie-only.
 function saveToken(t) {
-  token.set(t);
-  try {
-    if (t) localStorage.setItem(TOKEN_KEY, t);
-    else localStorage.removeItem(TOKEN_KEY);
-  } catch {}
-  // Sync token to cookie for iframe sub-requests (/app/ proxy)
-  try {
-    if (t) document.cookie = `nimos_token=${t};path=/;SameSite=Strict`;
-    else document.cookie = 'nimos_token=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-  } catch {}
+  token.set(t); // solo en memoria (transitorio); NO localStorage, NO document.cookie
 }
 
 // Get current token value synchronously
@@ -39,13 +29,12 @@ export function getToken() { return currentToken; }
 export function hdrs() { return { 'Authorization': `Bearer ${currentToken}` }; }
 export function jsonHdrs() { return { 'Authorization': `Bearer ${currentToken}`, 'Content-Type': 'application/json' }; }
 
-// Initialize — check status + restore session
+// Initialize — check status + restore session (vía la cookie HttpOnly).
 export async function init() {
-  // Leer el token aquí, dentro de onMount, cuando localStorage ya está disponible
-  const storedToken = readToken();
-  if (storedToken) {
-    token.set(storedToken);
-  }
+  // Limpieza única: borrar el token que versiones anteriores dejaban en
+  // localStorage (vector de robo por XSS). NO tocamos la cookie aquí para no
+  // cerrar sesiones existentes; la auth va por la cookie HttpOnly.
+  try { localStorage.removeItem('nimos_token'); } catch {}
 
   try {
     const statusRes = await fetch(`${API}/status`);
@@ -56,19 +45,14 @@ export async function init() {
       return;
     }
 
-    if (storedToken) {
-      const meRes = await fetch(`${API}/me`, {
-        headers: { 'Authorization': `Bearer ${storedToken}` },
-      });
-      const me = await meRes.json();
-      if (me.user) {
-        user.set(me.user);
-        appState.set('desktop');
-        return;
-      } else {
-        // Token inválido o expirado — limpiar
-        saveToken('');
-      }
+    // Restaurar sesión con la cookie HttpOnly: se envía sola en same-origin.
+    // Sin token en JS; /me autentica por la cookie (getBearerToken cae a ella).
+    const meRes = await fetch(`${API}/me`);
+    const me = await meRes.json();
+    if (me.user) {
+      user.set(me.user);
+      appState.set('desktop');
+      return;
     }
 
     appState.set('login');
@@ -145,14 +129,12 @@ export async function login(username, password, totpCode) {
 }
 
 export async function logout() {
-  if (currentToken) {
-    try {
-      await fetch(`${API}/logout`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${currentToken}` },
-      });
-    } catch {}
-  }
+  // Siempre pedimos el logout al server: la cookie HttpOnly autentica la
+  // petición y el server INVALIDA la sesión y BORRA la cookie. (Antes se
+  // saltaba si no había token en JS → con cookie-only no cerraría sesión.)
+  try {
+    await fetch(`${API}/logout`, { method: 'POST' });
+  } catch {}
   saveToken('');
   user.set(null);
   appState.set('login');

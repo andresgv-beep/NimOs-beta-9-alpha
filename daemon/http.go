@@ -81,9 +81,14 @@ func bodyBool(body map[string]interface{}, key string) (bool, bool) {
 func getBearerToken(r *http.Request) string {
 	auth := r.Header.Get("Authorization")
 	if strings.HasPrefix(auth, "Bearer ") {
-		return auth[7:]
+		// Un "Bearer " VACÍO cae a la cookie (no cortocircuita). El frontend
+		// cookie-only manda Bearer vacío y la auth debe venir de la cookie
+		// HttpOnly; antes esto devolvía "" y rompía todo el flujo cookie-only.
+		if t := strings.TrimSpace(auth[7:]); t != "" {
+			return t
+		}
 	}
-	// Fallback: check cookie (needed for iframe sub-requests in /app/ proxy)
+	// Fallback: cookie HttpOnly (sesión cookie-only + iframe /app/ proxy).
 	if cookie, err := r.Cookie("nimos_token"); err == nil && cookie.Value != "" {
 		return cookie.Value
 	}
