@@ -1,4 +1,7 @@
 import { writable, derived, get } from 'svelte/store';
+// Auth centralizada (cookie HttpOnly; token solo en memoria). NO leer
+// localStorage aquí: reintroducirlo reabre el robo de sesión vía XSS.
+import { getToken } from '$lib/stores/auth.js';
 
 // ═══════════════════════════════════════════════════════════════
 // NimOS Upload Task Manager
@@ -27,10 +30,6 @@ let nextId = 0;
 const controllers = new Map();  // taskId → AbortController
 const taskMeta = new Map();     // taskId → { file, share, path, totalChunks, chunkSize, lastChunk }
 
-// ── Auth helper ──
-function getAuthToken() {
-  try { return localStorage.getItem('nimos_token') || ''; } catch { return ''; }
-}
 
 // ── Add task to queue ──
 export function addTask(name, size, file, share, path, totalChunks, chunkSize) {
@@ -113,7 +112,7 @@ export async function cancelTask(id) {
       await fetch('/api/files/upload-cancel', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${getToken()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ share: meta.share, path: meta.path, filename: meta.file.name }),
@@ -187,7 +186,7 @@ async function startUpload(id) {
         method: 'POST',
         signal: controller.signal,
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${getToken()}`,
           'X-Share': share,
           'X-Path': path,
           'X-Filename': file.name,

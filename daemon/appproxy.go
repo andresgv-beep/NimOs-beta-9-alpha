@@ -18,13 +18,6 @@ import (
 // ═══════════════════════════════════
 
 func handleAppProxy(w http.ResponseWriter, r *http.Request) {
-	// Require authentication for app proxy
-	session := authenticate(r)
-	if session == nil {
-		jsonError(w, 401, "Not authenticated")
-		return
-	}
-
 	// Block any path traversal attempts
 	if strings.Contains(r.URL.Path, "..") || strings.Contains(r.URL.RawPath, "..") {
 		jsonError(w, 400, "Invalid path")
@@ -46,6 +39,16 @@ func handleAppProxy(w http.ResponseWriter, r *http.Request) {
 		strings.Contains(appId, "/") || strings.Contains(appId, "\\") ||
 		strings.Contains(appId, "%") || strings.Contains(appId, "..") {
 		jsonError(w, 400, "Invalid app ID")
+		return
+	}
+
+	// APP-063 · grant por-app también en el proxy. Antes solo se comprobaba
+	// authenticate() (¿hay sesión?), así que un usuario logueado SIN acceso
+	// concedido a la app podía hablar igualmente con el backend del contenedor
+	// vía /app/{id}/. requireAppAccess = sesión + dbUserHasAppAccess (admin
+	// siempre pasa; no-admin necesita grant en user_app_access). El túnel WS
+	// hereda el check porque el upgrade se procesa después.
+	if requireAppAccess(w, r, appId) == nil {
 		return
 	}
 

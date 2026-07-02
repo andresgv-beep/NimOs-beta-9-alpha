@@ -385,9 +385,14 @@ func handleUpdateStatus(w http.ResponseWriter) {
 }
 
 // WARNING: Admin-level RCE endpoint — intentional privileged shell access.
-// Protected by: admin session check, audit logging, cwd sanitization, cmd guards.
+// El terminal ES una shell root para el admin, sin filtros: un blocklist de
+// "comandos peligrosos" aquí sería teatro (trivial de saltar con espacios,
+// variables, busybox…) y solo daría falsa sensación de seguridad. Las defensas
+// reales son: requireAdmin (doble check en handleSystemPost), opt-in explícito
+// vía security.json (disabled-by-default, ver isTerminalEnabled) y audit log
+// de cada comando.
 func handleTerminal(w http.ResponseWriter, r *http.Request, session *DBSession) {
-	// SECURITY: Terminal can be disabled via config
+	// SECURITY: Terminal must be explicitly enabled via config
 	if !isTerminalEnabled() {
 		jsonError(w, 403, "Terminal is disabled in system configuration")
 		return
@@ -399,22 +404,6 @@ func handleTerminal(w http.ResponseWriter, r *http.Request, session *DBSession) 
 	if cmd == "" || len(cmd) > 4096 {
 		jsonError(w, 400, "Invalid cmd (max 4096 chars)")
 		return
-	}
-
-	// SECURITY: Block obviously destructive commands
-	dangerousPatterns := []string{
-		"rm -rf /\n", "rm -rf / ", "rm -rf /\"", "rm -rf /'",
-		":(){ :|:& };:", // fork bomb
-		"mkfs.", "dd if=", "wipefs",
-		"> /dev/sd",
-	}
-	cmdLower := strings.ToLower(cmd)
-	for _, pattern := range dangerousPatterns {
-		if strings.Contains(cmdLower, strings.ToLower(pattern)) {
-			logMsg("TERMINAL BLOCKED [user=%s ip=%s]: %s", session.Username, r.RemoteAddr, cmd)
-			jsonError(w, 403, "Command blocked by security policy")
-			return
-		}
 	}
 
 	if cwd == "" {
@@ -446,20 +435,24 @@ func handleTerminal(w http.ResponseWriter, r *http.Request, session *DBSession) 
 }
 
 // isTerminalEnabled checks if terminal access is enabled in config.
-// Defaults to true if not set (backward compatible).
+// SECURITY: fail-closed. El terminal da shell root vía HTTP; en un NAS
+// expuesto no puede venir activado de serie ni activarse solo porque el
+// config falte o esté corrupto. Opt-in explícito:
+//
+//	echo '{"terminalEnabled": true}' > /var/lib/nimos/config/security.json
 func isTerminalEnabled() bool {
 	data, err := os.ReadFile("/var/lib/nimos/config/security.json")
 	if err != nil {
-		return true // default: enabled
+		return false // default: disabled (fail-closed)
 	}
 	var conf map[string]interface{}
 	if json.Unmarshal(data, &conf) != nil {
-		return true
+		return false
 	}
 	if enabled, ok := conf["terminalEnabled"].(bool); ok {
 		return enabled
 	}
-	return true
+	return false
 }
 
 func handleSystemInfo(w http.ResponseWriter) {

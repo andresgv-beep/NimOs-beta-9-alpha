@@ -1,15 +1,10 @@
 import { writable, derived, get } from 'svelte/store';
+// Auth centralizada (cookie HttpOnly; token solo en memoria). NO leer
+// localStorage aquí: reintroducirlo reabre el robo de sesión vía XSS.
+import { jsonHdrs as hdrs } from '$lib/stores/auth.js';
 
 export const notifications = writable([]);
 export const unreadCount = derived(notifications, $n => $n.filter(x => !x.read).length);
-
-// ── Auth token helper ──
-function getAuthToken() {
-  try { return localStorage.getItem('nimos_token') || ''; } catch { return ''; }
-}
-function hdrs() {
-  return { 'Authorization': `Bearer ${getAuthToken()}`, 'Content-Type': 'application/json' };
-}
 
 // ── Load from backend on init ──
 // Preserves local-only notifications (like login SMART alert) and sorts critical first

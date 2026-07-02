@@ -14,6 +14,7 @@
   import {
     loadNotifications, notifications
   } from '$lib/stores/notifications.js';
+  import { hdrs } from '$lib/stores/auth.js';
   import Taskbar from './Taskbar.svelte';
   import WindowFrame from './WindowFrame.svelte';
   import WidgetLayer from './WidgetLayer.svelte';
@@ -38,9 +39,10 @@
 
   async function checkSmartOnLogin() {
     try {
-      const token = localStorage.getItem('nimos_token') || '';
+      // Auth por cookie HttpOnly (hdrs centralizado, token solo en memoria).
+      // NO leer localStorage: reintroducirlo reabre el robo de sesión vía XSS.
       const r = await fetch('/api/disks/smart/summary', {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: hdrs(),
       });
       const d = await r.json();
       if (d.worstStatus === 'critical' || d.worstStatus === 'warning') {
