@@ -794,6 +794,12 @@ func shieldEnsureEngine() {
 			}
 		}
 
+		// Fase 2 del motor de comportamiento: restaurar el flag persistido.
+		loadShieldBehavEnforce()
+		if shieldBehavEnforce.Load() {
+			logMsg("behav: auto-bloqueo por comportamiento ARMADO (persistido)")
+		}
+
 		// Process events
 		go shieldEventLoop()
 

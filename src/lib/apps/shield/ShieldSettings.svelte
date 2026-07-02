@@ -2,7 +2,7 @@
   // Vista Ajustes: política de fuerza bruta (umbrales por nivel + escalado
   // de duración) y escalado de reincidentes al firewall del kernel.
   // El borrador es local; al guardar persiste vía el store.
-  import { config, configDefaults, saveConfig, status, firewallSetEnabled } from './shieldStore.js';
+  import { config, configDefaults, saveConfig, status, firewallSetEnabled, behaviorSetEnabled } from './shieldStore.js';
 
   let draft = null;
   let saving = false;
@@ -42,6 +42,22 @@
       fwMsg = e.message || 'Error';
     } finally {
       fwBusy = false;
+    }
+  }
+
+  let behavBusy = false;
+  let behavMsg = '';
+  async function toggleBehav() {
+    if (behavBusy) return;
+    behavBusy = true; behavMsg = '';
+    try {
+      await behaviorSetEnabled(!$status.behaviorEnforce);
+      behavMsg = $status.behaviorEnforce ? 'Auto-bloqueo armado ✓' : 'Auto-bloqueo desarmado ✓';
+      setTimeout(() => (behavMsg = ''), 2500);
+    } catch (e) {
+      behavMsg = e.message || 'Error';
+    } finally {
+      behavBusy = false;
     }
   }
 </script>
@@ -120,6 +136,27 @@
         </button>
       </div>
       {#if fwMsg}<span class="set-msg" class:err={!fwMsg.endsWith('✓')}>{fwMsg}</span>{/if}
+    </div>
+
+    <div class="set-group" class:fw-armed={$status.behaviorEnforce}>
+      <div class="set-group-head">Motor de comportamiento · auto-bloqueo (Fase 2)</div>
+      <p class="set-hint">
+        Cada IP acumula un score de comportamiento (0–100) que agrega todas las señales del
+        shield; el ataque sostenido lo hunde y el tiempo lo recupera. Armado, cruzar el umbral
+        ({$status.scoreThreshold ?? 30}) bloquea automáticamente con la duración escalada por
+        reincidencia. Salvaguardas: los eventos de una sesión válida y las IPs de la whitelist
+        <b>jamás</b> gatillan el auto-bloqueo. Desarmado, el log registra qué habría bloqueado.
+      </p>
+      <div class="set-row">
+        <label>Estado</label>
+        <span class="fw-state" class:on={$status.behaviorEnforce}>
+          {$status.behaviorEnforce ? 'ARMADO · bloqueo real' : 'DESARMADO (solo observa)'}
+        </span>
+        <button class="set-btn" class:fw-danger={$status.behaviorEnforce} on:click={toggleBehav} disabled={behavBusy}>
+          {behavBusy ? '…' : $status.behaviorEnforce ? 'Desarmar' : 'Armar'}
+        </button>
+      </div>
+      {#if behavMsg}<span class="set-msg" class:err={!behavMsg.endsWith('✓')}>{behavMsg}</span>{/if}
     </div>
 
     <p class="set-hint set-note">Las reglas duras (inyección, honeypots, path traversal, escáneres) no son configurables: son defensa innegociable para cualquier IP.</p>

@@ -143,6 +143,14 @@ export async function firewallSetEnabled(on) {
   }));
 }
 
+// ─── Motor de comportamiento · Fase 2 (auto-bloqueo por score) ───
+// Armado, cruzar el umbral de score bloquea de verdad; desarmado solo se
+// registra. Las salvaguardas (sesión válida, whitelist) viven en el backend.
+export async function behaviorSetEnabled(on) {
+  const r = await post('behavior', { enable: on }); // el error se propaga al componente
+  status.update(s => ({ ...s, behaviorEnforce: r.behaviorEnforce }));
+}
+
 // ─── NimShield Intelligence (threat feed) ───
 export async function intelSetEnforce(on) {
   const r = await post('intel/enforce', { enforce: on });

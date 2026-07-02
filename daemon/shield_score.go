@@ -1,24 +1,32 @@
-// shield_score.go — NimShield · Motor de comportamiento (Fase 1: score + correlación).
+// shield_score.go — NimShield · Motor de comportamiento (score + correlación).
 //
-// Asigna a cada IP un SCORE de comportamiento 0-100 (100 = confianza total) que
-// agrega TODAS las señales del shield sobre el tiempo, no solo el login. Cada
-// evento de detección resta puntos según su severidad; si una IP combina varios
-// vectores en poco tiempo (honeypot + scan + injection) se aplica una penalización
-// de CORRELACIÓN. El score se RECUPERA solo con el tiempo si no hay eventos nuevos,
-// así un desliz puntual se desvanece y solo el ataque sostenido hunde el score.
+// Asigna a cada clave de red un SCORE de comportamiento 0-100 (100 = confianza
+// total) que agrega TODAS las señales del shield sobre el tiempo, no solo el
+// login. Cada evento de detección resta puntos según su severidad; si una clave
+// combina varios vectores en poco tiempo (honeypot + scan + injection) se aplica
+// una penalización de CORRELACIÓN. El score se RECUPERA solo con el tiempo si no
+// hay eventos nuevos, así un desliz puntual se desvanece y solo el ataque
+// sostenido hunde el score.
 //
-// FASE 1 = OBSERVACIÓN: calcula y registra "habría auto-bloqueado", pero NO bloquea.
-// El auto-bloqueo llega en la Fase 2 (con toggle de admin, como el feed intel).
+// FASE 1 (siempre activa): calcula, registra y correla.
+// FASE 2 (toggle de admin, default OFF — patrón intelEnforce): al cruzar el
+// umbral hacia abajo, AUTO-BLOQUEA (BEHAV-001) con la duración escalada por
+// reincidencia. Salvaguardas: jamás por eventos de una sesión válida (el score
+// los cuenta, pero no gatillan bloqueo — mismo criterio que los payload rules)
+// y jamás contra una IP whitelisteada. Validado en observación: 3 días sin un
+// solo falso positivo y un atacante real cazado (2026-06-29, score 19).
 package main
 
 import (
+	"fmt"
+	"sync/atomic"
 	"time"
 )
 
 const (
 	scoreMax             = 100
 	scoreStart           = 100 // una IP sin historial empieza con confianza total
-	scoreBlockThreshold  = 30  // < umbral → candidata a auto-bloqueo (Fase 1 solo registra)
+	scoreBlockThreshold  = 30  // < umbral → auto-bloqueo si la Fase 2 está armada
 	scoreRecoveryPerHour = 5   // puntos/hora de recuperación hacia 100 sin eventos nuevos
 
 	// Correlación: ≥ N categorías de ataque distintas en la ventana = multi-vector.
@@ -26,6 +34,30 @@ const (
 	scoreCorrelationMin    = 3
 	scoreCorrelationExtra  = 30 // penalización extra por ataque correlado
 )
+
+// shieldBehavEnforce — Fase 2 en caliente: si está armada, cruzar el umbral
+// hacia abajo bloquea de verdad. Persistido en shield_settings
+// ('behavior_enforce'); por defecto OFF (el admin la arma, como el intel).
+var shieldBehavEnforce atomic.Bool
+
+func dbShieldSetBehavEnforce(enabled bool) {
+	v := "0"
+	if enabled {
+		v = "1"
+	}
+	if _, err := db.Exec(`INSERT OR REPLACE INTO shield_settings (key, value) VALUES ('behavior_enforce', ?)`, v); err != nil {
+		logMsg("behav: no pude persistir el flag: %v", err)
+	}
+}
+
+// loadShieldBehavEnforce lee el flag persistido. Sin fila → OFF.
+func loadShieldBehavEnforce() {
+	var v string
+	if err := db.QueryRow(`SELECT value FROM shield_settings WHERE key = 'behavior_enforce'`).Scan(&v); err != nil {
+		return
+	}
+	shieldBehavEnforce.Store(v == "1")
+}
 
 // scorePenalty traduce la severidad de un evento a puntos a restar del score.
 func scorePenalty(severity string) int {
@@ -128,13 +160,38 @@ func shieldScorePenalize(event ShieldEvent) {
 		ON CONFLICT(ip) DO UPDATE SET score = excluded.score, last_score_update = excluded.last_score_update
 	`, ip, newScore, now)
 
-	// Cruce del umbral hacia abajo: registrar (Fase 1 = observación, NO bloquea).
+	// Cruce del umbral hacia abajo: auto-bloqueo (Fase 2) o registro (observación).
 	if old >= scoreBlockThreshold && newScore < scoreBlockThreshold {
 		extra := ""
 		if correlated {
 			extra = " [multi-vector correlado]"
 		}
-		logMsg("behav: IP %s cruzó el umbral de comportamiento (score %d, por %s/%s)%s — HABRÍA AUTO-BLOQUEADO [OBSERVE]",
+
+		// Salvaguardas del auto-bloqueo (mismo criterio que los payload rules):
+		//   · un evento de SESIÓN VÁLIDA nunca gatilla bloqueo — el score lo
+		//     cuenta (observabilidad), pero el caso backtick/compose del dueño
+		//     no puede convertirse en bloqueo por la puerta de atrás;
+		//   · una IP whitelisteada jamás se bloquea (el check va sobre la IP
+		//     real del evento: cubre exactas y rangos CIDR).
+		if eventIsAuthenticated(event) || shieldIsWhitelisted(event.SourceIP) {
+			logMsg("behav: %s cruzó el umbral (score %d, por %s/%s)%s — exenta de auto-bloqueo (sesión válida o whitelist)",
+				ip, newScore, event.Category, event.Severity, extra)
+			return
+		}
+
+		if !shieldBehavEnforce.Load() {
+			logMsg("behav: %s cruzó el umbral de comportamiento (score %d, por %s/%s)%s — HABRÍA AUTO-BLOQUEADO [OBSERVE]",
+				ip, newScore, event.Category, event.Severity, extra)
+			return
+		}
+
+		// FASE 2 armada: bloqueo real, con la duración escalada por
+		// reincidencia (misma política que AUTH-001; shieldBlockIP incrementa
+		// el contador y, si ya es reincidente, escala también al firewall).
+		dur := escalatedBlockDuration(getShieldConfig(), shieldRepBlockCount(ip))
+		reason := fmt.Sprintf("Comportamiento malicioso sostenido (score %d)%s", newScore, extra)
+		logMsg("behav: %s AUTO-BLOQUEADA por comportamiento (score %d, por %s/%s)%s [BEHAV-001]",
 			ip, newScore, event.Category, event.Severity, extra)
+		shieldBlockIP(ip, dur, reason, "BEHAV-001")
 	}
 }

@@ -270,6 +270,8 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 			"firewallEscalation": shieldFWEnabled.Load(),
 			"firewallEntries":    shieldFWCount(),
 			"droppedEvents":      shieldEventsDropped.Load(),
+			"behaviorEnforce":    shieldBehavEnforce.Load(),
+			"scoreThreshold":     scoreBlockThreshold,
 		})
 
 	// GET /api/shield/events?limit=50
@@ -360,6 +362,22 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 		logMsg("shield FW: escalation %s by %s", map[bool]string{true: "ENABLED", false: "disabled"}[on], session.Username)
 		jsonOk(w, map[string]interface{}{
 			"ok": true, "firewallEscalation": shieldFWEnabled.Load(), "firewallEntries": shieldFWCount(),
+		})
+
+	// POST /api/shield/behavior — armar/desarmar el auto-bloqueo por
+	// comportamiento (Fase 2, admin). body: {"enable": true|false}
+	case path == "/api/shield/behavior" && method == "POST":
+		if session.Role != "admin" {
+			jsonError(w, 403, "Solo un administrador puede modificar NimShield")
+			return
+		}
+		body, _ := readBody(r)
+		on, _ := bodyBool(body, "enable")
+		shieldBehavEnforce.Store(on)
+		dbShieldSetBehavEnforce(on)
+		logMsg("behav: auto-bloqueo %s by %s", map[bool]string{true: "ARMADO", false: "desarmado"}[on], session.Username)
+		jsonOk(w, map[string]interface{}{
+			"ok": true, "behaviorEnforce": shieldBehavEnforce.Load(),
 		})
 
 	// GET /api/shield/config — política actual
