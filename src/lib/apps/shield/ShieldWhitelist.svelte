@@ -1,5 +1,5 @@
 <script>
-  // Vista Whitelist: IPs de confianza permanente. Loopback fija.
+  // Vista Whitelist: IPs o rangos CIDR de confianza permanente. Loopback fija.
   import { fmtAgo } from './shieldFormat.js';
   import { addWhitelist, removeWhitelist, busy } from './shieldStore.js';
 
@@ -24,7 +24,7 @@
 </script>
 
 <div class="wl-form">
-  <input type="text" class="ip" placeholder="192.168.1.100" bind:value={wlIP} on:keydown={(e) => e.key === 'Enter' && add()} />
+  <input type="text" class="ip" placeholder="192.168.1.100 o 10.0.0.0/24" bind:value={wlIP} on:keydown={(e) => e.key === 'Enter' && add()} />
   <input type="text" class="note" placeholder="Nota (ej: ordenador personal)" bind:value={wlNote} on:keydown={(e) => e.key === 'Enter' && add()} />
   <button class="btn-add" on:click={add}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -40,7 +40,7 @@
 
 <div class="wl-table">
   <div class="wl-head">
-    <span>IP</span>
+    <span>IP / rango</span>
     <span>Nota</span>
     <span>Añadida</span>
     <span style="text-align:right">Acción</span>
@@ -77,7 +77,7 @@
   .wl-form { display: flex; gap: 6px; margin-bottom: 14px; background: var(--bg-card, #15151a); padding: 10px; border-radius: 8px; }
   .wl-form input { background: var(--bg-inner, #101015); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; padding: 7px 10px; color: var(--fg, #f0f0f0); font-family: var(--font-mono); font-size: 11px; outline: none; }
   .wl-form input:focus { border-color: rgba(0,255,159,0.35); }
-  .wl-form input.ip { width: 140px; }
+  .wl-form input.ip { width: 190px; }
   .wl-form input.note { flex: 1; font-family: inherit; }
   .btn-add { padding: 0 16px; background: var(--nim-green, #00ff9f); color: var(--bg-window, #16161a); border: none; border-radius: 5px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
   .btn-add:hover { filter: brightness(1.08); }

@@ -164,11 +164,17 @@ func shieldFWEligible(key string) bool {
 	}
 	// Una clave que contiene una IP whitelisteada no se escala: el DROP de
 	// kernel ignoraría la whitelist (p.ej. el /64 del admin, bloqueado por
-	// culpa de un vecino de su red).
+	// culpa de un vecino de su red). Aplica a las dos formas de whitelist:
+	// IPs exactas y rangos CIDR (cualquier solape veta el escalado).
 	shieldBlockMu.RLock()
 	defer shieldBlockMu.RUnlock()
 	for wl := range shieldWhitelist {
 		if shieldNetKey(wl) == key {
+			return false
+		}
+	}
+	for _, p := range shieldWhitelistCIDRs {
+		if keyOverlapsPrefix(key, p) {
 			return false
 		}
 	}

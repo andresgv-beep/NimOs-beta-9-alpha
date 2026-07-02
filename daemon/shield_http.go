@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"time"
 )
 
@@ -134,17 +135,16 @@ func dbShieldWhitelistRemove(ip string) error {
 	return err
 }
 
-// loadPersistedWhitelist carga las IPs de confianza de BD al mapa en memoria.
-// Se llama al arrancar el shield, junto a loadPersistedBlocks.
+// loadPersistedWhitelist carga las entradas de confianza de BD al estado en
+// caliente (IPs exactas al mapa, CIDRs a la lista de prefijos). Se llama al
+// arrancar el shield, junto a loadPersistedBlocks.
 func loadPersistedWhitelist() {
 	entries := dbShieldWhitelistGetAll()
-	shieldBlockMu.Lock()
 	for _, e := range entries {
-		shieldWhitelist[e["ip"]] = true
+		shieldWhitelistApplyLive(e["ip"])
 	}
-	shieldBlockMu.Unlock()
 	if len(entries) > 0 {
-		logMsg("shield: loaded %d whitelisted IPs", len(entries))
+		logMsg("shield: loaded %d whitelisted entries", len(entries))
 	}
 }
 
@@ -454,7 +454,7 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 	case path == "/api/shield/whitelist" && method == "GET":
 		jsonOk(w, map[string]interface{}{"ok": true, "whitelist": dbShieldWhitelistGetAll()})
 
-	// POST /api/shield/whitelist — body: {"ip": "1.2.3.4", "note": "auditoría"}
+	// POST /api/shield/whitelist — body: {"ip": "1.2.3.4" | "10.0.0.0/24", "note": "auditoría"}
 	case path == "/api/shield/whitelist" && method == "POST":
 		if session.Role != "admin" {
 			jsonError(w, 403, "Solo un administrador puede modificar NimShield")
@@ -463,20 +463,21 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 		body, _ := readBody(r)
 		ip := bodyStr(body, "ip")
 		note := bodyStr(body, "note")
-		// Validar que es una IP real, no basura arbitraria.
+		// Validar: IP exacta o rango CIDR — nada de basura arbitraria.
 		if net.ParseIP(ip) == nil {
-			jsonError(w, 400, "IP inválida")
-			return
+			if _, err := netip.ParsePrefix(ip); err != nil {
+				jsonError(w, 400, "IP o CIDR inválido (ej: 192.168.1.100 o 192.168.1.0/24)")
+				return
+			}
 		}
 		if err := dbShieldWhitelistAdd(ip, note); err != nil {
 			jsonError(w, 500, "No se pudo guardar")
 			return
 		}
-		// Aplicar en caliente: añadir al mapa en memoria y quitar bloqueo activo.
-		shieldBlockMu.Lock()
-		shieldWhitelist[ip] = true
-		shieldBlockMu.Unlock()
-		shieldUnblockIP(ip) // si estaba bloqueada, liberarla ya
+		// Aplicar en caliente y liberar todo bloqueo activo que la entrada
+		// cubra (incluidos los escalados al kernel).
+		shieldWhitelistApplyLive(ip)
+		shieldUnblockCovered(ip)
 		logMsg("shield: whitelisted %s by %s", ip, session.Username)
 		jsonOk(w, map[string]interface{}{"ok": true, "ip": ip})
 
@@ -501,9 +502,7 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, 500, "No se pudo quitar")
 			return
 		}
-		shieldBlockMu.Lock()
-		delete(shieldWhitelist, ip)
-		shieldBlockMu.Unlock()
+		shieldWhitelistRemoveLive(ip)
 		logMsg("shield: un-whitelisted %s by %s", ip, session.Username)
 		jsonOk(w, map[string]interface{}{"ok": true, "ip": ip})
 

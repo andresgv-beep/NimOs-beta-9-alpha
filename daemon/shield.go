@@ -179,20 +179,99 @@ func shieldIsBlocked(ip string) (bool, string) {
 }
 
 // ── Whitelist ────────────────────────────────────────────────────────────────
+// Dos formas de entrada: IP exacta (mapa, O(1)) y CIDR (lista de prefijos,
+// escaneo lineal — la whitelist la gestiona el admin y es diminuta). La LAN
+// NO se whitelistea por defecto: solo loopback y lo que el admin añada.
 
 var shieldWhitelist = map[string]bool{
 	"127.0.0.1": true,
 	"::1":       true,
 }
 
+// shieldWhitelistCIDRs — entradas CIDR de la whitelist: string original (tal
+// cual la guardó el admin, para poder quitarla) → prefijo parseado y maskeado.
+var shieldWhitelistCIDRs = map[string]netip.Prefix{}
+
 func shieldIsWhitelisted(ip string) bool {
 	shieldBlockMu.RLock()
-	ok := shieldWhitelist[ip]
+	defer shieldBlockMu.RUnlock()
+	if shieldWhitelist[ip] {
+		return true
+	}
+	if len(shieldWhitelistCIDRs) == 0 {
+		return false
+	}
+	addr, err := netip.ParseAddr(ip)
+	if err != nil {
+		return false
+	}
+	addr = addr.Unmap()
+	for _, p := range shieldWhitelistCIDRs {
+		if p.Contains(addr) {
+			return true
+		}
+	}
+	return false
+}
+
+// shieldWhitelistApplyLive añade una entrada (IP exacta o CIDR) al estado en
+// caliente. La persistencia en BD va aparte (dbShieldWhitelistAdd).
+func shieldWhitelistApplyLive(entry string) {
+	shieldBlockMu.Lock()
+	defer shieldBlockMu.Unlock()
+	if p, err := netip.ParsePrefix(entry); err == nil {
+		shieldWhitelistCIDRs[entry] = p.Masked()
+		return
+	}
+	shieldWhitelist[entry] = true
+}
+
+// shieldWhitelistRemoveLive quita una entrada del estado en caliente (venga
+// de la forma que venga: prueba en ambas estructuras).
+func shieldWhitelistRemoveLive(entry string) {
+	shieldBlockMu.Lock()
+	delete(shieldWhitelist, entry)
+	delete(shieldWhitelistCIDRs, entry)
+	shieldBlockMu.Unlock()
+}
+
+// keyOverlapsPrefix decide si una clave de red (IP exacta o prefijo /64) se
+// solapa con un prefijo. Lo usan la liberación de bloqueos cubiertos por una
+// whitelist CIDR y la elegibilidad del escalado a firewall.
+func keyOverlapsPrefix(key string, p netip.Prefix) bool {
+	if a, err := netip.ParseAddr(key); err == nil {
+		return p.Contains(a.Unmap())
+	}
+	if kp, err := netip.ParsePrefix(key); err == nil {
+		return p.Overlaps(kp)
+	}
+	return false
+}
+
+// shieldUnblockCovered libera los bloqueos activos cubiertos por una entrada
+// de whitelist recién añadida (y, vía shieldUnblockIP, también los saca del
+// kernel si estaban escalados).
+func shieldUnblockCovered(entry string) {
+	if _, err := netip.ParseAddr(entry); err == nil {
+		shieldUnblockIP(entry) // IP exacta → su clave de red
+		return
+	}
+	p, err := netip.ParsePrefix(entry)
+	if err != nil {
+		return
+	}
+	p = p.Masked()
+	shieldBlockMu.RLock()
+	covered := []string{}
+	for k := range shieldBlocklist {
+		if keyOverlapsPrefix(k, p) {
+			covered = append(covered, k)
+		}
+	}
 	shieldBlockMu.RUnlock()
-	return ok
-	// Nota: la LAN NO se whitelistea por defecto (solo loopback y las IPs que
-	// el admin añada explícitamente). El bloque de CIDRs privados anterior era
-	// lógica muerta (calculaba Contains y siempre devolvía false); eliminado.
+	for _, k := range covered {
+		shieldUnblockIP(k)
+	}
 }
 
 // ── Honeypots ────────────────────────────────────────────────────────────────
