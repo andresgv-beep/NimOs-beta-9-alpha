@@ -36,6 +36,13 @@ type ShieldEvent struct {
 
 var shieldEvents = make(chan ShieldEvent, 2000)
 
+// shieldEventsDropped cuenta los eventos descartados por canal lleno. Antes se
+// tiraban EN SILENCIO: bajo un ataque que saturara el canal, el shield se
+// quedaba ciego (sin reglas, sin score, sin registro) y nadie se enteraba.
+// El contador se expone en /api/shield/status y el ticker de limpieza deja
+// constancia periódica en el log si hubo descartes nuevos.
+var shieldEventsDropped atomic.Int64
+
 // shieldEmit sends an event to the shield engine. Non-blocking — drops if full.
 func shieldEmit(event ShieldEvent) {
 	if event.Timestamp.IsZero() {
@@ -44,7 +51,8 @@ func shieldEmit(event ShieldEvent) {
 	select {
 	case shieldEvents <- event:
 	default:
-		// Channel full — drop event rather than block the request
+		// Channel full — drop event rather than block the request.
+		shieldEventsDropped.Add(1)
 	}
 }
 
@@ -749,7 +757,15 @@ func loadPersistedBlocks() {
 
 func startShieldCleanup() {
 	ticker := time.NewTicker(5 * time.Minute)
+	var lastDropped int64
 	for range ticker.C {
+		// Constancia periódica de descartes del canal de eventos (si los hay):
+		// que la ceguera bajo saturación se vea en el log, no solo en la API.
+		if d := shieldEventsDropped.Load(); d > lastDropped {
+			logMsg("shield: %d eventos descartados por canal lleno en los últimos 5min (%d en total)", d-lastDropped, d)
+			lastDropped = d
+		}
+
 		now := time.Now()
 		expired := []string{}
 		shieldBlockMu.Lock()

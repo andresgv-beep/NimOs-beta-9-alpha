@@ -269,6 +269,7 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 			"scannerUAs":         len(scannerUAs),
 			"firewallEscalation": shieldFWEnabled.Load(),
 			"firewallEntries":    shieldFWCount(),
+			"droppedEvents":      shieldEventsDropped.Load(),
 		})
 
 	// GET /api/shield/events?limit=50
