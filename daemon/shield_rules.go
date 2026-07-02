@@ -214,9 +214,11 @@ func processAuthRules(event ShieldEvent) {
 		windowCount := authFailWindow.countAndAdd("ip:"+key, 5*time.Minute)
 		block, distrust := shieldAuthDecision(cfg, successCount, failStreak, windowCount)
 		if block {
-			// Escalado por reincidencia: cada bloqueo previo de esta IP sube
-			// el siguiente (5min → 15min → 1h → 24h, configurable).
-			offenses := shieldRepRecordBlock(ip)
+			// Escalado por reincidencia: cada bloqueo previo de esta clave
+			// sube el siguiente (5min → 15min → 1h → 24h, configurable).
+			// Solo LEE el contador — el incremento lo hace shieldBlockIP,
+			// punto único de conteo para todos los bloqueos.
+			offenses := shieldRepBlockCount(ip)
 			dur := escalatedBlockDuration(cfg, offenses)
 			reason := "Brute force: login failures over threshold"
 			if distrust {

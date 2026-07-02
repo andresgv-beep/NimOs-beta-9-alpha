@@ -1,11 +1,14 @@
 <script>
   // Vista Ajustes: política de fuerza bruta (umbrales por nivel + escalado
-  // de duración). El borrador es local; al guardar persiste vía el store.
-  import { config, configDefaults, saveConfig } from './shieldStore.js';
+  // de duración) y escalado de reincidentes al firewall del kernel.
+  // El borrador es local; al guardar persiste vía el store.
+  import { config, configDefaults, saveConfig, status, firewallSetEnabled } from './shieldStore.js';
 
   let draft = null;
   let saving = false;
   let msg = '';
+  let fwBusy = false;
+  let fwMsg = '';
 
   // Inicializa el borrador cuando llega la config (sin pisar ediciones).
   $: if ($config && !draft) draft = { ...$config };
@@ -25,6 +28,20 @@
       msg = e.message;
     } finally {
       saving = false;
+    }
+  }
+
+  async function toggleFW() {
+    if (fwBusy) return;
+    fwBusy = true; fwMsg = '';
+    try {
+      await firewallSetEnabled(!$status.firewallEscalation);
+      fwMsg = $status.firewallEscalation ? 'Escalado activado ✓' : 'Escalado desactivado ✓';
+      setTimeout(() => (fwMsg = ''), 2500);
+    } catch (e) {
+      fwMsg = e.message || 'Error';
+    } finally {
+      fwBusy = false;
     }
   }
 </script>
@@ -82,6 +99,29 @@
       </div>
     </div>
 
+    <div class="set-group" class:fw-armed={$status.firewallEscalation}>
+      <div class="set-group-head">Escalado a firewall · reincidentes</div>
+      <p class="set-hint">
+        Cuando una IP (o red IPv6) reincide — 2º bloqueo en adelante — NimShield puede añadirla
+        al firewall del kernel (nftables): sus paquetes se descartan antes de tocar el sistema y
+        deja de consumir recursos. Solo IPs públicas: la LAN, el loopback y cualquier red que
+        contenga una IP de tu whitelist quedan fuera <b>siempre</b>. Al desactivar, la tabla del
+        kernel se elimina entera. Desarmado, el log registra qué habría escalado (FW-OBSERVE).
+      </p>
+      <div class="set-row">
+        <label>Estado</label>
+        <span class="fw-state" class:on={$status.firewallEscalation}>
+          {$status.firewallEscalation
+            ? `ACTIVO · ${$status.firewallEntries || 0} en kernel`
+            : 'DESARMADO (solo observa)'}
+        </span>
+        <button class="set-btn" class:fw-danger={$status.firewallEscalation} on:click={toggleFW} disabled={fwBusy}>
+          {fwBusy ? '…' : $status.firewallEscalation ? 'Desarmar' : 'Armar'}
+        </button>
+      </div>
+      {#if fwMsg}<span class="set-msg" class:err={!fwMsg.endsWith('✓')}>{fwMsg}</span>{/if}
+    </div>
+
     <p class="set-hint set-note">Las reglas duras (inyección, honeypots, path traversal, escáneres) no son configurables: son defensa innegociable para cualquier IP.</p>
 
     <div class="set-actions">
@@ -112,4 +152,8 @@
   .set-btn { padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 12.5px; font-weight: 600; border: 1px solid var(--nim-green, #00ff9f); background: rgba(0,255,159,0.1); color: var(--nim-green, #00ff9f); }
   .set-btn.ghost { border-color: var(--bd-3, #2a2a32); background: transparent; color: var(--fg-3, #b0b0b8); font-weight: 400; }
   .set-btn:disabled { opacity: 0.5; cursor: default; }
+  .set-btn.fw-danger { border-color: var(--st-crit, #f87171); background: rgba(248,113,113,0.1); color: var(--st-crit, #f87171); }
+  .fw-state { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.4px; color: var(--fg-4, #7a7a82); }
+  .fw-state.on { color: var(--st-crit, #f87171); }
+  .set-group.fw-armed { border-color: rgba(248,113,113,0.3); }
 </style>

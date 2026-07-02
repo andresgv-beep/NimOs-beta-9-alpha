@@ -261,12 +261,14 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 		shieldBlockMu.RUnlock()
 
 		jsonOk(w, map[string]interface{}{
-			"enabled":     shieldEnabled.Load(),
-			"blockedIPs":  blockedCount,
-			"honeypots":   len(honeypotPaths),
-			"rules":       22,
-			"xssPatterns": len(xssPatterns),
-			"scannerUAs":  len(scannerUAs),
+			"enabled":            shieldEnabled.Load(),
+			"blockedIPs":         blockedCount,
+			"honeypots":          len(honeypotPaths),
+			"rules":              22,
+			"xssPatterns":        len(xssPatterns),
+			"scannerUAs":         len(scannerUAs),
+			"firewallEscalation": shieldFWEnabled.Load(),
+			"firewallEntries":    shieldFWCount(),
 		})
 
 	// GET /api/shield/events?limit=50
@@ -321,12 +323,43 @@ func handleShieldRoutes(w http.ResponseWriter, r *http.Request) {
 			// Si el daemon arrancó con el shield desactivado, el motor (event
 			// loop, whitelist/bloqueos persistidos, feed intel) nunca llegó a
 			// arrancar: hay que levantarlo ahora. Idempotente — si ya corre,
-			// no hace nada. Al desactivar no se para nada: el middleware deja
-			// de actuar con el flag y el event loop en marcha es inocuo.
+			// no hace nada.
 			shieldEnsureEngine()
+			// Si el escalado a firewall estaba armado, re-crear la tabla y
+			// re-escalar reincidentes (el apagado anterior la desmontó).
+			if shieldFWEnabled.Load() {
+				if err := shieldFWInit(); err != nil {
+					logMsg("shield FW: no pude re-crear la tabla al re-activar: %v", err)
+				} else {
+					shieldFWResync()
+				}
+			}
+		} else {
+			// Shield apagado = NADA bloquea, tampoco el kernel: desmontar la
+			// tabla nftables (los DROP no deben sobrevivir al apagado). El
+			// event loop en marcha es inocuo con el middleware desactivado.
+			shieldFWTeardown()
 		}
 		logMsg("shield: %s by %s", map[bool]string{true: "enabled", false: "disabled"}[newState], session.Username)
 		jsonOk(w, map[string]interface{}{"ok": true, "enabled": newState})
+
+	// POST /api/shield/firewall — armar/desarmar el escalado a kernel (admin)
+	// body: {"enable": true|false}
+	case path == "/api/shield/firewall" && method == "POST":
+		if session.Role != "admin" {
+			jsonError(w, 403, "Solo un administrador puede modificar NimShield")
+			return
+		}
+		body, _ := readBody(r)
+		on, _ := bodyBool(body, "enable")
+		if err := shieldFWSetEnabled(on); err != nil {
+			jsonError(w, 500, "No se pudo configurar el firewall: "+err.Error())
+			return
+		}
+		logMsg("shield FW: escalation %s by %s", map[bool]string{true: "ENABLED", false: "disabled"}[on], session.Username)
+		jsonOk(w, map[string]interface{}{
+			"ok": true, "firewallEscalation": shieldFWEnabled.Load(), "firewallEntries": shieldFWCount(),
+		})
 
 	// GET /api/shield/config — política actual
 	case path == "/api/shield/config" && method == "GET":

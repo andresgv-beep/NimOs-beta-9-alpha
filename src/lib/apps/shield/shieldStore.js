@@ -130,6 +130,19 @@ export async function saveConfig(draft) {
   return r.config;
 }
 
+// ─── Escalado a firewall (nftables) ───
+// Arma/desarma el paso de reincidentes a DROP de kernel. El backend aplica
+// las salvaguardas (solo IPs públicas, nunca whitelist/LAN); aquí solo se
+// refleja el estado que devuelve.
+export async function firewallSetEnabled(on) {
+  const r = await post('firewall', { enable: on }); // el error se propaga al componente
+  status.update(s => ({
+    ...s,
+    firewallEscalation: r.firewallEscalation,
+    firewallEntries: r.firewallEntries,
+  }));
+}
+
 // ─── NimShield Intelligence (threat feed) ───
 export async function intelSetEnforce(on) {
   const r = await post('intel/enforce', { enforce: on });

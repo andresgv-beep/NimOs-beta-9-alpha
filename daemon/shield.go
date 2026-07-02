@@ -127,6 +127,11 @@ func shieldBlockIP(ip string, duration time.Duration, reason, rule string) {
 	// Store in DB for persistence across restarts
 	dbShieldBlockInsert(key, duration, reason, rule)
 
+	// Reincidencia: TODO bloqueo cuenta (punto único de conteo). Un
+	// reincidente elegible escala a DROP de kernel (shield_firewall.go).
+	prevBlocks := shieldRepRecordBlock(key)
+	shieldFWMaybeEscalate(key, prevBlocks)
+
 	// Emit notification
 	addNotification("warning", "system",
 		fmt.Sprintf("IP bloqueada: %s", key),
@@ -140,6 +145,9 @@ func shieldUnblockIP(ip string) {
 	shieldBlockMu.Unlock()
 
 	dbShieldBlockDelete(key)
+	// Si estaba escalada al kernel, liberarla también de allí (cubre el
+	// unblock manual del admin y el flujo whitelist→unblock).
+	shieldFWRemove(key)
 	logMsg("shield UNBLOCK: %s", key)
 }
 
@@ -688,6 +696,17 @@ func shieldEnsureEngine() {
 		logMsg("shield: engine started (honeypots: %d, scanner UAs: %d, XSS patterns: %d)",
 			len(honeypotPaths), len(scannerUAs), len(xssPatterns))
 
+		// Escalado a firewall: restaurar el flag persistido y, si está armado,
+		// reconstruir la tabla nftables desde los bloqueos reincidentes vivos.
+		loadShieldFWEnabled()
+		if shieldFWEnabled.Load() {
+			if err := shieldFWInit(); err != nil {
+				logMsg("shield FW: no pude crear la tabla nftables (%v) — escalado inoperativo este arranque", err)
+			} else {
+				shieldFWResync()
+			}
+		}
+
 		// Process events
 		go shieldEventLoop()
 
@@ -732,14 +751,21 @@ func startShieldCleanup() {
 	ticker := time.NewTicker(5 * time.Minute)
 	for range ticker.C {
 		now := time.Now()
+		expired := []string{}
 		shieldBlockMu.Lock()
 		for ip, entry := range shieldBlocklist {
 			if now.After(entry.ExpiresAt) {
 				delete(shieldBlocklist, ip)
+				expired = append(expired, ip)
 				logMsg("shield: expired block for %s", ip)
 			}
 		}
 		shieldBlockMu.Unlock()
+		// Liberar del kernel las claves expiradas (fuera del lock: nftExec
+		// es un exec externo y shieldFWRemove toma su propio mutex).
+		for _, ip := range expired {
+			shieldFWRemove(ip)
+		}
 
 		// Also clean old events from DB (keep 7 days)
 		dbShieldEventsCleanup(7 * 24 * time.Hour)

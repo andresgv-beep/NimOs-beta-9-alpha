@@ -222,9 +222,23 @@ func shieldRepForget(ip string) error {
 	return err
 }
 
-// shieldRepRecordBlock incrementa el contador de bloqueos de una IP y
-// devuelve cuántos bloqueos PREVIOS tenía (0 = primera vez). Alimenta el
-// escalado de duración por reincidencia.
+// shieldRepBlockCount devuelve cuántos bloqueos lleva acumulados una clave de
+// red, SIN modificar nada. Lo usa AUTH-001 para elegir la duración escalada
+// (el incremento lo hace shieldBlockIP, único punto de conteo).
+func shieldRepBlockCount(ip string) int {
+	if db == nil || ip == "" {
+		return 0
+	}
+	var n int
+	db.QueryRow(`SELECT block_count FROM shield_reputation WHERE ip = ?`, shieldNetKey(ip)).Scan(&n)
+	return n
+}
+
+// shieldRepRecordBlock incrementa el contador de bloqueos de una clave de red
+// y devuelve cuántos bloqueos PREVIOS tenía (0 = primera vez). Se llama SOLO
+// desde shieldBlockIP: así TODO bloqueo (auth, honeypot, scan, inyección…)
+// cuenta como reincidencia, y alimenta tanto la duración escalada de AUTH-001
+// como el escalado al firewall.
 func shieldRepRecordBlock(ip string) int {
 	if db == nil || ip == "" {
 		return 0
