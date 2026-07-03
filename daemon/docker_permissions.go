@@ -140,6 +140,22 @@ func dockerAppPermUpdate(w http.ResponseWriter, r *http.Request, appId string) {
 	jsonOk(w, map[string]interface{}{"ok": true, "appId": appId, "users": allowedUsers})
 }
 
+// dockerAppUserAllowed · ¿está username en appPermissions[appId] de
+// docker.json? Es la lista que edita el panel Permisos (CPPermissions).
+// NO mira el rol: el caller decide qué hacer con admins. La consulta
+// también el app proxy (APP-063) para autorizar /app/{id}/.
+func dockerAppUserAllowed(username, appId string) bool {
+	conf := getDockerConfigGo()
+	appPerms, _ := conf["appPermissions"].(map[string]interface{})
+	users, _ := appPerms[appId].([]interface{})
+	for _, u := range users {
+		if us, _ := u.(string); us == username {
+			return true
+		}
+	}
+	return false
+}
+
 func dockerAppAccess(w http.ResponseWriter, r *http.Request, appId string) {
 	session := requireAuth(w, r)
 	if session == nil {
@@ -149,17 +165,7 @@ func dockerAppAccess(w http.ResponseWriter, r *http.Request, appId string) {
 		jsonOk(w, map[string]interface{}{"hasAccess": true, "appId": appId})
 		return
 	}
-	conf := getDockerConfigGo()
-	appPerms, _ := conf["appPermissions"].(map[string]interface{})
-	users, _ := appPerms[appId].([]interface{})
-	username := session.Username
-	hasAccess := false
-	for _, u := range users {
-		if us, _ := u.(string); us == username {
-			hasAccess = true
-			break
-		}
-	}
+	hasAccess := dockerAppUserAllowed(session.Username, appId)
 	jsonOk(w, map[string]interface{}{"hasAccess": hasAccess, "appId": appId})
 }
 

@@ -45,10 +45,19 @@ func handleAppProxy(w http.ResponseWriter, r *http.Request) {
 	// APP-063 · grant por-app también en el proxy. Antes solo se comprobaba
 	// authenticate() (¿hay sesión?), así que un usuario logueado SIN acceso
 	// concedido a la app podía hablar igualmente con el backend del contenedor
-	// vía /app/{id}/. requireAppAccess = sesión + dbUserHasAppAccess (admin
-	// siempre pasa; no-admin necesita grant en user_app_access). El túnel WS
-	// hereda el check porque el upgrade se procesa después.
-	if requireAppAccess(w, r, appId) == nil {
+	// vía /app/{id}/. Hay DOS fuentes de permiso y el proxy honra ambas:
+	//   · user_app_access (SQLite, API /api/app-access · apps del sistema)
+	//   · appPermissions de docker.json (panel Permisos del Control Panel ·
+	//     apps Docker, la única con UI hoy)
+	// Admin siempre pasa (vía dbUserHasAppAccess). El túnel WS hereda el
+	// check porque el upgrade se procesa después.
+	session := requireAuth(w, r)
+	if session == nil {
+		return
+	}
+	if !dbUserHasAppAccess(session.Username, session.Role, appId) &&
+		!dockerAppUserAllowed(session.Username, appId) {
+		jsonError(w, 403, "No tienes acceso a esta aplicación")
 		return
 	}
 
