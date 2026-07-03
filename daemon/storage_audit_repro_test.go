@@ -262,3 +262,91 @@ func TestSetPoolCompression_RejectsInvalidAlgorithm(t *testing.T) {
 		t.Errorf("la compresión no debe haber cambiado; got %q", pool.Compression)
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// AUDIT F8 · Scrub status con progreso en vivo
+//
+// La UI mostraba "Último scrub: —" hardcodeado y ningún progreso: el
+// parser ignoraba "Bytes scrubbed: X (Y%)", "Time left:" y "ETA:".
+// ─────────────────────────────────────────────────────────────────────────
+
+func TestParseScrubStatus_Running(t *testing.T) {
+	out := `UUID:             cb0163d6-1d87-4074-9021-90b5c05e42f9
+Scrub started:    Fri Jul  4 10:00:00 2026
+Status:           running
+Duration:         0:05:12
+Time left:        0:47:21
+ETA:              Fri Jul  4 10:52:33 2026
+Total to scrub:   11.78GiB
+Bytes scrubbed:   1.50GiB  (12.73%)
+Rate:             98.34MiB/s
+Error summary:    no errors found`
+
+	r := parseScrubStatusOutput(out)
+	if r["status"] != "scrubbing" {
+		t.Errorf("status: got %v, want scrubbing", r["status"])
+	}
+	if pct, ok := r["progress"].(float64); !ok || pct != 12.73 {
+		t.Errorf("progress: got %v, want 12.73", r["progress"])
+	}
+	if r["bytesScrubbed"] != "1.50GiB" {
+		t.Errorf("bytesScrubbed: got %v", r["bytesScrubbed"])
+	}
+	if r["timeLeft"] != "0:47:21" {
+		t.Errorf("timeLeft: got %v", r["timeLeft"])
+	}
+	if r["lastScrub"] == nil {
+		t.Error("lastScrub debe traer la fecha de inicio del scrub en curso")
+	}
+}
+
+func TestParseScrubStatus_FinishedWithErrors(t *testing.T) {
+	out := `UUID:             cb0163d6-1d87-4074-9021-90b5c05e42f9
+Scrub started:    Thu Jul  3 22:00:00 2026
+Status:           finished
+Duration:         0:32:11
+Total to scrub:   11.78GiB
+Rate:             99.99MiB/s
+Error summary:    csum=3 verify=1`
+
+	r := parseScrubStatusOutput(out)
+	if r["status"] != "done" {
+		t.Errorf("status: got %v, want done", r["status"])
+	}
+	if r["errors"] != 4 {
+		t.Errorf("errors: got %v, want 4 (csum=3 + verify=1)", r["errors"])
+	}
+	if r["lastScrub"] == nil {
+		t.Error("lastScrub nil en scrub terminado")
+	}
+	if r["lastDuration"] != "0:32:11" {
+		t.Errorf("lastDuration: got %v", r["lastDuration"])
+	}
+}
+
+func TestParseScrubStatus_NeverRun(t *testing.T) {
+	r := parseScrubStatusOutput("scrub status for /nimos/pools/data1: no stats available")
+	if r["status"] != "never" {
+		t.Errorf("status: got %v, want never", r["status"])
+	}
+}
+
+// Cazado EN VIVO (2026-07-04) al verificar F8: en los primeros segundos de
+// un scrub, btrfs imprime "no stats available" JUNTO a las líneas de
+// progreso (la cabecera de stats aún no existe). El parser devolvía
+// "never" con el scrub corriendo. Fixture literal del sistema.
+func TestParseScrubStatus_JustStartedTransient(t *testing.T) {
+	out := `UUID:             cb0163d6-1d87-4074-9021-90b5c05e42f9
+	no stats available
+Time left:        0:00:00
+ETA:              Sat Jul  4 01:22:34 2026
+Total to scrub:   23.57GiB
+Bytes scrubbed:   0.00B  (0.00%)
+Rate:             0.00B/s
+Error summary:    no errors found`
+
+	r := parseScrubStatusOutput(out)
+	if r["status"] != "scrubbing" {
+		t.Errorf("status: got %v, want scrubbing (scrub recién arrancado, no 'never')", r["status"])
+	}
+}

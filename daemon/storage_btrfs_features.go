@@ -254,8 +254,16 @@ func getScrubStatus(poolName string) map[string]interface{} {
 func getBtrfsScrubStatus(mountPoint, poolName string) map[string]interface{} {
 	opts := CmdOptions{Timeout: 10 * time.Second}
 	res, _ := runCmd("btrfs", []string{"scrub", "status", mountPoint}, opts)
-	output := res.Stdout
+	return parseScrubStatusOutput(res.Stdout)
+}
 
+// parseScrubStatusOutput convierte la salida de `btrfs scrub status` en el
+// payload del endpoint /v2/scrub/status. PURA (testeable sin btrfs).
+//
+// AUDIT F8: se añade el parseo de progreso en vivo — "Bytes scrubbed:
+// 1.50GiB (12.34%)", "Time left:" y "ETA:" — que antes se ignoraba y la UI
+// no podía mostrar avance de un scrub en curso.
+func parseScrubStatusOutput(output string) map[string]interface{} {
 	result := map[string]interface{}{
 		"status":       "idle",
 		"progress":     0,
@@ -269,8 +277,15 @@ func getBtrfsScrubStatus(mountPoint, poolName string) map[string]interface{} {
 	}
 
 	if strings.Contains(output, "no stats available") || strings.Contains(output, "not started") {
-		result["status"] = "never"
-		return result
+		// Cazado EN VIVO (2026-07-04): en los primeros segundos de un scrub
+		// el kernel aún no ha volcado la cabecera de stats y btrfs imprime
+		// "no stats available" JUNTO A las líneas de progreso. Si hay
+		// "Bytes scrubbed:", el scrub está corriendo — no es "never".
+		if !strings.Contains(output, "Bytes scrubbed:") {
+			result["status"] = "never"
+			return result
+		}
+		result["status"] = "scrubbing" // la línea "Status:" lo sobrescribe si llega a aparecer
 	}
 
 	for _, line := range strings.Split(output, "\n") {
@@ -336,6 +351,28 @@ func getBtrfsScrubStatus(mountPoint, poolName string) map[string]interface{} {
 
 		if strings.HasPrefix(line, "Total to scrub:") {
 			result["totalSize"] = strings.TrimSpace(strings.TrimPrefix(line, "Total to scrub:"))
+		}
+
+		// "Bytes scrubbed: 1.50GiB (12.34%)" — progreso del scrub en curso.
+		if strings.HasPrefix(line, "Bytes scrubbed:") {
+			val := strings.TrimSpace(strings.TrimPrefix(line, "Bytes scrubbed:"))
+			if i := strings.Index(val, "("); i >= 0 {
+				pct := strings.TrimSpace(val[i+1:])
+				pct = strings.TrimSuffix(pct, ")")
+				pct = strings.TrimSuffix(pct, "%")
+				if f, err := strconv.ParseFloat(pct, 64); err == nil {
+					result["progress"] = f
+				}
+				val = strings.TrimSpace(val[:i])
+			}
+			result["bytesScrubbed"] = val
+		}
+
+		if strings.HasPrefix(line, "Time left:") {
+			result["timeLeft"] = strings.TrimSpace(strings.TrimPrefix(line, "Time left:"))
+		}
+		if strings.HasPrefix(line, "ETA:") {
+			result["eta"] = strings.TrimSpace(strings.TrimPrefix(line, "ETA:"))
 		}
 	}
 

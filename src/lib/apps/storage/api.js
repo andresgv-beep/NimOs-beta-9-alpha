@@ -178,6 +178,18 @@ export async function startScrub(poolName) {
   return unwrap(res, 'scrub start');
 }
 
+/**
+ * getScrubStatus — estado del scrub de un pool (AUDIT F8).
+ * Devuelve { status: idle|never|scrubbing|done|canceled, progress,
+ *   lastScrub, lastDuration, errors, timeLeft, eta, bytesScrubbed, ... }.
+ */
+export async function getScrubStatus(poolName) {
+  const res = await fetch(`${BASE}/scrub/status?pool=${encodeURIComponent(poolName)}`, {
+    headers: hdrs(),
+  });
+  return unwrap(res, 'scrub status');
+}
+
 // ────────────────────────────────────────────────────────────────────────
 // Upgrade de profile (single → raid1): añadir disco + convertir + progreso.
 // El convert es ASYNC en el backend: devuelve la Operation in_progress y el

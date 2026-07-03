@@ -465,7 +465,35 @@
     await loadAll(); // refleja el nuevo profile + el disco que entró al pool
   }
 
-  // ─── Scrub ───
+  // ─── Scrub (AUDIT F8) ───
+  // scrubStatus: { [poolName]: payload de /scrub/status }. Se carga al
+  // entrar en la vista scrub y se refresca cada 4s mientras alguno corre,
+  // para que el progreso avance y "Último scrub" sea real (antes: "—").
+  let scrubStatus = {};
+  let scrubPollInterval = null;
+
+  async function loadScrubStatuses() {
+    const entries = await Promise.all((pools || []).map(async (p) => {
+      try {
+        return [p.name, await api.getScrubStatus(p.name)];
+      } catch {
+        return [p.name, scrubStatus[p.name] || null]; // conservar último conocido
+      }
+    }));
+    scrubStatus = Object.fromEntries(entries.filter((e) => e[1]));
+
+    const anyRunning = Object.values(scrubStatus).some((s) => s?.status === 'scrubbing');
+    if (anyRunning && !scrubPollInterval) {
+      scrubPollInterval = setInterval(loadScrubStatuses, 4000);
+    } else if (!anyRunning && scrubPollInterval) {
+      clearInterval(scrubPollInterval);
+      scrubPollInterval = null;
+    }
+  }
+
+  // Cargar estados al entrar en la vista scrub (y si cambia la lista de pools).
+  $: if (active === 'scrub' && pools.length) loadScrubStatuses();
+
   async function startScrub(poolName) {
     if (!confirm(`¿Iniciar scrub del pool "${poolName}"? El sistema puede ir más lento mientras corre.`)) return;
     scrubbing[poolName] = true;
@@ -479,6 +507,7 @@
         scrubMsg = e.message || 'Error al iniciar scrub';
       }
       await loadAll();
+      await loadScrubStatuses(); // refleja "en curso" y arranca el polling
     } catch {
       scrubMsg = 'Error de conexión';
     }
@@ -501,6 +530,7 @@
   onDestroy(() => {
     if (pollInterval) clearInterval(pollInterval);
     if (repairPollInterval) clearInterval(repairPollInterval);
+    if (scrubPollInterval) clearInterval(scrubPollInterval);
   });
 </script>
 
@@ -627,6 +657,7 @@
         pools={pools}
         scrubbing={scrubbing}
         scrubMsg={scrubMsg}
+        scrubStatus={scrubStatus}
         on:start={(e) => startScrub(e.detail.poolName)}
       />
     {/if}
