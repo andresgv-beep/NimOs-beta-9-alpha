@@ -281,7 +281,11 @@
   <svelte:fragment slot="page-header">
     <b>Descargas</b>
     <span class="ph-desc">· {torrents.length} torrents</span>
+  </svelte:fragment>
 
+  <!-- Barra de acciones · debajo del title bar, así no choca con los
+       controles de ventana (mismo patrón que Storage). -->
+  <div class="nt-toolbar" slot="toolbar">
     <div class="nt-head-actions">
       <div class="pool-select" class:open={shareMenuOpen} title="Carpeta de destino" on:click={() => shareMenuOpen = !shareMenuOpen} on:keydown={(e) => e.key === 'Enter' && (shareMenuOpen = !shareMenuOpen)} role="button" tabindex="0">
         <span class="pool-select-lbl">Carpeta</span>
@@ -321,7 +325,7 @@
         Añadir torrent
       </button>
     </div>
-  </svelte:fragment>
+  </div>
 
   <!-- ═══ SPLIT · lista (arriba) + detalle (abajo) ═══ -->
   <!-- Contenedor del cuerpo · barra opcional (auto) + split (flex:1) -->
@@ -561,8 +565,18 @@
   .ph-desc { color: var(--fg-4, #7a7a82); font-size: 12px; font-weight: 400; }
 
   /* ═══ HEADER ACTIONS ═══ */
+  /* Barra de acciones bajo el title bar · alineada a la derecha, con su
+     propia línea inferior para separarla de la lista de torrents. */
+  .nt-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 9px 22px;
+    border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.05));
+    flex-shrink: 0;
+  }
   .nt-head-actions {
-    margin-left: auto;
     display: flex;
     align-items: center;
     gap: 8px;
