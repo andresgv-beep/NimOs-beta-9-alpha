@@ -181,6 +181,7 @@ func bootHTTP() {
 	maintenanceManager.Register(&appUIDsHygieneTask{})
 	maintenanceManager.Register(&dockerImagePruneTask{})
 	maintenanceManager.Register(&dockerNetworkPruneTask{})
+	maintenanceManager.Register(&appUpdateCheckTask{})
 	startMaintenanceScheduler()
 }
 

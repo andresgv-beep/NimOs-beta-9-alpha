@@ -194,16 +194,19 @@ func dockerUpdateCheck(w http.ResponseWriter, r *http.Request, appID string) {
 // Ejecuta el update de una app: `docker compose pull && docker compose up -d`
 // Tras éxito, actualiza local_digest en BD (igual a remote_digest, app al día).
 //
-// Síncrono · típicamente 30s-2min según tamaño de imagen y red. Si tarda
-// mucho, considerar pasar a async con operationId (no en v1).
+// Con ?async=true (recomendado · UPD-ASYNC): responde 202 {operationId,
+// pollUrl} al instante y ejecuta el trabajo en background reportando
+// progreso por fases (10/50/85/95/100). Esto elimina el 502 del proxy en
+// updates largos (Immich en Pi: 5-15 min > timeout de Caddy) donde el
+// trabajo terminaba bien pero la respuesta HTTP se perdía y la UI
+// mostraba "invalid JSON response (status 502)".
 //
-// Response:
+// Sin ?async=true funciona síncrono · backward compat (30s-2min en apps
+// pequeñas; en grandes puede chocar con el timeout del proxy).
+//
+// Response sync:
 //
 //	{ "ok": true, "appId": "immich" }
-//
-// Si falla:
-//
-//	{ "ok": false, "error": "stderr output del compose pull o up -d" }
 //
 // Solo funciona para apps tipo 'stack' (las que tienen compose YAML).
 // Para single-container, hay que re-pull + re-create · diferente flujo.
@@ -238,6 +241,46 @@ func dockerAppUpdate(w http.ResponseWriter, r *http.Request, appID string) {
 	stackPath := filepath.Join(dockerPath, "stacks", safeID)
 	composePath := filepath.Join(stackPath, "docker-compose.yml")
 
+	if isAsyncRequested(r) {
+		// Async path · UPD-ASYNC. Mismo patrón que dockerPull/dockerInstall.
+		op, err := operationsRepo.Create(r.Context(), "docker.app_update", session.Username)
+		if err != nil {
+			jsonError(w, 500, "Failed to create operation: "+err.Error())
+			return
+		}
+		runWorkerAsync(op.ID, func(ctx context.Context) (map[string]interface{}, error) {
+			return runAppUpdateWork(ctx, safeID, stackPath, composePath, op.ID)
+		})
+		writeAsyncAccepted(w, op)
+		return
+	}
+
+	// Sync path (legacy)
+	result, err := runAppUpdateWork(r.Context(), safeID, stackPath, composePath, "")
+	if err != nil {
+		writeWorkerError(w, err)
+		return
+	}
+	jsonOk(w, result)
+}
+
+// runAppUpdateWork · trabajo real del update de una app stack.
+//
+// Función pura sin acceso a HTTP (patrón runDockerPullWork). Si opID != ""
+// reporta progreso por fases a operationsRepo · tramos de la barra en UI:
+//
+//	10  Descargando imágenes      (compose pull)
+//	50  Recreando contenedores    (compose up -d --pull always --force-recreate)
+//	85  Verificando servicios     (refresh de digests locales en BD)
+//	95  Actualizando registro     (invalidar cache NimHealth)
+//	100 succeeded                 (lo marca runWorkerAsync)
+//
+// Los subprocess usan commitContext() + timeout 15 min: si el cliente se
+// desconecta a mitad NO se mata el docker compose (dejaría imágenes a medias
+// y containers inconsistentes).
+func runAppUpdateWork(ctx context.Context, safeID, stackPath, composePath, opID string) (map[string]interface{}, error) {
+	updateOpProgressSafe(ctx, opID, 10, "Descargando imágenes…")
+
 	// 1. compose pull · descarga las imágenes nuevas (NO toca containers vivos).
 	// Timeout 15 min · stacks pesados como Immich tienen 4+ imágenes (varios GB
 	// total) y en Pi 4 con red doméstica pueden tardar fácil 5-10 min. Mejor
@@ -257,9 +300,10 @@ func dockerAppUpdate(w http.ResponseWriter, r *http.Request, appID string) {
 	pullCmd.Dir = stackPath
 	if out, err := pullCmd.CombinedOutput(); err != nil {
 		logMsg("docker: app update pull failed for %s: %v (output: %s)", safeID, err, string(out))
-		jsonError(w, 500, "Pull failed: "+string(out))
-		return
+		return nil, asHTTPError(500, "Pull failed: %s", string(out))
 	}
+
+	updateOpProgressSafe(ctx, opID, 50, "Recreando contenedores…")
 
 	// 2. compose up -d --pull always --force-recreate
 	//
@@ -290,13 +334,18 @@ func dockerAppUpdate(w http.ResponseWriter, r *http.Request, appID string) {
 	upCmd.Dir = stackPath
 	if out, err := upCmd.CombinedOutput(); err != nil {
 		logMsg("docker: app update up -d failed for %s: %v (output: %s)", safeID, err, string(out))
-		jsonError(w, 500, "Restart failed: "+string(out))
-		return
+		return nil, asHTTPError(500, "Restart failed: %s", string(out))
 	}
 
-	// 3. Refrescar digests locales (ahora son los nuevos) en BD
-	// No bloqueante · si falla, update-check los refrescará al abrir el detail.
-	go refreshLocalDigestsAfterUpdate(context.Background(), safeID, composePath, stackPath)
+	updateOpProgressSafe(ctx, opID, 85, "Verificando servicios…")
+
+	// 3. Refrescar digests locales (ahora son los nuevos) en BD.
+	// Inline (antes goroutine): en el worker async no bloquea ninguna
+	// respuesta HTTP y así el progreso refleja el paso real. Si falla,
+	// update-check los refrescará al abrir el detail (no es fatal).
+	refreshLocalDigestsAfterUpdate(commitContext(), safeID, composePath, stackPath)
+
+	updateOpProgressSafe(ctx, opID, 95, "Actualizando registro…")
 
 	// 4. Invalidar cache de NimHealth.
 	// commitContext() · refresh debe completarse aunque cliente se haya ido.
@@ -304,17 +353,18 @@ func dockerAppUpdate(w http.ResponseWriter, r *http.Request, appID string) {
 	ForceDockerCacheRefresh(commitContext())
 
 	logMsg("docker: app %s updated successfully", safeID)
-	jsonOk(w, map[string]interface{}{
+	return map[string]interface{}{
 		"ok":    true,
 		"appId": safeID,
-	})
+	}, nil
 }
 
 // refreshLocalDigestsAfterUpdate actualiza local_digest en BD para todos los
 // servicios de una app tras `compose pull && up -d`. Las imágenes nuevas
 // están descargadas; sus digests son ahora los "remotos" que veíamos antes.
 //
-// Se llama en goroutine porque no bloquea la respuesta HTTP del update.
+// Se llama inline desde runAppUpdateWork (fase 85%) · en async no bloquea
+// ninguna respuesta HTTP y el progreso refleja el paso real.
 func refreshLocalDigestsAfterUpdate(ctx context.Context, appID, composePath, stackDir string) {
 	if appImagesRepo == nil {
 		return

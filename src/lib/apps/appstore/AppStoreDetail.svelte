@@ -45,7 +45,7 @@
   import { openWindow } from '$lib/stores/windows.js';
   import ConfirmDialog from '$lib/ui/ConfirmDialog.svelte';
   import { fetchCatalog } from './catalog.js';
-  import { getInstalledApps, uninstallApp, checkAppUpdates, updateApp, checkAppBroken, repairApp } from './api.js';
+  import { getInstalledApps, uninstallApp, checkAppUpdates, updateApp, waitForOperation, checkAppBroken, repairApp } from './api.js';
   import { fetchLaunchable, normalizeLaunchable, openApp } from './launchApp.js';
   import InstallFlow from './InstallFlow.svelte';
   import {
@@ -134,6 +134,8 @@
    */
   let updatePhase = 'confirm';
   let updateErr = '';
+  let updateProgress = 0;   // 0..100 · tramos: 10 descarga · 50 recreate · 85 verificando · 95 registro
+  let updateMsg = '';       // mensaje de fase del backend ("Descargando imágenes…")
 
   // Screenshots · intentamos cargar 1..6, oculta automáticamente las que fallan.
   // El repo del catálogo guarda screenshots en /screenshots/{appId}/N.{ext}
@@ -474,9 +476,31 @@
 
     updatePhase = 'running';
     updateErr = '';
+    updateProgress = 0;
+    updateMsg = 'Iniciando actualización…';
     try {
-      await updateApp(view.id);
-      updatePhase = 'done';
+      // Async (UPD-ASYNC) · el backend responde 202 {operationId} al instante
+      // y hacemos polling del progreso. Así el update de apps grandes
+      // (Immich: 5-15 min) no choca con el timeout del proxy → adiós al
+      // "invalid JSON response (status 502)" con la app actualizada igual.
+      const resp = await updateApp(view.id, { async: true });
+      if (resp?.operationId) {
+        const op = await waitForOperation(resp.operationId, (o) => {
+          updateProgress = Math.max(updateProgress, o?.progress ?? 0);
+          if (o?.message) updateMsg = o.message;
+        });
+        if (op.status === 'succeeded') {
+          updateProgress = 100;
+          updatePhase = 'done';
+        } else {
+          updatePhase = 'error';
+          updateErr = op.error || 'La actualización falló';
+        }
+      } else {
+        // Backend antiguo sin async · respondió el resultado síncrono
+        updateProgress = 100;
+        updatePhase = 'done';
+      }
     } catch (err) {
       updatePhase = 'error';
       updateErr = err?.message || String(err);
@@ -991,10 +1015,16 @@
       <div class="uninstall-progress">
         <div class="uninstall-step">
           <span class="uninstall-led led-active"></span>
-          <span class="uninstall-step-label">Descargando nueva versión y reiniciando…</span>
+          <span class="uninstall-step-label">{updateMsg || 'Actualizando…'}</span>
+          <span class="update-pct">{updateProgress}%</span>
+        </div>
+        <div class="update-bar">
+          <div class="update-bar-fill" style="width: {updateProgress}%"></div>
         </div>
         <div class="uninstall-hint-running">
-          Apps grandes (Immich, Nextcloud) pueden tardar 5-15 min. No cierres el modal.
+          Apps grandes (Immich, Nextcloud) pueden tardar 5-15 min. La
+          actualización corre en el servidor · aunque pierdas la conexión,
+          continúa hasta terminar.
         </div>
       </div>
     {:else if updatePhase === 'done'}
@@ -1766,6 +1796,27 @@
     border-radius: var(--radius-sm);
     word-break: break-word;
   }
+  /* ═══ UPD-ASYNC · barra de progreso por fases del update ═══ */
+  .update-pct {
+    margin-left: auto;
+    color: var(--ink-mute);
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    font-variant-numeric: tabular-nums;
+  }
+  .update-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--well, rgba(255, 255, 255, 0.06));
+    overflow: hidden;
+  }
+  .update-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--signal);
+    transition: width 0.4s ease;
+  }
+
   /* ═══ Sprint Updates · modal de update · vista 'confirm' ═══ */
   .update-confirm {
     display: flex;

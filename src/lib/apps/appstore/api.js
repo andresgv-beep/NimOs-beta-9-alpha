@@ -689,9 +689,11 @@ export async function checkAppUpdates(appId, opts = {}) {
  * @param {string} appId
  * @returns {Promise<{ok: boolean, appId: string}>}
  */
-export async function updateApp(appId) {
+export async function updateApp(appId, { async: asyncMode = false } = {}) {
   if (!appId) throw new Error('updateApp: appId required');
-  const res = await fetch(`/api/docker/app/${encodeURIComponent(appId)}/update`, {
+  const path = `/api/docker/app/${encodeURIComponent(appId)}/update`;
+  const url = asyncMode ? `${path}?async=true` : path;
+  const res = await fetch(url, {
     method: 'POST',
     headers: hdrs(),
   });

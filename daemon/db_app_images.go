@@ -187,6 +187,28 @@ type AppUpdateSummary struct {
 //
 // El sidebar lo usa para mostrar el icono azul + count. El catálogo lo usa
 // para marcar las cards con badge "NUEVA".
+// ListAppIDs devuelve los IDs (distinct) de todas las apps con imágenes
+// registradas en BD · el universo que recorre el chequeo nocturno de
+// actualizaciones (maintenance_update_check.go). Orden estable.
+func (r *AppImagesRepo) ListAppIDs(ctx context.Context) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT DISTINCT app_id FROM docker_app_images ORDER BY app_id`)
+	if err != nil {
+		return nil, fmt.Errorf("ListAppIDs: %w", err)
+	}
+	defer rows.Close()
+
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 func (r *AppImagesRepo) ListAppsWithUpdates(ctx context.Context) ([]AppUpdateSummary, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT

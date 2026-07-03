@@ -125,17 +125,24 @@
         </div>
 
         <div class="cd-foot">
-          <button class="cd-btn" on:click={handleCancel} disabled={processing}>
-            {cancelLabel}
-          </button>
+          <!-- Sin label → sin botón. Evita el "botón fantasma" (pill vacía)
+               que se veía en fases running/done/error de los modales que
+               pasan cancelLabel='' (ej. update de apps). -->
+          {#if cancelLabel}
+            <button class="cd-btn" on:click={handleCancel} disabled={processing}>
+              {cancelLabel}
+            </button>
+          {/if}
           <div class="cd-spacer"></div>
-          <button
-            class="cd-btn btn-{variant}"
-            on:click={handleConfirm}
-            disabled={!canConfirm}
-          >
-            {processing ? 'Procesando...' : confirmLabel}
-          </button>
+          {#if processing || confirmLabel}
+            <button
+              class="cd-btn btn-{variant}"
+              on:click={handleConfirm}
+              disabled={!canConfirm}
+            >
+              {processing ? 'Procesando...' : confirmLabel}
+            </button>
+          {/if}
         </div>
 
       </div>
