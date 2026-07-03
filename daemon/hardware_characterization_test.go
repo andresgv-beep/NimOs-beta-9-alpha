@@ -17,18 +17,23 @@ import "testing"
 // ═══════════════════════════════════════════════════════════════════════
 
 func TestFormatBytes_Characterization(t *testing.T) {
+	// AUDIT (menor): formatBytes pasó a base SI (1000) con etiquetas
+	// honestas — antes dividía por 1024 pero rotulaba KB/GB/TB, y un disco
+	// de 4 TB salía como "3.6 TB". Los casos documentan el contrato nuevo.
 	cases := []struct {
 		in   int64
 		want string
 	}{
 		{0, "0 B"},
 		{512, "512.0 B"},
+		{1000, "1.0 KB"},
 		{1024, "1.0 KB"},
 		{1536, "1.5 KB"},
 		{1048576, "1.0 MB"},
-		{1073741824, "1.0 GB"},
-		{1099511627776, "1.0 TB"},
-		{5368709120, "5.0 GB"},
+		{1073741824, "1.1 GB"},
+		{1099511627776, "1.1 TB"},
+		{4000787030016, "4.0 TB"}, // el disco de 4 TB del sistema real
+		{5368709120, "5.4 GB"},
 	}
 	for _, c := range cases {
 		if got := formatBytes(c.in); got != c.want {

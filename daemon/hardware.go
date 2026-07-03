@@ -80,12 +80,19 @@ func formatBytes(bytes int64) string {
 	if bytes == 0 {
 		return "0 B"
 	}
+	// AUDIT (menor): antes dividía por 1024 pero etiquetaba KB/MB/GB/TB —
+	// un disco de 4 TB salía como "3.6 TB". Base SI (1000) para que la
+	// etiqueta sea verdad y coincida con el frontend (formatters.js) y con
+	// cómo venden los discos los fabricantes.
 	sizes := []string{"B", "KB", "MB", "GB", "TB"}
-	i := int(math.Floor(math.Log(math.Abs(float64(bytes))) / math.Log(1024)))
+	i := int(math.Floor(math.Log10(math.Abs(float64(bytes))) / 3))
 	if i >= len(sizes) {
 		i = len(sizes) - 1
 	}
-	return fmt.Sprintf("%.1f %s", float64(bytes)/math.Pow(1024, float64(i)), sizes[i])
+	if i < 0 {
+		i = 0
+	}
+	return fmt.Sprintf("%.1f %s", float64(bytes)/math.Pow(1000, float64(i)), sizes[i])
 }
 
 func parseInt64(s string) int64 {

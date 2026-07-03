@@ -435,8 +435,10 @@ func TestAnalyzeDivergences_IOErrors(t *testing.T) {
 		{
 			UUID: "managed-uuid", IsManaged: true, ManagedPoolName: "data",
 			DevicesExpected: 2, DevicesOnline: 2,
-			IOErrorCount: 42,
-			CanProbe:     true, IsMounted: true,
+			// AUDIT F12: la divergencia salta por errores NUEVOS (delta
+			// sobre línea base), no por el acumulado histórico del kernel.
+			IOErrorCount: 42, IOErrorsNew: 42,
+			CanProbe: true, IsMounted: true,
 		},
 	}
 	divs := analyzeDivergences(fs)

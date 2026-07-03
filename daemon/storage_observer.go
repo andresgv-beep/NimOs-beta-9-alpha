@@ -32,6 +32,7 @@ package main
 // Lecturas del endpoint hacen atomic.Load → lock-free, miles/seg sin contención.
 
 import (
+	"fmt"
 	"context"
 	"sync"
 	"sync/atomic"
@@ -86,6 +87,11 @@ var globalObserver *StorageObserver
 
 // NewStorageObserver crea un observer no-arrancado. Llamar Start() para
 // iniciar el loop.
+// maxSnapshotAge: edad máxima de un snapshot antes de forzar re-scan aunque
+// el fingerprint no cambie (AUDIT F12: el fingerprint es ciego a cambios de
+// uso y contadores de error I/O).
+const maxSnapshotAge = 5 * time.Minute
+
 func NewStorageObserver(periodicInterval time.Duration) *StorageObserver {
 	if periodicInterval <= 0 {
 		periodicInterval = 60 * time.Second
@@ -225,12 +231,20 @@ func (o *StorageObserver) tryReconcile() {
 	// Si el fingerprint no cambió, skip del scan caro — SALVO que sea un
 	// reconcile forzado (destroy/export/wipe), donde el caller ya sabe que
 	// el estado cambió aunque el fingerprint barato no lo capte todavía.
+	//
+	// AUDIT F12: el fingerprint solo ve discos/mounts/blkid — es CIEGO a
+	// cambios de uso y a contadores de error I/O. Sin límite de edad, el
+	// snapshot podía quedar congelado días. Si es más viejo que
+	// maxSnapshotAge, se escanea aunque el fingerprint no haya cambiado.
 	if !forced && fp == o.lastFingerprint && o.generation.Load() > 0 {
 		// generation > 0 evita skip del primer scan (lastFingerprint zero-valued)
-		if o.onSnapshot != nil {
-			o.onSnapshot(o.snapshot.Load(), false)
+		if snap := o.snapshot.Load(); snap != nil && time.Since(snap.Timestamp) < maxSnapshotAge {
+			if o.onSnapshot != nil {
+				o.onSnapshot(snap, false)
+			}
+			return
 		}
-		return
+		// snapshot viejo → cae al scan completo
 	}
 
 	// 2. Scan completo
@@ -256,26 +270,47 @@ func (o *StorageObserver) tryReconcile() {
 	}
 
 	if !ok {
-		// probe falló — mantener el snapshot anterior y registrar
+		// probe falló — mantener el snapshot anterior PERO marcado como stale
+		// (AUDIT F12: antes se servía como fresco; con btrfs colgado o un
+		// disco muriendo, la UI seguía viendo "todo sano" indefinidamente).
 		logMsg("StorageObserver: probe failed (btrfs not responding?)")
+		if snap := o.snapshot.Load(); snap != nil && !snap.Stale {
+			c := *snap
+			c.Stale = true
+			o.snapshot.Store(&c)
+		}
 		return
 	}
 
 	// 3. Cruzar con managed state (SQLite) para marcar IsManaged
-	enrichWithManagedState(filesystems)
+	managedStateOK := enrichWithManagedState(filesystems) == nil
 
-	// 4. Análisis de divergencia
-	divergences := analyzeDivergences(filesystems)
+	// 3b. AUDIT F12: aplicar la línea base de errores I/O — los contadores
+	// de `btrfs device stats` son acumulativos (no bajan nunca): un error de
+	// hace un año mantenía el pool "degraded" para siempre. Solo los errores
+	// NUEVOS desde que este daemon observa cuentan para salud/divergencias.
+	applyIOErrorBaseline(filesystems)
+
+	// 4. Análisis de divergencia. Sin managed state legible NO se analiza:
+	// un hipo de SQLite marcaba pools reales como huérfanos con hint
+	// "Destruir para liberar los discos" (AUDIT F12).
+	var divergences []Divergence
+	if managedStateOK {
+		divergences = analyzeDivergences(filesystems)
+	} else {
+		logMsg("StorageObserver: managed state ilegible — snapshot sin análisis de divergencias (no se marcan huérfanos)")
+	}
 
 	// 5. Construir snapshot
 	newSnap := &ObservedSnapshot{
-		Generation:      o.generation.Add(1),
-		Timestamp:       time.Now().UTC(),
-		Filesystems:     filesystems,
-		LooseDevices:    looseDevices,
-		Divergences:     divergences,
-		ScanDurationMs:  time.Since(start).Milliseconds(),
-		FingerprintHash: fp,
+		Generation:          o.generation.Add(1),
+		Timestamp:           time.Now().UTC(),
+		Filesystems:         filesystems,
+		LooseDevices:        looseDevices,
+		Divergences:         divergences,
+		ScanDurationMs:      time.Since(start).Milliseconds(),
+		FingerprintHash:     fp,
+		ManagedStateUnknown: !managedStateOK,
 	}
 
 	o.lastFingerprint = fp
@@ -292,14 +327,14 @@ func (o *StorageObserver) tryReconcile() {
 
 // enrichWithManagedState marca cada ObservedBtrfs con IsManaged/ManagedPool*
 // según lo que haya en storage_pools (SQLite). Modifica filesystems in-place.
-func enrichWithManagedState(filesystems []ObservedBtrfs) {
+func enrichWithManagedState(filesystems []ObservedBtrfs) error {
 	if storageService == nil {
-		return
+		return fmt.Errorf("storage service no inicializado")
 	}
 	ctx := context.Background()
 	pools, err := storageService.repo.ListPools(ctx)
 	if err != nil {
-		return
+		return fmt.Errorf("ListPools: %w", err)
 	}
 	// Mapa UUID BTRFS → pool managed
 	byUUID := make(map[string]*Pool, len(pools))
@@ -311,6 +346,43 @@ func enrichWithManagedState(filesystems []ObservedBtrfs) {
 			filesystems[i].IsManaged = true
 			filesystems[i].ManagedPoolID = p.ID
 			filesystems[i].ManagedPoolName = p.Name
+		}
+	}
+	return nil
+}
+
+// ─── AUDIT F12 · línea base de errores I/O ───────────────────────────────
+//
+// `btrfs device stats` acumula desde la creación del FS (solo -z resetea).
+// La primera vez que este proceso ve un device, sus contadores son la línea
+// base; a partir de ahí solo el INCREMENTO cuenta como "error nuevo".
+// Se resetea al reiniciar el daemon: un contador histórico no re-alerta.
+var ioErrBaseline = map[string]int64{} // clave: fsUUID + "|" + devicePath
+
+func applyIOErrorBaseline(filesystems []ObservedBtrfs) {
+	for i := range filesystems {
+		fs := &filesystems[i]
+		var newErrs int64
+		for j := range fs.Devices {
+			key := fs.UUID + "|" + fs.Devices[j].Path
+			base, seen := ioErrBaseline[key]
+			if !seen {
+				ioErrBaseline[key] = fs.Devices[j].IOErrors
+				continue
+			}
+			if d := fs.Devices[j].IOErrors - base; d > 0 {
+				newErrs += d
+			}
+		}
+		fs.IOErrorsNew = newErrs
+		// Recalcular salud: "degraded" solo por errores NUEVOS. Si el único
+		// motivo del degraded eran contadores históricos, se recalcula sin
+		// ellos (el resto de ramas de computeObservationHealth se respetan).
+		if fs.ObservationHealth == HealthDegraded && fs.IOErrorCount > 0 && newErrs == 0 {
+			saved := fs.IOErrorCount
+			fs.IOErrorCount = 0
+			fs.ObservationHealth = computeObservationHealth(fs)
+			fs.IOErrorCount = saved
 		}
 	}
 }
@@ -360,14 +432,17 @@ func analyzeDivergences(filesystems []ObservedBtrfs) []Divergence {
 				Hint: "Verifica conexiones físicas o reemplaza el disco ausente.",
 			})
 		}
-		if fs.IOErrorCount > 0 {
+		// AUDIT F12: solo errores NUEVOS desde que el daemon observa. Los
+		// contadores acumulados históricos (visibles en los devices) no
+		// mantienen la alerta viva para siempre.
+		if fs.IOErrorsNew > 0 {
 			divs = append(divs, Divergence{
 				Type:     DivUnexpectedIOErrors,
 				Severity: SeverityWarning,
 				PoolID:   fs.ManagedPoolID,
 				PoolName: fs.ManagedPoolName,
 				FSUUID:   fs.UUID,
-				Detail:   "Errores de I/O detectados en el pool '" + fs.ManagedPoolName + "'.",
+				Detail:   "Errores de I/O NUEVOS detectados en el pool '" + fs.ManagedPoolName + "'.",
 				Hint:     "Ejecuta un scrub y revisa SMART de los discos.",
 			})
 		}

@@ -503,3 +503,66 @@ func TestCreateAndDestroyPool_RegenerateFstabFromDB(t *testing.T) {
 		t.Errorf("DestroyPool debe limpiar su entrada de fstab: got %d syncs, want 2", syncCalls)
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// AUDIT F12 · Línea base de errores I/O del observer
+//
+// Los contadores de `btrfs device stats` son acumulativos: un error de
+// hace un año mantenía el pool "degraded" + divergencia para siempre.
+// Solo los errores NUEVOS desde que el daemon observa deben alertar.
+// ─────────────────────────────────────────────────────────────────────────
+
+func TestApplyIOErrorBaseline(t *testing.T) {
+	// Aislar el estado del paquete.
+	orig := ioErrBaseline
+	ioErrBaseline = map[string]int64{}
+	defer func() { ioErrBaseline = orig }()
+
+	fs := []ObservedBtrfs{{
+		UUID:     "uuid-1",
+		CanProbe: true,
+		Devices: []ObservedDevice{
+			{Path: "/dev/sdc", IOErrors: 22}, // error histórico pre-daemon
+			{Path: "/dev/sdd", IOErrors: 0},
+		},
+		IOErrorCount:      22,
+		ObservationHealth: HealthDegraded, // como lo dejó computeObservationHealth
+	}}
+
+	// Primera observación: los 22 son línea base, NO errores nuevos.
+	applyIOErrorBaseline(fs)
+	if fs[0].IOErrorsNew != 0 {
+		t.Errorf("primera observación: IOErrorsNew=%d, want 0 (histórico = línea base)", fs[0].IOErrorsNew)
+	}
+	if fs[0].ObservationHealth == HealthDegraded {
+		t.Error("salud no debe quedar degraded por contadores históricos")
+	}
+
+	// Segunda observación con 3 errores NUEVOS en sdc.
+	fs[0].Devices[0].IOErrors = 25
+	fs[0].IOErrorCount = 25
+	fs[0].ObservationHealth = HealthDegraded
+	applyIOErrorBaseline(fs)
+	if fs[0].IOErrorsNew != 3 {
+		t.Errorf("errores nuevos: got %d, want 3", fs[0].IOErrorsNew)
+	}
+	if fs[0].ObservationHealth != HealthDegraded {
+		t.Error("con errores NUEVOS la salud sí debe ser degraded")
+	}
+}
+
+// Complemento: contadores históricos SIN errores nuevos NO generan la
+// divergencia unexpected_io_errors (antes la mantenían viva para siempre).
+func TestAnalyzeDivergences_HistoricalIOErrorsAlone_NoAlert(t *testing.T) {
+	fs := []ObservedBtrfs{{
+		UUID: "managed-uuid", IsManaged: true, ManagedPoolName: "data",
+		DevicesExpected: 2, DevicesOnline: 2,
+		IOErrorCount: 42, IOErrorsNew: 0,
+		CanProbe: true, IsMounted: true,
+	}}
+	for _, d := range analyzeDivergences(fs) {
+		if d.Type == DivUnexpectedIOErrors {
+			t.Error("contadores históricos sin delta no deben generar unexpected_io_errors")
+		}
+	}
+}

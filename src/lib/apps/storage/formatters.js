@@ -13,6 +13,10 @@
  * 0 o falsy → '0 B'.
  */
 export function fmtBytes(b) {
+  // AUDIT (menor): null/undefined = dato AUSENTE → '—'; 0 real → '0 B'.
+  // Antes ambos daban '0 B' y el fallback `fmtBytes(x) || '—'` era código
+  // muerto (nunca devuelve falsy).
+  if (b == null) return '—';
   if (!b || b === 0) return '0 B';
   if (b >= 1e12) return (b / 1e12).toFixed(1) + ' TB';
   if (b >= 1e9)  return (b / 1e9).toFixed(1)  + ' GB';
@@ -51,28 +55,15 @@ export function fmtDate(iso) {
 }
 
 /**
- * inferDiskRole — Devuelve el rol visual de un disco dentro de un vdev.
- *
- * BTRFS no expone parity explícita por disco, pero para UI es útil
- * mostrar "data" vs "parity" en perfiles con redundancia paritaria.
- * Esto es heurística visual, no refleja el layout real on-disk.
- *
- * - raidz / raidz1   → último disco = parity, resto data
- * - raidz2           → últimos 2 = parity
- * - raidz3           → últimos 3 = parity
- * - mirror           → todos 'mirror'
- * - cualquier otro   → 'data'
- *
- * NOTA: los perfiles 'raidzN' son nomenclatura ZFS legada en la UI;
- * BTRFS no los soporta nativamente. Se mantienen por compatibilidad
- * mientras la UI no migre la nomenclatura.
+ * inferDiskRole — Rol visual de un disco: 'mirror' en espejos, 'data' en
+ * el resto. BTRFS no tiene discos de paridad dedicados.
  */
 export function inferDiskRole(disks, idx, vdevType) {
+  // AUDIT (menor): se eliminó la heurística que etiquetaba discos como
+  // "parity" por su POSICIÓN en perfiles raidzN — nomenclatura ZFS que
+  // BTRFS no soporta y que no reflejaba ningún layout real: era un badge
+  // inventado. mirror → 'mirror'; todo lo demás → 'data'.
   const v = (vdevType || '').toLowerCase();
-  const n = disks.length;
-  if (v === 'raidz' || v === 'raidz1') return idx === n - 1 ? 'parity' : 'data';
-  if (v === 'raidz2') return idx >= n - 2 ? 'parity' : 'data';
-  if (v === 'raidz3') return idx >= n - 3 ? 'parity' : 'data';
   if (v === 'mirror') return 'mirror';
   return 'data';
 }

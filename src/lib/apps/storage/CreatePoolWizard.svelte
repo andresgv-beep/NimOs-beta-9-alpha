@@ -396,7 +396,7 @@
                 <div class="dr-orphan-hint">⚠ Tiene BTRFS huérfano · datos preservables</div>
               {/if}
             </div>
-            <div class="dr-size">{d.sizeH || fmtBytes(d.size)}</div>
+            <div class="dr-size">{fmtBytes(d.size)}</div>
             <div class="dr-tags">
               <span class="chip chip-{d.rotational ? 'default' : 'info'}">
                 {d.rotational ? 'HDD' : 'SSD'}
@@ -547,7 +547,7 @@
         {#each selectedDisksArr as d}
           <span class="disk-chip">
             <span class="cube"></span>
-            {diskPath(d)} · {d.sizeH || fmtBytes(d.size)}
+            {diskPath(d)} · {fmtBytes(d.size)}
           </span>
         {/each}
       </div>

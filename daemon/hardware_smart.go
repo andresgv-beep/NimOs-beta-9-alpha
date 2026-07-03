@@ -306,12 +306,22 @@ func startSmartMonitor() {
 	}
 }
 
+// smartReadFailures cuenta lecturas SMART fallidas consecutivas por disco.
+// Tras smartMaxReadFailures, el estado pasa a "unknown" en vez de servir el
+// último estado bueno para siempre (AUDIT F13: un disco que deja de
+// responder a SMART se mostraba "ok" congelado indefinidamente).
+var smartReadFailures = map[string]int{}
+
+const smartMaxReadFailures = 3
+
 func checkAllDisksSmart() {
 	// Get all disks from lsblk
 	out, ok := runSafe("lsblk", "-d", "-n", "-o", "NAME,TYPE")
 	if !ok || out == "" {
 		return
 	}
+
+	present := map[string]bool{} // AUDIT F13: para purgar discos retirados
 
 	for _, line := range strings.Split(out, "\n") {
 		fields := strings.Fields(line)
@@ -324,21 +334,35 @@ func checkAllDisksSmart() {
 		if strings.HasPrefix(diskName, "loop") || strings.HasPrefix(diskName, "ram") || strings.HasPrefix(diskName, "zram") {
 			continue
 		}
+		present[diskName] = true
 
 		smartResult := getDiskSmart(diskName)
 		currentStatus, _ := smartResult["status"].(string)
 		if currentStatus == "" {
-			// El disco no devolvió un status legible. ANTES esto se tragaba en
-			// silencio y la cache quedaba vacía → el disco se mostraba sano por
-			// defecto. Ahora lo logueamos: un disco que no se puede leer es
-			// información, no un no-evento.
+			// El disco no devolvió un status legible. AUDIT F13: tras
+			// smartMaxReadFailures fallos consecutivos el estado cacheado
+			// pasa a "unknown" — servir el último estado bueno para siempre
+			// era mentir (el disco puede estar muriéndose sin responder).
 			reason, _ := smartResult["error"].(string)
 			if reason == "" {
 				reason = "status vacío"
 			}
-			logMsg("SMART: /dev/%s sin lectura utilizable (%s) — no se actualiza su estado", diskName, reason)
+			smartMu.Lock()
+			smartReadFailures[diskName]++
+			fails := smartReadFailures[diskName]
+			if fails == smartMaxReadFailures {
+				if prev, ok := smartHistory[diskName]; ok && prev != "unknown" {
+					logMsg("SMART: /dev/%s ilegible %d veces seguidas — estado %q → unknown", diskName, fails, prev)
+					smartHistory[diskName] = "unknown"
+				}
+			}
+			smartMu.Unlock()
+			logMsg("SMART: /dev/%s sin lectura utilizable (%s) — fallo consecutivo %d", diskName, reason, fails)
 			continue
 		}
+		smartMu.Lock()
+		delete(smartReadFailures, diskName) // lectura OK → resetear contador
+		smartMu.Unlock()
 
 		// Cache detail metrics for getSmartDetailsForDisk (used by pool health)
 		details := SmartDetails{}
@@ -430,6 +454,21 @@ func checkAllDisksSmart() {
 			}
 		}
 	}
+
+	// AUDIT F13: purgar discos que ya no existen. smartHistory nunca se
+	// limpiaba: un disco retirado seguía en el summary para siempre y su
+	// último estado (p.ej. "critical") clavaba el worstStatus global.
+	smartMu.Lock()
+	for name := range smartHistory {
+		if !present[name] {
+			logMsg("SMART: disco %s ya no está presente — purgado del histórico", name)
+			delete(smartHistory, name)
+			delete(smartDetailsCache, name)
+			delete(smartReadFailures, name)
+		}
+	}
+	smartMu.Unlock()
+
 }
 
 // nextTempState aplica la histéresis de temperatura. Dado el estado previo

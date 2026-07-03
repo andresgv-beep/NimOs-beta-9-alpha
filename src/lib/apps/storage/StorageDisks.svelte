@@ -183,7 +183,7 @@
           <div class="dt-row" class:has-orphan={dStatus.kind === 'orphan'}>
             <span class="mono dt-trunc">{dPath}</span>
             <span class="mono dt-trunc">{disk.model || '—'}</span>
-            <span>{disk.sizeH || fmtBytes(disk.size)}</span>
+            <span>{fmtBytes(disk.size)}</span>
             <span>
               <Badge size="sm" variant={disk.rotational ? 'default' : 'info'}>
                 {disk.rotational ? 'HDD' : 'SSD'}
@@ -232,7 +232,7 @@
           <div class="dt-row">
             <span class="mono dt-trunc">{disk.path || '/dev/' + disk.name}</span>
             <span class="mono dt-trunc">{disk.model || '—'}</span>
-            <span>{disk.sizeH || fmtBytes(disk.size)}</span>
+            <span>{fmtBytes(disk.size)}</span>
             <span><Badge size="sm" variant="warn">USB</Badge></span>
             <span><Badge size="sm">externo</Badge></span>
           </div>

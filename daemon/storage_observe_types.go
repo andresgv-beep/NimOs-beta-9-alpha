@@ -31,6 +31,15 @@ type ObservedSnapshot struct {
 	// de sistema, no en uso). Es decir, candidatos para ser usados en un pool.
 	LooseDevices []ObservedDevice `json:"loose_devices"`
 
+	// Stale indica que el último intento de probe FALLÓ y este snapshot es
+	// el último bueno conocido, no el estado actual (AUDIT F12).
+	Stale bool `json:"stale,omitempty"`
+
+	// ManagedStateUnknown indica que la BD no se pudo leer durante el scan:
+	// IsManaged no es fiable y NO se generaron divergencias (AUDIT F12 —
+	// antes un hipo de SQLite marcaba pools reales como huérfanos).
+	ManagedStateUnknown bool `json:"managed_state_unknown,omitempty"`
+
 	// Divergences pre-computadas en el momento del snapshot.
 	// La UI puede usar esto directamente sin reanalizar.
 	Divergences []Divergence `json:"divergences"`
@@ -69,6 +78,11 @@ type ObservedBtrfs struct {
 
 	// Errores agregados de todos los devices del filesystem
 	IOErrorCount int64 `json:"io_error_count"`
+
+	// IOErrorsNew: errores I/O NUEVOS desde que este daemon observa el FS
+	// (delta sobre la línea base; AUDIT F12). IOErrorCount es el acumulado
+	// histórico del kernel, que nunca baja.
+	IOErrorsNew int64 `json:"io_errors_new"`
 
 	// Cruce con managed state
 	IsManaged       bool   `json:"is_managed"`

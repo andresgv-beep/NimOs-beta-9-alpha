@@ -52,9 +52,12 @@
 
   const dispatch = createEventDispatcher();
 
-  // El backend no siempre rellena usage_percent; lo calculamos desde
-  // used/total igual que las KPIs de cabecera (evita la barra a 0%).
+  // AUDIT (menor): preferir el usage_percent del BACKEND — la app usaba
+  // Math.round y el backend trunca, así que el mismo pool podía mostrar
+  // 89% aquí y 90% en el widget (±1% en los umbrales de alarma). Fallback
+  // al cálculo local solo si el backend no lo rellena.
   function poolPct(pool) {
+    if (pool?.usage?.usage_percent != null) return pool.usage.usage_percent;
     const total = pool?.usage?.total_bytes || 0;
     const used = pool?.usage?.used_bytes || 0;
     return total > 0 ? Math.round((used / total) * 100) : 0;
