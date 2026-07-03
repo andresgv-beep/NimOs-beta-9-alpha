@@ -520,6 +520,10 @@ type ReplaceDeviceRequest struct {
 	PoolID      string `json:"pool_id"`
 	OldDeviceID string `json:"old_device_id"`
 	NewDeviceID string `json:"new_device_id"`
+	// Force acepta destruir un filesystem preexistente en el disco NUEVO
+	// (AUDIT F10: sin esto, `replace -f` machacaba ext4/NTFS con datos sin
+	// el aviso DISK_HAS_FILESYSTEM que sí tiene CreatePool).
+	Force bool `json:"force,omitempty"`
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

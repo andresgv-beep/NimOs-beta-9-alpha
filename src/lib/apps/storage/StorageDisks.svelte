@@ -209,7 +209,7 @@
               </button>
               <button
                 class="disk-action-btn warn"
-                on:click={() => dispatch('wipe', { path: dPath })}
+                on:click={() => dispatch('wipe', { path: dPath, serial: disk.serial })}
                 title={dStatus.kind === 'orphan'
                   ? '⚠ Atención: este disco tiene datos. Formatear los borrará permanentemente.'
                   : 'Formatear disco (borra restos de formatos anteriores)'}

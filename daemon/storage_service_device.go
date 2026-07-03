@@ -170,6 +170,16 @@ func (s *StorageService) AddDevice(ctx context.Context, req AddDeviceRequest) (*
 			fmt.Sprintf("device %q is already in a pool", device.ID))
 	}
 
+	// AUDIT F10 (M2): preflight de filesystem — CreatePool ya avisaba con
+	// DISK_HAS_FILESYSTEM antes de machacar un disco con datos; add no.
+	// WipeFirst=true salta el check (destrucción consciente), igual que en
+	// CreatePool. El *ErrDiskHasFilesystem fluye tal cual hasta la UI.
+	if !req.WipeFirst {
+		if err := s.checkDevicesAvailable(ctx, []*Device{device}); err != nil {
+			return nil, err
+		}
+	}
+
 	// ─── Crear Operation ───────────────────────────────────────────────
 	op := &Operation{
 		ID:     newUUID(),
@@ -421,6 +431,16 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 		return nil, errFromCode(ErrCodeDeviceNotEligible,
 			fmt.Sprintf("new device size (%d) < old device size (%d)",
 				newDev.SizeBytes, oldDev.SizeBytes))
+	}
+
+	// AUDIT F10 (M2): preflight de filesystem en el disco NUEVO — el
+	// `replace start -f` del executor sobrescribe sin preguntar, así que
+	// el aviso tiene que venir de aquí. Force=true (usuario ya avisado
+	// por la UI con DISK_HAS_FILESYSTEM) lo salta.
+	if !req.Force {
+		if err := s.checkDevicesAvailable(ctx, []*Device{newDev}); err != nil {
+			return nil, err
+		}
 	}
 
 	op := &Operation{

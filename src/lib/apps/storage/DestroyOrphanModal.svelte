@@ -45,7 +45,9 @@
     processing = true;
     error = '';
     try {
-      const paths = (fs.devices || []).map(d => d.path).filter(Boolean);
+      // AUDIT F10: preferir by-id (identidad estable) sobre /dev/sdX, que
+      // puede renumerarse entre que el observer listó y el usuario confirmó.
+      const paths = (fs.devices || []).map(d => d.by_id_path || d.path).filter(Boolean);
       for (const path of paths) {
         await api.wipeDisk(path, { force: true });
       }

@@ -917,8 +917,9 @@ func (h *StorageHTTPHandler) handleDisksCategorized(w http.ResponseWriter, r *ht
 // Body: { "disk": "/dev/sdb" }
 
 type wipeRequest struct {
-	Disk  string `json:"disk"`
-	Force bool   `json:"force"` // permite wipe de orphans (NO managed pools)
+	Disk   string `json:"disk"`
+	Force  bool   `json:"force"`            // permite wipe de orphans (NO managed pools)
+	Serial string `json:"serial,omitempty"` // AUDIT F10: identidad esperada del disco
 }
 
 func (h *StorageHTTPHandler) handleWipe(w http.ResponseWriter, r *http.Request) {
@@ -933,6 +934,14 @@ func (h *StorageHTTPHandler) handleWipe(w http.ResponseWriter, r *http.Request) 
 	}
 	if req.Disk == "" {
 		writeError(w, ErrCodeBadRequest, "disk path is required")
+		return
+	}
+	// AUDIT F10 (M1): el wipe era la única op destructiva direccionada solo
+	// por /dev/sdX — una renumeración de discos entre listar y confirmar
+	// podía borrar el disco equivocado. Si el cliente manda el serial que
+	// vio en la lista, se confirma que el path sigue siendo ESE disco.
+	if err := verifyWipeTargetIdentity(req.Disk, req.Serial); err != nil {
+		writeError(w, ErrCodeDeviceNotEligible, err.Error())
 		return
 	}
 	var result map[string]interface{}

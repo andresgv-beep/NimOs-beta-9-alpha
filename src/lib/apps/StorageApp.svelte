@@ -74,6 +74,7 @@
 
   // Formatear disco (wipe)
   let wipeDisk = null;         // path del disco a formatear (null = dialog cerrado)
+  let wipeSerial = '';         // serial esperado del disco (AUDIT F10)
   let wipeProcessing = false;
   let wipeError = '';
 
@@ -369,8 +370,9 @@
   }
 
   // ─── Formatear disco (wipe) ───
-  function openWipeDialog(diskPath) {
+  function openWipeDialog(diskPath, diskSerial = '') {
     wipeDisk = diskPath;
+    wipeSerial = diskSerial; // AUDIT F10: identidad que verá el backend
     wipeError = '';
   }
 
@@ -393,7 +395,13 @@
     replaceOldDisk = null;
     replaceNewDeviceId = '';
     replaceError = '';
+    replaceNeedsForce = false;
   }
+
+  // AUDIT F10: si el disco nuevo trae un filesystem, el backend responde
+  // DISK_HAS_FILESYSTEM. Se muestra el aviso y el siguiente click confirma
+  // la destrucción reintentando con force.
+  let replaceNeedsForce = false;
 
   async function confirmReplace() {
     if (!replacePool || !replaceOldDisk || !replaceNewDeviceId || replaceProcessing) return;
@@ -401,14 +409,23 @@
     replaceError = '';
     try {
       const oldId = replaceOldDisk.id || replaceOldDisk.device_id || replaceOldDisk.serial;
-      await api.replaceDevice(replacePool.id || replacePool.name, oldId, replaceNewDeviceId);
+      await api.replaceDevice(replacePool.id || replacePool.name, oldId, replaceNewDeviceId,
+        { force: replaceNeedsForce });
       replaceProcessing = false;
       closeReplaceDialog();
       await loadAll();         // refresco inmediato → el disco se mueve al pool
       startRepairPolling();    // refresco acelerado mientras dura el replace
     } catch (err) {
       console.error('replace error:', err);
-      replaceError = err.message || 'Error al reemplazar el disco';
+      if (err.code === 'DISK_HAS_FILESYSTEM') {
+        replaceNeedsForce = true;
+        const d = err.details || {};
+        replaceError = `El disco nuevo contiene un filesystem ${d.fs_type || ''}`
+          + (d.fs_label ? ` ("${d.fs_label}")` : '')
+          + '. Pulsa "Reemplazar" de nuevo para DESTRUIRLO y continuar.';
+      } else {
+        replaceError = err.message || 'Error al reemplazar el disco';
+      }
       replaceProcessing = false;
     }
   }
@@ -434,7 +451,7 @@
     wipeProcessing = true;
     wipeError = '';
     try {
-      await api.wipeDisk(wipeDisk);
+      await api.wipeDisk(wipeDisk, { serial: wipeSerial });
       // Éxito
       wipeProcessing = false;
       wipeDisk = null;
@@ -637,7 +654,7 @@
         scanning={scanning}
         on:rescan={rescanDisks}
         on:create-pool={openCreatePoolWizard}
-        on:wipe={(e) => openWipeDialog(e.detail.path)}
+        on:wipe={(e) => openWipeDialog(e.detail.path, e.detail.serial)}
         on:replace-device={(e) => openReplaceDialog(e.detail.pool, e.detail.disk)}
       />
     {/if}
@@ -741,7 +758,8 @@
       {#if (disks.eligible?.length || 0) === 0}
         <div class="replace-err">No hay discos libres disponibles.</div>
       {:else}
-        <select class="replace-select" bind:value={replaceNewDeviceId}>
+        <select class="replace-select" bind:value={replaceNewDeviceId}
+        on:change={() => { replaceNeedsForce = false; replaceError = ''; }}>
           <option value="">— Selecciona un disco —</option>
           {#each disks.eligible as d}
             <option value={d.id || d.device_id || d.path}>

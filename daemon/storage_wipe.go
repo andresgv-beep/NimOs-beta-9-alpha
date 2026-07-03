@@ -528,6 +528,25 @@ func parseBlkidExport(out string) map[string]string {
 //  7. Clear remaining signatures with wipefs
 //  8. Force kernel to re-read partition table
 //  9. VERIFY: lsblk must show zero partitions
+// verifyWipeTargetIdentity confirma que el disco que vive HOY en diskPath
+// es el que el cliente vio al listar (mismo serial). AUDIT F10: los paths
+// /dev/sdX se renumeran (replug, reinicio, USB); el serial es la identidad
+// de firmware. Sin serial (cliente antiguo) se permite pero se loguea.
+func verifyWipeTargetIdentity(diskPath, expectedSerial string) error {
+	if expectedSerial == "" {
+		logMsg("wipe: petición sin serial para %s — sin verificación de identidad (cliente antiguo)", diskPath)
+		return nil
+	}
+	actual := readDeviceSerial(diskPath)
+	if actual == "" {
+		return fmt.Errorf("no se pudo leer el serial de %s para confirmar su identidad — reintenta o re-escanea", diskPath)
+	}
+	if actual != expectedSerial {
+		return fmt.Errorf("el disco en %s NO es el esperado (serial actual %s, esperado %s): la numeración de discos ha cambiado — refresca la lista y reintenta", diskPath, actual, expectedSerial)
+	}
+	return nil
+}
+
 func wipeDiskGo(diskPath string) map[string]interface{} {
 	return wipeDiskWithOptions(diskPath, false)
 }

@@ -127,13 +127,15 @@ export async function importPool({ uuid, name }) {
  * sustituye el disco que falta/falla (oldDeviceId) por uno libre (newDeviceId).
  *   POST /pools/{poolId}/devices/{oldDeviceId}/replace  { new_device_id }
  */
-export async function replaceDevice(poolId, oldDeviceId, newDeviceId) {
+export async function replaceDevice(poolId, oldDeviceId, newDeviceId, { force = false } = {}) {
   const res = await fetch(
     `${BASE}/pools/${encodeURIComponent(poolId)}/devices/${encodeURIComponent(oldDeviceId)}/replace`,
     {
       method: 'POST',
       headers: jsonHdrs(),
-      body: JSON.stringify({ new_device_id: newDeviceId }),
+      // force: el usuario ya vio DISK_HAS_FILESYSTEM y aceptó destruir
+      // el contenido del disco nuevo (AUDIT F10).
+      body: JSON.stringify({ new_device_id: newDeviceId, force }),
     }
   );
   return unwrap(res, 'replace device');
@@ -144,11 +146,13 @@ export async function replaceDevice(poolId, oldDeviceId, newDeviceId) {
  * `force=true` permite wipe sobre disco con BTRFS huérfano. Sin force,
  * el preflight aborta si detecta filesystem.
  */
-export async function wipeDisk(path, { force = false } = {}) {
+export async function wipeDisk(path, { force = false, serial = '' } = {}) {
   const res = await fetch(`${BASE}/wipe`, {
     method: 'POST',
     headers: jsonHdrs(),
-    body: JSON.stringify({ disk: path, force }),
+    // serial: identidad esperada del disco (AUDIT F10) — el backend
+    // aborta si el path ya apunta a OTRO disco (renumeración sdX).
+    body: JSON.stringify({ disk: path, force, serial }),
   });
   return unwrap(res, 'wipe disk');
 }

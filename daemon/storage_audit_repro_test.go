@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -348,5 +349,121 @@ Error summary:    no errors found`
 	r := parseScrubStatusOutput(out)
 	if r["status"] != "scrubbing" {
 		t.Errorf("status: got %v, want scrubbing (scrub recién arrancado, no 'never')", r["status"])
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// AUDIT F10 · Wipe con identidad + preflight FS en add/replace
+// ─────────────────────────────────────────────────────────────────────────
+
+// El wipe era la única op destructiva direccionada solo por /dev/sdX: una
+// renumeración entre listar y confirmar podía borrar el disco equivocado.
+func TestVerifyWipeTargetIdentity(t *testing.T) {
+	orig := readDeviceSerial
+	defer func() { readDeviceSerial = orig }()
+
+	readDeviceSerial = func(string) string { return "SERIAL-REAL" }
+	if err := verifyWipeTargetIdentity("/dev/sdb", "SERIAL-REAL"); err != nil {
+		t.Errorf("serial coincidente debe pasar: %v", err)
+	}
+	if err := verifyWipeTargetIdentity("/dev/sdb", "OTRO-SERIAL"); err == nil {
+		t.Error("serial distinto DEBE bloquear el wipe (disco renumerado)")
+	}
+	readDeviceSerial = func(string) string { return "" }
+	if err := verifyWipeTargetIdentity("/dev/sdb", "SERIAL-REAL"); err == nil {
+		t.Error("serial ilegible con identidad esperada DEBE bloquear (no se puede confirmar)")
+	}
+	// Cliente antiguo sin serial: se permite (compat), solo loguea.
+	if err := verifyWipeTargetIdentity("/dev/sdb", ""); err != nil {
+		t.Errorf("sin serial esperado no debe bloquear: %v", err)
+	}
+}
+
+// AddDevice sin wipe_first debe avisar si el disco trae un filesystem.
+func TestAddDevice_PreflightBlocksDiskWithFilesystem(t *testing.T) {
+	service, _, cleanup := setupTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	poolID, _ := createTestPool(t, service, ctx, "data", ProfileRaid1, 2)
+	tx, _ := service.db.BeginTx(ctx, nil)
+	service.repo.UpsertDevice(ctx, tx, &Device{
+		ID: "extra", Serial: "E1",
+		ByIDPath: "/dev/disk/by-id/e1", CurrentPath: "/dev/sde",
+		SizeBytes: 1e12,
+	})
+	tx.Commit()
+
+	service.deviceChecker = func(devices []*Device) error {
+		return &ErrDiskHasFilesystem{Disk: "/dev/sde", FSType: "ext4"}
+	}
+
+	_, err := service.AddDevice(ctx, AddDeviceRequest{PoolID: poolID, DeviceID: "extra"})
+	if err == nil {
+		t.Fatal("disco con filesystem sin wipe_first debe rechazarse")
+	}
+	if _, ok := err.(*ErrDiskHasFilesystem); !ok {
+		t.Errorf("debe fluir *ErrDiskHasFilesystem (para la UI); got %T: %v", err, err)
+	}
+
+	// Con wipe_first el usuario ya consintió: el preflight se salta.
+	service.deviceChecker = func([]*Device) error {
+		t.Error("con wipe_first NO debe ejecutarse el preflight")
+		return nil
+	}
+	op, err := service.AddDevice(ctx, AddDeviceRequest{PoolID: poolID, DeviceID: "extra", WipeFirst: true})
+	if err != nil {
+		t.Fatalf("AddDevice con wipe_first: %v", err)
+	}
+	waitForOperation(t, service, ctx, op.ID, 3*time.Second)
+}
+
+// ReplaceDevice debe avisar si el disco NUEVO trae un filesystem (el
+// executor usa `replace start -f`, que lo machacaría sin preguntar).
+func TestReplaceDevice_PreflightBlocksNewDiskWithFilesystem(t *testing.T) {
+	service, _, cleanup := setupTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	poolID, deviceIDs := createTestPool(t, service, ctx, "data", ProfileRaid1, 2)
+	tx, _ := service.db.BeginTx(ctx, nil)
+	service.repo.UpsertDevice(ctx, tx, &Device{
+		ID: "new-1", Serial: "NEW-1",
+		ByIDPath: "/dev/disk/by-id/new-1", CurrentPath: "/dev/sdn",
+		SizeBytes: 2e12,
+	})
+	tx.Commit()
+
+	service.deviceChecker = func(devices []*Device) error {
+		if len(devices) != 1 || devices[0].ID != "new-1" {
+			t.Errorf("el preflight debe evaluar SOLO el disco nuevo; got %+v", devices)
+		}
+		return &ErrDiskHasFilesystem{Disk: "/dev/sdn", FSType: "ntfs"}
+	}
+
+	_, err := service.ReplaceDevice(ctx, ReplaceDeviceRequest{
+		PoolID: poolID, OldDeviceID: deviceIDs[0], NewDeviceID: "new-1",
+	})
+	if err == nil {
+		t.Fatal("disco nuevo con filesystem sin force debe rechazarse")
+	}
+	if _, ok := err.(*ErrDiskHasFilesystem); !ok {
+		t.Errorf("debe fluir *ErrDiskHasFilesystem; got %T: %v", err, err)
+	}
+
+	// Con force (usuario avisado por la UI) procede.
+	origScrub := startScrubOnPool
+	defer func() { startScrubOnPool = origScrub }()
+	startScrubOnPool = func(string, string) error { return nil }
+	service.deviceChecker = noopDeviceChecker
+	op, err := service.ReplaceDevice(ctx, ReplaceDeviceRequest{
+		PoolID: poolID, OldDeviceID: deviceIDs[0], NewDeviceID: "new-1", Force: true,
+	})
+	if err != nil {
+		t.Fatalf("ReplaceDevice con force: %v", err)
+	}
+	final := waitForOperation(t, service, ctx, op.ID, 3*time.Second)
+	if final.Status != OpStatusCompleted {
+		t.Errorf("op.Status: got %q", final.Status)
 	}
 }
