@@ -41,9 +41,9 @@
   // Tamaño de la ventana → columnas/filas adaptativas
   let winW = 1280;
   let winH = 800;
-  // Celda ≈ 96px ancho, 128px alto (icono + nombre + gap)
-  $: cols = Math.max(4, Math.min(9, Math.floor((winW * 0.82) / 112)));
-  $: rows = Math.max(2, Math.min(6, Math.floor((winH - 300) / 128)));
+  // Celda ≈ 116px ancho, 148px alto (icono + nombre + gap)
+  $: cols = Math.max(4, Math.min(9, Math.floor((winW * 0.82) / 148)));
+  $: rows = Math.max(2, Math.min(6, Math.floor((winH - 300) / 150)));
   $: pageSize = cols * rows;
 
   $: if (visible) {
@@ -196,7 +196,7 @@
     <!-- ─── Grid de apps · clic en vacío cierra (los tiles paran con su launch) ─── -->
     <div class="lx-stage" role="presentation">
       {#if pageApps.length > 0}
-        <div class="lx-grid" style="grid-template-columns: repeat({cols}, 96px);">
+        <div class="lx-grid" style="grid-template-columns: repeat({cols}, 116px);">
           {#each pageApps as app (app.id)}
             <button class="app-tile" on:click={() => launch(app)} title={app.name}>
               <div class="app-tile-ico">
@@ -243,7 +243,11 @@
       <button class="lx-power" on:click={handlePower} title="Cerrar sesión">⏻</button>
     </div>
 
-    <div class="lx-hint"><span class="k">esc</span> cerrar</div>
+    <button class="lx-close" on:click|stopPropagation={() => (visible = false)} title="Cerrar" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+      </svg>
+    </button>
 
   </div>
 {/if}
@@ -321,7 +325,7 @@
   }
   .lx-grid {
     display: grid;
-    gap: 26px 16px;
+    gap: 34px 26px;
     justify-content: center;
   }
 
@@ -329,10 +333,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    width: 96px;
-    padding: 12px 6px;
-    border-radius: 12px;
+    gap: 12px;
+    width: 116px;
+    padding: 14px 6px;
+    border-radius: 14px;
     cursor: pointer;
     position: relative;
     background: transparent;
@@ -349,8 +353,8 @@
   }
 
   .app-tile-ico {
-    width: 64px;
-    height: 64px;
+    width: 76px;
+    height: 76px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -365,7 +369,7 @@
   }
 
   .app-tile-name {
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--ink-dim, #c4c4cc);
     text-align: center;
     font-weight: 400;
@@ -380,8 +384,8 @@
 
   .app-tile-running {
     position: absolute;
-    top: 6px;
-    right: 18px;
+    top: 8px;
+    right: 26px;
     width: 6px;
     height: 6px;
     background: var(--signal, #00ff9f);
@@ -479,15 +483,26 @@
     border-color: rgba(255, 90, 90, 0.25);
   }
 
-  /* ─── Pista esc ─── */
-  .lx-hint {
+  /* ─── Botón cerrar (arriba-derecha) ─── */
+  .lx-close {
     position: absolute;
+    top: 22px;
     right: 24px;
-    bottom: 26px;
-    font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 11px;
-    color: var(--ink-faint, #6a6a72);
-    letter-spacing: 0.3px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--ink-mute, #9a9aa3);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.12s;
   }
-  .lx-hint .k { color: var(--signal, #00ff9f); }
+  .lx-close:hover {
+    color: var(--crit, #ff5a5a);
+    background: rgba(255, 90, 90, 0.1);
+    border-color: rgba(255, 90, 90, 0.3);
+  }
 </style>
