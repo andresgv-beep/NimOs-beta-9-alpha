@@ -190,23 +190,7 @@ func (s *StorageService) AddDevice(ctx context.Context, req AddDeviceRequest) (*
 			fmt.Sprintf("another layout operation is in progress on pool %s", pool.ID))
 	}
 
-	// ─── Wipe defensivo opcional ───────────────────────────────────────
-	if req.WipeFirst {
-		wipePath := resolveDevicePath(device)
-		if wipePath == "" {
-			s.markOperationFailed(ctx, op.ID,
-				fmt.Sprintf("ningún path del device existe en /dev para wipe (by-id=%q current=%q)",
-					device.ByIDPath, device.CurrentPath),
-				ErrCodeBtrfsCommandFailed)
-			return s.repo.GetOperation(ctx, op.ID)
-		}
-		if err := s.btrfs.WipeDevice(ctx, wipePath); err != nil {
-			s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
-			return s.repo.GetOperation(ctx, op.ID)
-		}
-	}
-
-	// ─── Ejecutar btrfs device add ─────────────────────────────────────
+	// ─── Path verificado, ANTES de lanzar nada (fail-fast al caller) ───
 	// Regla 16 · SOT-04: resolver el path verificando que existe (by-id
 	// preferido, fallback a current_path). Evita el bug del by-id obsoleto.
 	addPath := resolveDevicePath(device)
@@ -217,22 +201,43 @@ func (s *StorageService) AddDevice(ctx context.Context, req AddDeviceRequest) (*
 			ErrCodeBtrfsCommandFailed)
 		return s.repo.GetOperation(ctx, op.ID)
 	}
-	if err := s.btrfs.AddDevice(ctx, pool.MountPoint, addPath); err != nil {
-		s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
-		return s.repo.GetOperation(ctx, op.ID)
-	}
 
-	// ─── Persistir asignación ──────────────────────────────────────────
-	err = s.runInTx(ctx, func(tx *sql.Tx) error {
-		if err := s.repo.AssignDeviceToPool(ctx, tx, pool.ID, device.ID); err != nil {
-			return err
+	// ─── ASYNC: wipe + add + persistencia en background (AUDIT F9/A1) ──
+	// Antes esto corría inline con r.Context(): si el navegador cortaba
+	// (timeout, cerrar pestaña) el context cancelado MATABA el CLI btrfs a
+	// medias y la BD divorciaba de la realidad. Mismo patrón que
+	// ConvertProfile: goroutine con context.Background() (vive lo que viva
+	// el daemon) y la Operation in_progress como candado (INV-1) y como
+	// canal de progreso para el frontend.
+	poolID, mountPoint, deviceID := pool.ID, pool.MountPoint, device.ID
+	wipeFirst := req.WipeFirst
+	go func() {
+		bgCtx := context.Background()
+
+		if wipeFirst {
+			if err := s.btrfs.WipeDevice(bgCtx, addPath); err != nil {
+				s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
+				return
+			}
 		}
-		return s.repo.UpdateOperationStatus(ctx, tx, op.ID, OpStatusCompleted, nil, nil)
-	})
-	if err != nil {
-		s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeInternal)
-		return s.repo.GetOperation(ctx, op.ID)
-	}
+
+		if err := s.btrfs.AddDevice(bgCtx, mountPoint, addPath); err != nil {
+			s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
+			return
+		}
+
+		err := s.runInTx(bgCtx, func(tx *sql.Tx) error {
+			if err := s.repo.AssignDeviceToPool(bgCtx, tx, poolID, deviceID); err != nil {
+				return err
+			}
+			return s.repo.UpdateOperationStatus(bgCtx, tx, op.ID, OpStatusCompleted, nil, nil)
+		})
+		if err != nil {
+			s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeInternal)
+			return
+		}
+		logMsg("AddDevice async: device %s añadido al pool %s", deviceID, poolID)
+	}()
 
 	return s.repo.GetOperation(ctx, op.ID)
 }
@@ -303,7 +308,7 @@ func (s *StorageService) RemoveDevice(ctx context.Context, req RemoveDeviceReque
 			fmt.Sprintf("another layout operation is in progress on pool %s", pool.ID))
 	}
 
-	// Ejecutar btrfs device remove
+	// Path verificado ANTES de lanzar nada (fail-fast al caller).
 	// Regla 16 · SOT-04: path verificado (by-id obsoleto → fallback).
 	rmPath := resolveDevicePath(device)
 	if rmPath == "" {
@@ -313,22 +318,34 @@ func (s *StorageService) RemoveDevice(ctx context.Context, req RemoveDeviceReque
 			ErrCodeBtrfsCommandFailed)
 		return s.repo.GetOperation(ctx, op.ID)
 	}
-	if err := s.btrfs.RemoveDevice(ctx, pool.MountPoint, rmPath); err != nil {
-		s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
-		return s.repo.GetOperation(ctx, op.ID)
-	}
 
-	// Persistir desasignación
-	err = s.runInTx(ctx, func(tx *sql.Tx) error {
-		if err := s.repo.UnassignDeviceFromPool(ctx, tx, pool.ID, device.ID); err != nil {
-			return err
+	// ─── ASYNC: remove + persistencia en background (AUDIT F9/A1-A2) ──
+	// `btrfs device remove` hace un balance implícito (mueve TODOS los
+	// datos del disco saliente a los demás): puede tardar horas. Antes
+	// corría inline con r.Context() — un corte del navegador mataba el CLI
+	// a medias — y además el executor le aplicaba el timeout genérico de
+	// 30 min. Patrón ConvertProfile: goroutine + context.Background().
+	poolID, mountPoint, deviceID := pool.ID, pool.MountPoint, device.ID
+	go func() {
+		bgCtx := context.Background()
+
+		if err := s.btrfs.RemoveDevice(bgCtx, mountPoint, rmPath); err != nil {
+			s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
+			return
 		}
-		return s.repo.UpdateOperationStatus(ctx, tx, op.ID, OpStatusCompleted, nil, nil)
-	})
-	if err != nil {
-		s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeInternal)
-		return s.repo.GetOperation(ctx, op.ID)
-	}
+
+		err := s.runInTx(bgCtx, func(tx *sql.Tx) error {
+			if err := s.repo.UnassignDeviceFromPool(bgCtx, tx, poolID, deviceID); err != nil {
+				return err
+			}
+			return s.repo.UpdateOperationStatus(bgCtx, tx, op.ID, OpStatusCompleted, nil, nil)
+		})
+		if err != nil {
+			s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeInternal)
+			return
+		}
+		logMsg("RemoveDevice async: device %s retirado del pool %s", deviceID, poolID)
+	}()
 
 	return s.repo.GetOperation(ctx, op.ID)
 }
@@ -426,31 +443,11 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 			fmt.Sprintf("another layout operation is in progress on pool %s", pool.ID))
 	}
 
-	// ── Asegurar que el pool es ESCRIBIBLE antes del replace ───────────────
-	// Un raid degradado lo montamos en `degraded,ro` por seguridad (no escribir
-	// sin redundancia). Pero `btrfs replace` NECESITA escribir (copia los datos
-	// al disco nuevo), y falla con "Never started" sobre un FS read-only.
-	// Por eso, justo para la reparación, remontamos `degraded,rw`. Es un riesgo
-	// calculado y consciente: durante el replace se escribe sin redundancia,
-	// pero es la ÚNICA forma de reconstruirla. Al terminar, el pool queda
-	// completo y se puede remontar rw normal.
-	remountedForRepair := false
-	if poolMountIsReadOnly(pool.MountPoint) {
-		logMsg("ReplaceDevice: pool %s está en read-only; remontando degraded,rw para permitir la reparación", pool.MountPoint)
-		if err := remountPoolReadWriteDegraded(pool.MountPoint); err != nil {
-			s.markOperationFailed(ctx, op.ID,
-				fmt.Sprintf("no se pudo poner el pool en modo escritura para repararlo: %v", err),
-				ErrCodeBtrfsCommandFailed)
-			return s.repo.GetOperation(ctx, op.ID)
-		}
-		remountedForRepair = true
-	}
-
-	// Ejecutar btrfs replace (incluye wipefs seguro del old)
-	// Regla 16 · SOT-04: ambos paths verificados. El NEW debe existir sí o sí
-	// (es el disco que entra); el OLD puede estar muerto (justamente por eso
-	// se reemplaza), así que si su by-id no resuelve, btrfs replace admite el
-	// devid — pero priorizamos un path vivo cuando lo haya.
+	// Paths verificados ANTES de lanzar nada (fail-fast al caller).
+	// Regla 16 · SOT-04: el NEW debe existir sí o sí (es el disco que entra);
+	// el OLD puede estar muerto (justamente por eso se reemplaza), así que si
+	// su by-id no resuelve, btrfs replace admite el devid — pero priorizamos
+	// un path vivo cuando lo haya.
 	newPath := resolveDevicePath(newDev)
 	if newPath == "" {
 		s.markOperationFailed(ctx, op.ID,
@@ -466,43 +463,78 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 		// resolverlo por devid aunque el symlink ya no exista.
 		oldPath = oldDev.ByIDPath
 	}
-	if err := s.btrfs.ReplaceDevice(ctx, pool.MountPoint, oldPath, newPath); err != nil {
-		// Si habíamos puesto el pool rw SOLO para reparar, revertirlo a ro tras el
-		// fallo: un pool degradado en escritura sin redundancia es el peor estado.
-		// Best-effort: si el revert falla, lo logueamos pero el fallo del replace
-		// es lo que manda en la operación.
-		if remountedForRepair {
-			if rerr := remountPoolReadOnlyDegraded(pool.MountPoint); rerr != nil {
-				logMsg("ReplaceDevice: no se pudo revertir %s a ro tras fallo del replace: %v", pool.MountPoint, rerr)
+
+	// ─── ASYNC: remount + replace + swap + scrub en background ─────────────
+	// AUDIT F9/A1 — el peor caso del modelo inline: un replace de un disco de
+	// TB tarda HORAS con -B. Con r.Context(), cerrar la pestaña mataba el CLI
+	// (el replace del KERNEL seguía), la op quedaba failed, el revert dejaba
+	// el pool en degraded,ro con el replace aún corriendo, y el swap old→new
+	// jamás se persistía. Patrón ConvertProfile: context.Background().
+	poolID, mountPoint, poolName := pool.ID, pool.MountPoint, pool.Name
+	oldDevID, newDevID := oldDev.ID, newDev.ID
+	go func() {
+		bgCtx := context.Background()
+
+		// ── Asegurar que el pool es ESCRIBIBLE antes del replace ───────────
+		// Un raid degradado lo montamos en `degraded,ro` por seguridad (no
+		// escribir sin redundancia). Pero `btrfs replace` NECESITA escribir
+		// (copia los datos al disco nuevo), y falla con "Never started" sobre
+		// un FS read-only. Por eso, justo para la reparación, remontamos
+		// `degraded,rw`. Riesgo calculado: durante el replace se escribe sin
+		// redundancia, pero es la ÚNICA forma de reconstruirla.
+		remountedForRepair := false
+		if poolMountIsReadOnly(mountPoint) {
+			logMsg("ReplaceDevice: pool %s está en read-only; remontando degraded,rw para permitir la reparación", mountPoint)
+			if err := remountPoolReadWriteDegraded(mountPoint); err != nil {
+				s.markOperationFailed(bgCtx, op.ID,
+					fmt.Sprintf("no se pudo poner el pool en modo escritura para repararlo: %v", err),
+					ErrCodeBtrfsCommandFailed)
+				return
 			}
+			remountedForRepair = true
 		}
-		s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
-		return s.repo.GetOperation(ctx, op.ID)
-	}
 
-	// Swap atómico: desasignar old, asignar new
-	err = s.runInTx(ctx, func(tx *sql.Tx) error {
-		if err := s.repo.UnassignDeviceFromPool(ctx, tx, pool.ID, oldDev.ID); err != nil {
-			return err
+		// Ejecutar btrfs replace (incluye wipefs seguro del old)
+		if err := s.btrfs.ReplaceDevice(bgCtx, mountPoint, oldPath, newPath); err != nil {
+			// Si habíamos puesto el pool rw SOLO para reparar, revertirlo a ro
+			// tras el fallo: un pool degradado en escritura sin redundancia es
+			// el peor estado. Best-effort: si el revert falla se loguea, pero
+			// el fallo del replace es lo que manda en la operación.
+			if remountedForRepair {
+				if rerr := remountPoolReadOnlyDegraded(mountPoint); rerr != nil {
+					logMsg("ReplaceDevice: no se pudo revertir %s a ro tras fallo del replace: %v", mountPoint, rerr)
+				}
+			}
+			s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
+			return
 		}
-		if err := s.repo.AssignDeviceToPool(ctx, tx, pool.ID, newDev.ID); err != nil {
-			return err
-		}
-		return s.repo.UpdateOperationStatus(ctx, tx, op.ID, OpStatusCompleted, nil, nil)
-	})
-	if err != nil {
-		s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeInternal)
-		return s.repo.GetOperation(ctx, op.ID)
-	}
 
-	// Redundancia restaurada (el replace con -B ya terminó). Lanzamos un scrub
-	// para VERIFICAR que la copia reconstruida es íntegra (detecta/corrige bit-rot
-	// silencioso contra la otra copia). No bloqueante: `btrfs scrub start` corre
-	// en el kernel. Best-effort: si no arranca, el replace ya está completo y no
-	// se invalida — solo se loguea.
-	if serr := startScrubOnPool(pool.MountPoint, pool.Name); serr != nil {
-		logMsg("ReplaceDevice: no se pudo lanzar el scrub de verificación post-replace en %s: %v", pool.MountPoint, serr)
-	}
+		// Redundancia restaurada (el replace con -B ya terminó). Lanzamos un
+		// scrub para VERIFICAR que la copia reconstruida es íntegra (detecta/
+		// corrige bit-rot silencioso contra la otra copia). No bloqueante:
+		// `btrfs scrub start` corre en el kernel. Best-effort. Va ANTES de
+		// marcar completed para que "completed" = ejecución 100% terminada
+		// (observable y testeable sin carreras).
+		if serr := startScrubOnPool(mountPoint, poolName); serr != nil {
+			logMsg("ReplaceDevice: no se pudo lanzar el scrub de verificación post-replace en %s: %v", mountPoint, serr)
+		}
+
+		// Swap atómico: desasignar old, asignar new
+		err := s.runInTx(bgCtx, func(tx *sql.Tx) error {
+			if err := s.repo.UnassignDeviceFromPool(bgCtx, tx, poolID, oldDevID); err != nil {
+				return err
+			}
+			if err := s.repo.AssignDeviceToPool(bgCtx, tx, poolID, newDevID); err != nil {
+				return err
+			}
+			return s.repo.UpdateOperationStatus(bgCtx, tx, op.ID, OpStatusCompleted, nil, nil)
+		})
+		if err != nil {
+			s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeInternal)
+			return
+		}
+		logMsg("ReplaceDevice async: pool %s — %s sustituido por %s", poolID, oldDevID, newDevID)
+	}()
 
 	return s.repo.GetOperation(ctx, op.ID)
 }

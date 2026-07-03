@@ -268,7 +268,12 @@ func (e *RealBtrfsExecutor) AddDevice(ctx context.Context, mountPoint, byIDPath 
 }
 
 func (e *RealBtrfsExecutor) RemoveDevice(ctx context.Context, mountPoint, byIDPath string) error {
-	_, err := e.runCommand(ctx, "btrfs", "device", "remove", byIDPath, mountPoint)
+	// runCommandNoTimeout (AUDIT F9/A2): `btrfs device remove` hace un
+	// balance implícito que mueve TODOS los datos del disco saliente — con
+	// cientos de GB supera de sobra el CmdTimeout de 30 min, que lo mataba
+	// a la mitad mientras el kernel seguía reubicando (mismo motivo que
+	// replace/convert, STOR-03). Sigue respetando el ctx del caller.
+	_, err := e.runCommandNoTimeout(ctx, "btrfs", "device", "remove", byIDPath, mountPoint)
 	if err != nil {
 		return fmt.Errorf("RemoveDevice: %w", err)
 	}

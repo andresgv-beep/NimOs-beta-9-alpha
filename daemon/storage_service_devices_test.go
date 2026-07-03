@@ -62,8 +62,10 @@ func TestStorageServiceAddDeviceHappy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AddDevice: %v", err)
 	}
-	if op.Status != OpStatusCompleted {
-		t.Errorf("op.Status: got %q", op.Status)
+	// Modelo async (AUDIT F9): la op vuelve in_progress; esperar al goroutine.
+	final := waitForOperation(t, service, ctx, op.ID, 3*time.Second)
+	if final.Status != OpStatusCompleted {
+		t.Errorf("op.Status: got %q", final.Status)
 	}
 
 	// Executor recibió AddDevice
@@ -152,11 +154,12 @@ func TestStorageServiceAddDeviceBtrfsFails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AddDevice: %v", err)
 	}
-	if op.Status != OpStatusFailed {
-		t.Errorf("op.Status: got %q, want failed", op.Status)
+	final := waitForOperation(t, service, ctx, op.ID, 3*time.Second)
+	if final.Status != OpStatusFailed {
+		t.Errorf("op.Status: got %q, want failed", final.Status)
 	}
-	if op.ErrorCode == nil || *op.ErrorCode != ErrCodeBtrfsCommandFailed {
-		t.Errorf("op.ErrorCode: got %v", op.ErrorCode)
+	if final.ErrorCode == nil || *final.ErrorCode != ErrCodeBtrfsCommandFailed {
+		t.Errorf("op.ErrorCode: got %v", final.ErrorCode)
 	}
 
 	// El device NO debe estar asignado al pool
@@ -185,8 +188,9 @@ func TestStorageServiceRemoveDeviceHappy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RemoveDevice: %v", err)
 	}
-	if op.Status != OpStatusCompleted {
-		t.Errorf("op.Status: got %q", op.Status)
+	final := waitForOperation(t, service, ctx, op.ID, 3*time.Second)
+	if final.Status != OpStatusCompleted {
+		t.Errorf("op.Status: got %q", final.Status)
 	}
 
 	if len(mock.RemoveDeviceCalls) != 1 {
@@ -276,8 +280,9 @@ func TestStorageServiceReplaceDeviceHappy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReplaceDevice: %v", err)
 	}
-	if op.Status != OpStatusCompleted {
-		t.Errorf("op.Status: got %q", op.Status)
+	final := waitForOperation(t, service, ctx, op.ID, 3*time.Second)
+	if final.Status != OpStatusCompleted {
+		t.Errorf("op.Status: got %q", final.Status)
 	}
 
 	if len(mock.ReplaceDeviceCalls) != 1 {
@@ -349,8 +354,12 @@ func TestStorageServiceReplaceDeviceRevertsToReadOnlyOnFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("esperaba op fallida sin error de transporte, got %v", err)
 	}
-	if op == nil || op.Status != OpStatusFailed {
-		t.Fatalf("op debería estar FAILED, got %+v", op)
+	if op == nil {
+		t.Fatal("op nil")
+	}
+	final := waitForOperation(t, service, ctx, op.ID, 3*time.Second)
+	if final.Status != OpStatusFailed {
+		t.Fatalf("op debería estar FAILED, got %+v", final)
 	}
 	if !rwCalled {
 		t.Error("debió remontar rw para intentar la reparación")
@@ -403,8 +412,12 @@ func TestStorageServiceReplaceDeviceLaunchesScrubOnSuccess(t *testing.T) {
 		OldDeviceID: deviceIDs[0],
 		NewDeviceID: "new-1",
 	})
-	if err != nil || op == nil || op.Status != OpStatusCompleted {
-		t.Fatalf("el replace debería completar, got op=%+v err=%v", op, err)
+	if err != nil || op == nil {
+		t.Fatalf("ReplaceDevice: op=%+v err=%v", op, err)
+	}
+	final := waitForOperation(t, service, ctx, op.ID, 3*time.Second)
+	if final.Status != OpStatusCompleted {
+		t.Fatalf("el replace debería completar, got %+v", final)
 	}
 	if scrubbedMount == "" {
 		t.Error("tras un replace exitoso debió lanzarse un scrub de verificación")
