@@ -22,6 +22,23 @@ export function fmtBytes(b) {
 }
 
 /**
+ * splitBytes — Como fmtBytes pero devuelve { n, u } por separado, para
+ * UIs que renderizan número y unidad con estilos distintos (widgets).
+ *
+ * AUDIT F7: el widget de escritorio y el móvil dividían por 1024 pero
+ * etiquetaban "GB/TB" — el mismo pool mostraba "4.0 TB" en la app y
+ * "3.6 TB" en el widget. TODA la UI usa ahora SI (base 1000) desde aquí.
+ */
+export function splitBytes(b) {
+  if (b == null) return { n: '—', u: '' };
+  if (b >= 1e12) return { n: (b / 1e12).toFixed(1), u: 'TB' };
+  if (b >= 1e9)  return { n: (b / 1e9).toFixed(0),  u: 'GB' };
+  if (b >= 1e6)  return { n: (b / 1e6).toFixed(0),  u: 'MB' };
+  if (b >= 1e3)  return { n: (b / 1e3).toFixed(0),  u: 'KB' };
+  return { n: String(b), u: 'B' };
+}
+
+/**
  * fmtDate — Formatea fecha ISO a "dd/mm/yyyy hh:mm" en es-ES.
  * Si ISO es falsy → '—'. Si falla el parse → devuelve el input tal cual.
  */

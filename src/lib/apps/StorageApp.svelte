@@ -82,6 +82,7 @@
   let alerts = [];
   let capabilities = {};
   let status = {};
+  let connError = false; // AUDIT F5: el último loadAll no pudo leer /pools
 
   // Fase 7 Bloque C3.2: Observed state
   //
@@ -147,8 +148,12 @@
       // huérfanos (BTRFS no gestionados por NimOS) y mostrar divergencias.
       // Cada llamada aislada: si una falla, las demás siguen sirviendo
       // datos al usuario (degradación graceful).
+      // AUDIT F5: getPools falla → null, NO []. Antes un error transitorio
+      // (daemon reiniciando) vaciaba pools y la UI mostraba "Sin volúmenes
+      // configurados" + Salud "OK · sin incidencias" (every() sobre []).
+      // Ahora se conservan los últimos pools conocidos y se avisa.
       const [poolsData, statusData, disksData, alertsData, capsData, observedData] = await Promise.all([
-        api.getPools().catch(() => []),
+        api.getPools().catch(() => null),
         api.getStatus().catch(() => ({})),
         api.getDisks().catch(() => ({})),
         api.getAlerts().catch(() => ({ alerts: [] })),
@@ -156,7 +161,12 @@
         api.getObserved().catch(() => ({ filesystems: [], divergences: [] })),
       ]);
 
-      pools = Array.isArray(poolsData) ? poolsData : [];
+      if (poolsData === null) {
+        connError = true; // conservar pools previos, avisar en la UI
+      } else {
+        connError = false;
+        pools = Array.isArray(poolsData) ? poolsData : [];
+      }
       status = statusData || {};
       // /v2/disks devuelve {eligible, nvme, usb, provisioned} igual que legacy.
       disks = disksData || {};
@@ -554,7 +564,12 @@
 
   {#if active === 'overview'}
     <div class="st-kpis-wrap">
-      <StorageKPIs pools={pools} disks={disks} alerts={alerts} />
+      {#if connError}
+        <div class="conn-error" role="alert">
+          ⚠ Sin conexión con el daemon — mostrando los últimos datos conocidos
+        </div>
+      {/if}
+      <StorageKPIs pools={pools} disks={disks} alerts={alerts} stale={connError} />
     </div>
   {/if}
 
@@ -768,6 +783,19 @@
 {/if}
 
 <style>
+  /* AUDIT F5: aviso de datos no frescos cuando /pools no responde */
+  .conn-error {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--warn);
+    border: 1px solid var(--warn);
+    border-radius: var(--radius-sm, 4px);
+    background: color-mix(in srgb, var(--warn) 8%, transparent);
+  }
+
   /* Loading state */
   .storage-loading {
     flex: 1;

@@ -6,6 +6,10 @@
   import { hdrs } from '$lib/stores/auth.js';
   import { goToSection, openShareInFiles } from '../mobileNav.js';
   import MobileStatCard from '../components/MobileStatCard.svelte';
+  // AUDIT F7: los volúmenes usan SI (base 1000) para mostrar la MISMA cifra
+  // que la app Storage — antes este card decía "3.6 TB" y la app "4.0 TB"
+  // para el mismo pool. El fmtBytes local (base 1024) se mantiene para RAM.
+  import { fmtBytes as fmtVolBytes } from '$lib/apps/storage/formatters.js';
 
   let sys = null;
   let shares = [];
@@ -100,14 +104,19 @@
   // Volúmenes = pools reales de NimOS. Usamos pool.usage (de
   // `btrfs filesystem usage`), que da la capacidad USABLE correcta —
   // a diferencia de `df`, que en BTRFS RAID1 reporta cifras engañosas.
+  //
+  // AUDIT F5-móvil: NO filtrar los pools sin usage — un pool desmontado o
+  // caído desaparecía en silencio ("Sin pools" con el pool fallando). Se
+  // muestran todos, marcando los caídos.
   $: volumes = (pools || [])
-    .filter((p) => p && p.usage && p.usage.total_bytes > 0)
+    .filter((p) => p)
     .map((p) => ({
       name: p.name || poolName(p.mount_point),
-      used: p.usage.used_bytes,
-      total: p.usage.total_bytes,
-      percent: p.usage.usage_percent,
+      used: p.usage?.used_bytes,
+      total: p.usage?.total_bytes,
+      percent: p.usage?.usage_percent,
       profile: p.profile,
+      down: !p.mounted || !p.usage,
     }));
 
   function poolName(mount) {
@@ -165,10 +174,12 @@
         {#if volumes.length > 0}
           {#each volumes as v}
             <div class="pool-line">
-              <span class="pool-cap">{fmtBytes(v.used)} / {fmtBytes(v.total)}</span>
-              <span class="pool-prf"><span class="dot"></span>{v.name}{#if v.profile} · {v.profile}{/if}</span>
+              <!-- AUDIT F7: unidades SI (fmtVolBytes) para cuadrar con la app
+                   Storage; F5: pool caído visible y marcado, no oculto. -->
+              <span class="pool-cap" class:down={v.down}>{v.down ? 'SIN MONTAR' : `${fmtVolBytes(v.used)} / ${fmtVolBytes(v.total)}`}</span>
+              <span class="pool-prf"><span class="dot" class:down={v.down}></span>{v.name}{#if v.profile} · {v.profile}{/if}</span>
             </div>
-            <div class="bar"><div class="bar-fill" style="width:{v.percent || 0}%"></div></div>
+            <div class="bar"><div class="bar-fill" class:down={v.down} style="width:{v.down ? 100 : (v.percent || 0)}%"></div></div>
           {/each}
         {:else}
           <div class="empty-note">Sin pools</div>
@@ -241,11 +252,14 @@
   .m-skeleton { height: 150px; background: var(--bg-card); border: 1px solid var(--line); border-radius: 12px; opacity: 0.4; }
   .pool-line { display: flex; flex-direction: column; gap: 3px; margin-bottom: 5px; }
   .pool-cap { font-size: 12px; color: var(--info); font-family: var(--font-mono); }
+  .pool-cap.down { color: var(--crit, #ef4444); }
   .pool-prf { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--signal); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pool-prf .dot { width: 7px; height: 7px; border-radius: 2px; background: var(--signal); flex-shrink: 0; }
+  .pool-prf .dot.down { background: var(--crit, #ef4444); }
   .bar { height: 5px; background: var(--bg-inner); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
   .bar:last-child { margin-bottom: 0; }
   .bar-fill { height: 100%; background: var(--info); border-radius: 2px; }
+  .bar-fill.down { background: var(--crit, #ef4444); opacity: 0.5; }
   .empty-note { font-size: 12px; color: var(--ink-faint); font-family: var(--font-mono); }
   .empty-note.pad { padding: 8px 2px; }
 

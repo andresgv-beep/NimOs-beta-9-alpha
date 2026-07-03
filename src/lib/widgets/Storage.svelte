@@ -20,6 +20,7 @@
    */
   import { onMount } from 'svelte';
   import { topicStore, acquire } from '$lib/stores/widgetData.js';
+  import { splitBytes } from '$lib/apps/storage/formatters.js';
 
   export const w = 2;
   export let h = 1;
@@ -29,6 +30,7 @@
   onMount(() => acquire('storage'));
 
   $: allPools = Array.isArray($data?.data) ? $data.data : null;
+  $: stale = $data?._stale === true; // último fetch falló: datos antiguos
   $: multi = h >= 2;
 
   // Modelo multi-instancia: cada caja muestra el pool de config.pool.
@@ -47,14 +49,18 @@
 
   $: anyBad = (allPools || []).some(p => healthClass(p) !== 'ok');
 
-  // Estados reales del daemon (HealthStatus en nimos_health.go):
-  // healthy | degraded | failed | partial | incomplete | unknown | stale
+  // AUDIT F6: vocabulario REAL de PoolHealth.Status en el backend v2
+  // (storage_health.go): healthy | degraded | at_risk | unstable |
+  // critical | missing. El check antiguo comparaba contra 'failed' (que
+  // el backend nunca emite) y evaluaba el null ANTES que mounted: un pool
+  // crítico salía como warning y uno desmontado sin dato de salud, verde.
   function healthClass(p) {
+    if (p && p.mounted === false) return 'crit'; // desmontado SIEMPRE es crítico
     const s = p?.health?.status;
-    if (s == null) return 'ok';            // aún sin dato → no alarmar (skeleton)
-    if (!p?.mounted || s === 'failed') return 'crit';
+    if (s == null) return 'ok';                  // aún sin dato → skeleton, no alarmar
+    if (s === 'critical' || s === 'missing' || s === 'failed') return 'crit';
     if (s === 'healthy') return 'ok';
-    // degraded | partial | incomplete | stale | unknown | cualquier otro
+    // degraded | at_risk | unstable | partial | incomplete | unknown | ...
     return 'warn';
   }
   function barClass(pct) {
@@ -62,12 +68,9 @@
     if (pct >= 80) return 'hot';
     return '';
   }
-  function split(b) {
-    if (b == null) return { n: '—', u: '' };
-    const TB = 1099511627776, GB = 1073741824;
-    if (b >= TB) return { n: (b / TB).toFixed(1), u: 'TB' };
-    return { n: (b / GB).toFixed(0), u: 'GB' };
-  }
+  // AUDIT F7: unidades SI compartidas con la app (antes: base 1024
+  // etiquetada TB/GB — "faltaban" 400 GB respecto a la app Storage).
+  const split = splitBytes;
   function fmtBytes(b) {
     const s = split(b);
     return s.u ? `${s.n} ${s.u}` : s.n;
@@ -78,8 +81,8 @@
   {#if multi}
     <div class="head">
       <span class="title">Almacenamiento</span>
-      <span class="aux" class:bad={anyBad}>
-        {#if !allPools}—{:else if allPools.length === 0}sin pools{:else if anyBad}atención{:else}OK{/if}
+      <span class="aux" class:bad={anyBad || stale}>
+        {#if !allPools}—{:else if stale}sin conexión{:else if allPools.length === 0}sin pools{:else if anyBad}atención{:else}OK{/if}
       </span>
     </div>
   {/if}
@@ -91,6 +94,7 @@
   {:else}
     <div class="list" class:scroll={multi}>
       {#each shown as p (p.id ?? p.name)}
+        {@const hasUsage = !!p.usage}
         {@const pct = p.usage?.usage_percent ?? 0}
         {@const hc = healthClass(p)}
         {@const used = split(p.usage?.used_bytes)}
@@ -105,8 +109,8 @@
           {:else}
             <!-- 2×1: cabecera compacta en una sola línea -->
             <div class="pool-head compact">
-              <span class="badge {hc}">{hc === 'ok' ? 'OK' : 'ATENCIÓN'}</span>
-              <span class="name">{p.name}</span>
+              <span class="badge {hc}">{hc === 'ok' ? 'OK' : hc === 'crit' ? 'CRÍTICO' : 'ATENCIÓN'}</span>
+              <span class="name">{p.name}{#if !p.mounted}<small> · sin montar</small>{/if}</span>
               <span class="cap">{fmtBytes(p.usage?.used_bytes)} / {fmtBytes(p.usage?.total_bytes)}</span>
             </div>
           {/if}
@@ -114,15 +118,17 @@
           <div class="bar"><i class={barClass(pct)} style="width:{pct}%"></i></div>
 
           <div class="cards">
+            <!-- AUDIT: sin usage (pool desmontado) NO se inventa "0% usado /
+                 100% disponible" — se muestra el dato ausente como ausente. -->
             <div class="c">
               <span class="c-label">Usado</span>
               <span class="c-num">{used.n}<small>{used.u}</small></span>
-              <span class="c-sub accent">{pct}%</span>
+              <span class="c-sub accent">{hasUsage ? `${pct}%` : '—'}</span>
             </div>
             <div class="c">
               <span class="c-label">Disponible</span>
               <span class="c-num">{avail.n}<small>{avail.u}</small></span>
-              <span class="c-sub accent">{100 - pct}%</span>
+              <span class="c-sub accent">{hasUsage ? `${100 - pct}%` : '—'}</span>
             </div>
             <div class="c">
               <span class="c-label">Tipo</span>

@@ -17,6 +17,9 @@
   export let pools = [];
   export let disks = {};
   export let alerts = [];
+  // AUDIT F5: true cuando el último fetch de /pools falló — los datos son
+  // los últimos conocidos y la Salud no puede afirmarse.
+  export let stale = false;
 
   $: totalDisksAssigned = pools.reduce((s, p) => s + (p.devices?.length || 0), 0);
   $: totalDisksFree = (disks.eligible?.length || 0);
@@ -61,12 +64,14 @@
     tag={totalCapacity > 0 ? `${fmtBytes(totalFree)} libres · ${overallUsagePct}%` : '—'}
     tagVariant={capVariant}
   />
+  <!-- AUDIT F5: sin conexión NO se afirma "OK · sin incidencias" — la
+       salud real es desconocida en ese momento. -->
   <StatCard
     label="Salud"
-    value={overallHealth === 'ok' ? 'OK' : overallHealth === 'warn' ? 'WARN' : 'CRIT'}
-    variant={overallHealth}
-    tag={healthTag}
-    tagVariant={overallHealth}
+    value={stale ? '—' : overallHealth === 'ok' ? 'OK' : overallHealth === 'warn' ? 'WARN' : 'CRIT'}
+    variant={stale ? 'warn' : overallHealth}
+    tag={stale ? 'sin conexión' : healthTag}
+    tagVariant={stale ? 'warn' : overallHealth}
   />
 </div>
 

@@ -45,12 +45,30 @@ async function fetchTopic(topic) {
     const r = await fetch(def.url, {
       headers: { 'Authorization': `Bearer ${getToken() || ''}` },
     });
-    if (!r.ok) return; // mantener último dato válido, no machacar con null
+    if (!r.ok) { markStale(topic); return; } // mantener último dato, marcándolo
     const data = await r.json();
+    // _stale/_ts: metadatos de frescura (AUDIT: antes el widget mostraba
+    // datos de hace horas como actuales si el daemon caía). Solo se añaden
+    // a respuestas objeto (todas las de TOPICS lo son).
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      data._stale = false;
+      data._ts = Date.now();
+    }
     ensure(topic).store.set(data);
   } catch {
-    // red caída o daemon reiniciando: conservar último dato
+    // red caída o daemon reiniciando: conservar último dato, marcándolo
+    markStale(topic);
   }
+}
+
+// markStale conserva el último dato pero lo marca como no-fresco, para que
+// el widget pueda avisar ("sin conexión") en vez de fingir normalidad.
+function markStale(topic) {
+  ensure(topic).store.update(v =>
+    v && typeof v === 'object' && !Array.isArray(v) && v._stale !== true
+      ? { ...v, _stale: true }
+      : v
+  );
 }
 
 function startTimer(topic) {
