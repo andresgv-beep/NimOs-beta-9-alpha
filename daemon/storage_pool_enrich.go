@@ -153,27 +153,21 @@ var isPoolMounted = func(mountPoint string) bool {
 // discos distintos. La capacidad usable resultante por profile:
 //
 //	single  : suma de todos (sin redundancia)
-//	raid1   : 2 copias en 2 discos distintos →
-//	          usable = min(suma/2, suma − disco_mayor)
-//	          (el disco mayor no puede emparejarse consigo mismo: el cuello de
-//	           botella es cuánto pueden absorber "los demás")
-//	raid1c3 : 3 copias → usable = min(suma/3, suma − (mayor1 + mayor2))... pero
-//	          se generaliza como suma/copias con el límite de los menores.
-//	raid10  : stripe sobre mirrors → ~suma/2 (requiere ≥4 discos balanceados)
+//	raid1   : 2 copias, cada una en un disco distinto
+//	raid1c3 : 3 copias, cada una en un disco distinto
+//	raid10  : stripe sobre mirrors → 2 copias (requiere ≥4 discos)
 //
-// Para raid1, la fórmula min(suma/2, suma−mayor) captura exactamente el caso
-// asimétrico: con 120+320, suma=440, mayor=320 → min(220, 120)=120 GiB usables.
+// Para los perfiles con copias se usa la condición general (water-filling):
+// U bytes lógicos caben ⟺ sum(min(s_i, U)) ≥ copias·U. Ejemplos:
+//   - raid1 120+320   → U=120 (el mayor no se empareja consigo mismo)
+//   - raid1c3 1000+100+100 → U=100 (3 copias en 3 discos ⇒ limita el menor)
 func computeUsableCapacity(profile Profile, sizes []int64) int64 {
 	if len(sizes) == 0 {
 		return 0
 	}
 	var sum int64
-	var max int64
 	for _, s := range sizes {
 		sum += s
-		if s > max {
-			max = s
-		}
 	}
 
 	switch profile {
@@ -181,21 +175,39 @@ func computeUsableCapacity(profile Profile, sizes []int64) int64 {
 		return sum
 
 	case ProfileRaid1, ProfileRaid1c3, ProfileRaid10:
-		copies := profileCopies(profile)
-		// Capacidad por número de copias.
-		byCopies := sum / int64(copies)
-		// Límite por asimetría: lo que pueden absorber los discos que NO son
-		// el mayor (el mayor necesita pareja en otro disco para cada copia).
-		// Para 2 copias: suma − mayor. Generalizamos restando el mayor una vez
-		// (cuello de botella dominante en arrays típicos de 2-4 discos).
-		byAsymmetry := sum - max
-		// En raid1 el usable es min(suma/2, suma−mayor). Para raid1c3/raid10
-		// la cota por copias domina en discos balanceados; mantenemos el min
-		// con la asimetría como salvaguarda conservadora.
-		if byAsymmetry < byCopies {
-			return byAsymmetry
+		// AUDIT-2: la fórmula anterior min(suma/copias, suma−mayor) restaba
+		// el disco mayor UNA sola vez — correcta para raid1 de 2-4 discos,
+		// pero sobrestimaba en raid1c3 asimétrico (con [1000,100,100]
+		// devolvía 200 GB cuando lo usable real es 100: cada byte necesita
+		// 3 copias en 3 discos DISTINTOS, así que limita el menor).
+		//
+		// Fórmula general (water-filling): U bytes lógicos son colocables
+		// ⟺ sum(min(s_i, U)) ≥ copias·U — cada disco aporta como máximo
+		// min(s_i, U) porque no puede guardar dos copias del mismo byte.
+		// f(U) = sum(min(s_i,U)) − copias·U es cóncava con f(0)=0, así que
+		// la región factible es [0, U*]: búsqueda binaria del borde.
+		copies := int64(profileCopies(profile))
+		if int64(len(sizes)) < copies {
+			return 0 // imposible colocar copias en discos distintos
 		}
-		return byCopies
+		lo, hi := int64(0), sum/copies
+		for lo < hi {
+			mid := lo + (hi-lo+1)/2
+			var capBytes int64
+			for _, s := range sizes {
+				if s < mid {
+					capBytes += s
+				} else {
+					capBytes += mid
+				}
+			}
+			if capBytes >= copies*mid {
+				lo = mid
+			} else {
+				hi = mid - 1
+			}
+		}
+		return lo
 	}
 	return sum
 }
@@ -219,31 +231,28 @@ func computePoolUsage(mountPoint string) *PoolUsage {
 	var used, available int64
 
 	if bfsOut, ok := runSafe("btrfs", "filesystem", "usage", "-b", mountPoint); ok {
-		for _, line := range strings.Split(bfsOut, "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "Used:") {
-				used = parseInt64(strings.TrimSpace(strings.TrimPrefix(line, "Used:")))
-			} else if strings.HasPrefix(line, "Free (statfs, df):") {
-				val := strings.TrimSpace(strings.TrimPrefix(line, "Free (statfs, df):"))
-				if idx := strings.Index(val, "("); idx > 0 {
-					val = strings.TrimSpace(val[:idx])
-				}
-				available = parseInt64(val)
-			}
-		}
+		ov := parseBtrfsUsageOverall(bfsOut)
+		// AUDIT-3: "Used:" son bytes RAW (todas las copias del profile);
+		// servirlo tal cual doblaba el uso mostrado en RAID1.
+		used = ov.usableUsedBytes()
+		available = ov.FreeStatfs
 	}
 
-	// Fallback a df si btrfs no responde
-	if used == 0 && available == 0 {
+	// Fallback a df si btrfs no respondió o dejó campos incompletos.
+	// AUDIT: btrfs-progs < 6.3 no imprime "Free (statfs, df)" — antes eso
+	// dejaba available=0 sin activar el fallback → UI al 100% en falso.
+	if used == 0 || available == 0 {
 		if dfOut, ok := runSafe("df", "-B1", "--output=size,used,avail", mountPoint); ok {
 			lines := strings.Split(strings.TrimSpace(dfOut), "\n")
 			if len(lines) >= 2 {
 				parts := strings.Fields(lines[1])
 				if len(parts) >= 3 {
-					total := parseInt64(parts[0])
-					used = parseInt64(parts[1])
-					available = parseInt64(parts[2])
-					_ = total // total se recalcula abajo como used+available
+					if used == 0 {
+						used = parseInt64(parts[1])
+					}
+					if available == 0 {
+						available = parseInt64(parts[2])
+					}
 				}
 			}
 		}

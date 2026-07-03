@@ -194,6 +194,16 @@ func probeBtrfsFilesystems() ([]ObservedBtrfs, bool) {
 func parseDevidLine(line string) *ObservedDevice {
 	// "devid 1 size 111.79GiB used 2.01GiB path /dev/sda"
 	// Con --raw: "devid 1 size 120033041920 used 2155872256 path /dev/sda"
+	//
+	// AUDIT-1: con el FS montado y degradado, btrfs-progs imprime el disco
+	// ausente como "devid 2 size 0 used 0 path /dev/sdd MISSING". Antes se
+	// parseaba como device online (Path="/dev/sdd MISSING") → DevicesMissing=0
+	// → un RAID1 degradado salía "healthy". Un devid MISSING no es un device
+	// presente: se descarta y el ausente se contabiliza vía Expected−Online,
+	// igual que en el formato sin montar ("*** Some devices missing").
+	if strings.HasSuffix(strings.TrimSpace(line), " MISSING") {
+		return nil
+	}
 	idx := strings.Index(line, "path ")
 	if idx < 0 {
 		return nil
@@ -258,19 +268,11 @@ func enrichBtrfsCapacity(fs *ObservedBtrfs) {
 	if !ok {
 		return
 	}
-	for _, line := range strings.Split(out, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "Used:") {
-			val := strings.TrimSpace(strings.TrimPrefix(line, "Used:"))
-			fs.UsedBytes = parseInt64(val)
-		} else if strings.HasPrefix(line, "Free (statfs, df):") {
-			val := strings.TrimSpace(strings.TrimPrefix(line, "Free (statfs, df):"))
-			if idx := strings.Index(val, "("); idx > 0 {
-				val = strings.TrimSpace(val[:idx])
-			}
-			fs.FreeBytes = parseInt64(val)
-		}
-	}
+	// AUDIT-3: mismo fix que computePoolUsage — "Used:" es RAW (todas las
+	// copias); dividir por el data ratio para servir bytes usables.
+	ov := parseBtrfsUsageOverall(out)
+	fs.UsedBytes = ov.usableUsedBytes()
+	fs.FreeBytes = ov.FreeStatfs
 	if fs.UsedBytes > 0 || fs.FreeBytes > 0 {
 		fs.SizeBytes = fs.UsedBytes + fs.FreeBytes
 	}
