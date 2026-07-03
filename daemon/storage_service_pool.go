@@ -97,7 +97,18 @@ func (s *StorageService) RenamePool(ctx context.Context, id, newName string) (*O
 
 // SetPoolCompression cambia la compresión de un pool.
 // Síncrona. Solo afecta a archivos escritos a partir del cambio.
+//
+// AUDIT F4: antes SOLO escribía la BD — ni remount ni fstab, así que el
+// ajuste era decorativo (el fstab hardcodeaba compress=zstd para todos).
+// Ahora: validar → cambiar la REALIDAD primero (remount en vivo si está
+// montado) → persistir BD → regenerar fstab (derivado de la BD). Si la BD
+// fallara tras el remount, SOT-05 auto-cura leyendo la realidad.
 func (s *StorageService) SetPoolCompression(ctx context.Context, id, algorithm string) (*Operation, error) {
+	if !validCompressionAlgo(algorithm) {
+		return nil, errFromCode(ErrCodeBadRequest,
+			fmt.Sprintf("algoritmo de compresión inválido: %q (válidos: none, lzo, zlib[:1-9], zstd[:1-15])", algorithm))
+	}
+
 	// Usar GetPool del service (no del repo) porque hidrata capabilities,
 	// que policy necesita para validar la op.
 	pool, err := s.GetPool(ctx, id)
@@ -107,6 +118,13 @@ func (s *StorageService) SetPoolCompression(ctx context.Context, id, algorithm s
 
 	if err := s.checkPolicy(pool, OpTypeSetCompression); err != nil {
 		return nil, err
+	}
+
+	// Realidad primero: remount en vivo. Si falla, no se ha cambiado nada.
+	if pool.Mounted {
+		if err := remountPoolCompressionFn(pool.MountPoint, algorithm); err != nil {
+			return nil, errFromCode(ErrCodeMountFailed, err.Error())
+		}
 	}
 
 	op := &Operation{
@@ -130,8 +148,18 @@ func (s *StorageService) SetPoolCompression(ctx context.Context, id, algorithm s
 		return nil, err
 	}
 
+	// fstab se deriva de la BD, así que va DESPUÉS del commit. Best-effort:
+	// si falla, el sync del arranque lo auto-cura (FIX-4).
+	if err := syncFstabAfterCompressionFn(ctx); err != nil {
+		logMsg("SetPoolCompression: sync fstab falló (se auto-cura al arranque): %v", err)
+	}
+
 	return s.repo.GetOperation(ctx, op.ID)
 }
+
+// syncFstabAfterCompressionFn permite stubear la escritura real de fstab en
+// tests (patrón applyPoolRenamePhysicalFn).
+var syncFstabAfterCompressionFn = syncFstabFromDB
 
 // CreatePool crea un nuevo pool BTRFS con los devices indicados.
 // Asíncrona conceptualmente (genera Operation) pero ejecuta inline en

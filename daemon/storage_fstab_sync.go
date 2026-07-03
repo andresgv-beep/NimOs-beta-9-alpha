@@ -27,7 +27,7 @@ import (
 const (
 	fstabMarkerStart = "# >>> [nimos] pools gestionados · generado, no editar a mano"
 	fstabMarkerEnd   = "# <<< [nimos]"
-	fstabPoolOpts    = "defaults,nofail,noatime,compress=zstd"
+	fstabBaseOpts    = "defaults,nofail,noatime"
 )
 
 // buildManagedFstab toma el contenido actual de fstab y la lista de pools y
@@ -72,10 +72,26 @@ func buildManagedFstab(current string, pools []*Pool) string {
 			continue
 		}
 		b.WriteString(fmt.Sprintf("UUID=%s %s btrfs %s 0 2\n",
-			p.BtrfsUUID, p.MountPoint, fstabPoolOpts))
+			p.BtrfsUUID, p.MountPoint, fstabOptsForPool(p)))
 	}
 	b.WriteString(fstabMarkerEnd + "\n")
 	return b.String()
+}
+
+// fstabOptsForPool construye las opciones de montaje de un pool: base común
+// + compresión del pool (AUDIT F4: antes se hardcodeaba compress=zstd para
+// todos, ignorando pool.Compression — la UI decía "none" y se comprimía).
+// Solo valores whitelisteados llegan aquí (validCompressionAlgo), pero se
+// revalida por defensa: el fstab no es sitio para strings arbitrarios.
+func fstabOptsForPool(p *Pool) string {
+	algo := p.Compression
+	if algo == "" || algo == "none" || !validCompressionAlgo(algo) {
+		if algo != "" && algo != "none" {
+			logMsg("fstabOptsForPool: pool '%s' con compresión inválida %q — se omite", p.Name, algo)
+		}
+		return fstabBaseOpts
+	}
+	return fstabBaseOpts + ",compress=" + algo
 }
 
 // isNimosPoolFstabLine indica si una línea (no comentada) monta algo bajo

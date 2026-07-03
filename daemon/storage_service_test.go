@@ -55,11 +55,19 @@ func setupTestService(t *testing.T) (*StorageService, *MockBtrfsExecutor, func()
 		mountedPool: func(string) bool { return true },
 		readOnly:    func(string) bool { return false },
 	}
+	// AUDIT F4: SetPoolCompression ahora remonta y reescribe fstab; ninguno
+	// de los dos es ejecutable en tests.
+	origRemountComp := remountPoolCompressionFn
+	remountPoolCompressionFn = func(string, string) error { return nil }
+	origSyncFstab := syncFstabAfterCompressionFn
+	syncFstabAfterCompressionFn = func(context.Context) error { return nil }
 	wrappedCleanup := func() {
 		devicePathExists = origPathExists
 		applyPoolRenamePhysicalFn = origRename
 		verifyPoolMountedFn = origVerifyMount
 		defaultPoolWritableChecks = origWritableChecks
+		remountPoolCompressionFn = origRemountComp
+		syncFstabAfterCompressionFn = origSyncFstab
 		cleanupDB()
 	}
 

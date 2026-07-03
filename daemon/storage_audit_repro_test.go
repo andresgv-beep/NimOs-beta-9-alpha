@@ -6,7 +6,10 @@
 // Referencia completa: ~/storage-audit-2026-07-03.md
 package main
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT-1 · Parser de `btrfs filesystem show` vs discos MISSING
@@ -161,5 +164,101 @@ func TestParseBtrfsUsageOverall_NoRatioServesRaw(t *testing.T) {
 	ov := parseBtrfsUsageOverall("Used:  1000\n")
 	if ov.usableUsedBytes() != 1000 {
 		t.Errorf("sin ratio: got %d, want 1000 (raw tal cual)", ov.usableUsedBytes())
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// AUDIT F4 · Compresión honesta (Fase 2)
+//
+// Tres piezas descoordinadas mentían: fstab hardcodeaba compress=zstd para
+// todos los pools, SetPoolCompression solo escribía la BD, y SOT-05 leía
+// `btrfs property get` (ciego a la opción de montaje). Verificado en vivo:
+// pool data1 montado compress=zstd:3, property vacía, BD/UI "none".
+// ─────────────────────────────────────────────────────────────────────────
+
+func TestFstabOptsForPool_DerivesFromCompression(t *testing.T) {
+	cases := []struct {
+		name string
+		comp string
+		want string
+	}{
+		{"none no añade compress", "none", "defaults,nofail,noatime"},
+		{"vacío no añade compress", "", "defaults,nofail,noatime"},
+		{"zstd:3 se refleja", "zstd:3", "defaults,nofail,noatime,compress=zstd:3"},
+		{"lzo se refleja", "lzo", "defaults,nofail,noatime,compress=lzo"},
+		// Anti-inyección: un valor no whitelisteado JAMÁS llega a fstab.
+		{"basura se omite", "zstd,exec=/bin/sh", "defaults,nofail,noatime"},
+	}
+	for _, c := range cases {
+		p := &Pool{Name: "t", Compression: c.comp}
+		if got := fstabOptsForPool(p); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+func TestValidCompressionAlgo(t *testing.T) {
+	valid := []string{"none", "lzo", "zlib", "zstd", "zstd:1", "zstd:15", "zlib:9"}
+	for _, a := range valid {
+		if !validCompressionAlgo(a) {
+			t.Errorf("%q debería ser válido", a)
+		}
+	}
+	invalid := []string{"", "ZSTD", "zstd:0", "zstd:16", "zlib:10", "gzip",
+		"zstd,exec=/bin/sh", "zstd:3,ro", "zstd 3", "none;rm -rf /"}
+	for _, a := range invalid {
+		if validCompressionAlgo(a) {
+			t.Errorf("%q debería ser inválido", a)
+		}
+	}
+}
+
+func TestCompressionFromMountOpts(t *testing.T) {
+	cases := map[string]string{
+		// Las opciones reales del pool data1 el día de la auditoría:
+		"rw,noatime,compress=zstd:3,space_cache=v2,subvolid=5,subvol=/": "zstd:3",
+		"rw,noatime,space_cache=v2":                                    "none",
+		"rw,compress=no,space_cache=v2":                                "none",
+		"rw,compress-force=lzo":                                        "lzo",
+		"rw,compress=zstd":                                             "zstd",
+	}
+	for opts, want := range cases {
+		if got := compressionFromMountOpts(opts); got != want {
+			t.Errorf("opts %q: got %q, want %q", opts, got, want)
+		}
+	}
+}
+
+func TestMountOptForCompression(t *testing.T) {
+	// El kernel necesita compress=no explícito para desactivar en remount.
+	if got := mountOptForCompression("none"); got != "compress=no" {
+		t.Errorf("none: got %q, want compress=no", got)
+	}
+	if got := mountOptForCompression("zstd:5"); got != "compress=zstd:5" {
+		t.Errorf("zstd:5: got %q, want compress=zstd:5", got)
+	}
+}
+
+// El setter debe rechazar algoritmos fuera de la whitelist ANTES de tocar
+// nada (antes aceptaba cualquier string y lo persistía).
+func TestSetPoolCompression_RejectsInvalidAlgorithm(t *testing.T) {
+	service, _, cleanup := setupTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	tx, _ := service.db.BeginTx(ctx, nil)
+	service.repo.CreatePool(ctx, tx, &Pool{
+		ID: "p1", Name: "data", BtrfsUUID: "u1",
+		Profile: ProfileSingle, MountPoint: "/m",
+	})
+	service.repo.SetPoolCapabilities(ctx, tx, "p1", []string{"compression"})
+	tx.Commit()
+
+	if _, err := service.SetPoolCompression(ctx, "p1", "zstd,exec=/bin/sh"); err == nil {
+		t.Fatal("algoritmo con inyección de opciones aceptado — debe rechazarse")
+	}
+	pool, _ := service.GetPool(ctx, "p1")
+	if pool.Compression != "" && pool.Compression != "none" {
+		t.Errorf("la compresión no debe haber cambiado; got %q", pool.Compression)
 	}
 }

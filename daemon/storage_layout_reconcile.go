@@ -130,15 +130,30 @@ func reconcilePoolProfileWithReality(p *Pool) {
 	}
 
 	// ── SOT-05 · compresión (se evalúa siempre, diverja o no el profile) ──
-	// BTRFS es la autoridad: se puede cambiar por `btrfs property set` por
-	// fuera. Si la realidad difiere de la BD, servimos la real.
+	// La OPCIÓN DE MONTAJE es la autoridad (AUDIT F4: antes se leía
+	// `btrfs property get`, que no ve compress= del mount — un pool montado
+	// con zstd:3 se servía como "none"). Si la realidad difiere de la BD,
+	// servimos la real Y auto-curamos la BD (mismo patrón que SOT-01): así
+	// el fstab, que se deriva de la BD, no revierte la realidad en el
+	// próximo montaje.
 	if real.Compression != "" && real.Compression != p.Compression {
-		logMsg("SOT-05: pool '%s' compression diverge — BD=%s realidad=%s; sirviendo real",
+		logMsg("SOT-05: pool '%s' compression diverge — BD=%s realidad=%s; sirviendo real + self-heal",
 			p.Name, p.Compression, real.Compression)
 		p.Compression = real.Compression
-		// Sin self-heal en BD aquí: el setter legítimo (SetPoolCompression)
-		// valida los valores permitidos. Servir el real evita que la UI
-		// mienta; la BD se alinea en la próxima mutación legítima.
+
+		poolID := p.ID
+		realComp := real.Compression
+		go func() {
+			if storageService == nil {
+				return
+			}
+			err := storageService.runInTx(context.Background(), func(tx *sql.Tx) error {
+				return storageService.repo.SetPoolCompression(context.Background(), tx, poolID, realComp)
+			})
+			if err != nil {
+				logMsg("SOT-05 self-heal falló para pool %s: %v", poolID, err)
+			}
+		}()
 	}
 
 	// ── SOT-02 · drift de composición de devices (solo aviso) ──
@@ -236,20 +251,15 @@ func readRealPoolState(mountPoint string) RealPoolState {
 	}
 	st.OK = true
 
-	// Compresión real (Regla 16 · SOT-05). `btrfs property get <mp> compression`
-	// devuelve p.ej. "compression=zstd:3" o vacío si no hay propiedad fijada.
-	if out, ok := runSafe("btrfs", "property", "get", mountPoint, "compression"); ok {
-		for _, line := range strings.Split(out, "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "compression=") {
-				val := strings.TrimPrefix(line, "compression=")
-				val = strings.TrimSpace(val)
-				if val == "" {
-					val = "none"
-				}
-				st.Compression = val
-				break
-			}
+	// Compresión real (Regla 16 · SOT-05): la OPCIÓN DE MONTAJE, vía findmnt.
+	// AUDIT F4: antes se usaba `btrfs property get`, que solo ve la property
+	// (xattr) y NO la opción compress= del montaje — con el fstab montando
+	// compress=zstd:3 y la property vacía, la compresión real era invisible.
+	// Si findmnt no responde, st.Compression queda "" → se respeta la BD.
+	if out, ok := runSafe("findmnt", "-no", "OPTIONS", mountPoint); ok {
+		opts := strings.TrimSpace(out)
+		if opts != "" {
+			st.Compression = compressionFromMountOpts(opts)
 		}
 	}
 	return st

@@ -235,6 +235,13 @@ func bootStorage() {
 	// así los pools válidos ya están montados y NO se confunden con huérfanos.
 	cleanOrphanPoolDirs()
 
+	// AUDIT F4: sembrar la compresión de la BD desde la realidad (opción de
+	// montaje) ANTES de regenerar fstab. Sin esto, el primer arranque tras
+	// el fix escribiría fstab desde una BD desactualizada ("none" heredado
+	// del hardcode antiguo) y la compresión se apagaría sola al siguiente
+	// reboot. Síncrono a propósito: fstab depende de este valor.
+	seedCompressionFromReality(context.Background())
+
 	// FIX-4: regenerar el bloque [nimos] de /etc/fstab desde la BD. Auto-cura el
 	// drift que dejó a data8 fuera de fstab: cualquier pool en la BD que falte en
 	// fstab se añade aquí, con nofail. Idempotente y no destructivo.
