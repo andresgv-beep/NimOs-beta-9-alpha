@@ -1,26 +1,24 @@
 <script>
   /**
-   * Launcher · Menú de inicio NimOS Beta 8.1 · Estilo W11
-   * ──────────────────────────────────────────────────────
-   * Se abre desde el logo NimOS del taskbar.
+   * Launcher · Launcher a pantalla completa NimOS Beta 9 · estilo Ubuntu 25/26
+   * ──────────────────────────────────────────────────────────────────────────
+   * Se abre desde el logo NimOS del taskbar. Cubre toda la pantalla con el
+   * wallpaper difuminado detrás.
    *
    * Estética:
-   *   - Anclado al taskbar pero separado (bottom: 12px, left: 12px)
-   *   - Esquinas redondeadas 14px (no chaflán, no tan agresivo)
-   *   - Search arriba con prompt `$` verde
-   *   - Apps en grid 6 columnas verticales (icono grande + nombre)
-   *   - Agrupadas inline en secciones: "Sistema NimOS" y "Aplicaciones"
-   *   - Sin sidebar de categorías (ruido visual innecesario)
-   *   - Sin "Recomendado" ni "Anclados" (duplican escritorio y taskbar)
-   *   - Footer con usuario + botón power
+   *   - Overlay full-screen con backdrop-blur (activities-style)
+   *   - Buscador centrado arriba (foco automático, filtra en vivo)
+   *   - Grid ÚNICO plano con TODAS las apps (sistema + docker juntas)
+   *   - Paginación horizontal con puntos (rueda del ratón / clic en punto)
+   *   - Iconos grandes a sangre + nombre debajo, puntito si está abierta
+   *   - Esquina: usuario + botón power · pista de "esc"
    *
-   * Lógica preservada (sin cambios):
+   * Lógica preservada:
    *   - APP_META + listAllApps de $lib/apps.js
    *   - fetch /api/my-apps · permisos de usuario
-   *   - fetch /api/docker/installed-apps · apps Docker
+   *   - fetchLaunchable · apps Docker
    *   - openWindow + windowList de $lib/stores/windows.js
-   *   - Search por nombre/id
-   *   - Keyboard: Esc cierra · Enter abre primera
+   *   - Keyboard: Esc cierra · Enter abre la primera coincidencia
    */
   import { tick } from 'svelte';
   import { APP_META, listAllApps } from '$lib/apps.js';
@@ -34,24 +32,30 @@
   let dockerApps = [];
   let allowedApps = null;
 
-  // ─── Fade de scroll (arriba/abajo) ───
-  // Mostramos un degradado en cada borde solo cuando hay contenido oculto
-  // en esa dirección, para que el corte se lea como "hay más, scrollea"
-  // en vez de parecer recortado por el marco.
-  let scrollEl;
-  let atTop = true;
-  let atBottom = false;
+  // ─── Búsqueda ───
+  let query = '';
+  let searchEl;
 
-  function updateScrollFades() {
-    if (!scrollEl) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollEl;
-    atTop = scrollTop <= 1;
-    atBottom = scrollTop + clientHeight >= scrollHeight - 1;
-  }
+  // ─── Paginación ───
+  let page = 0;
+  // Tamaño de la ventana → columnas/filas adaptativas
+  let winW = 1280;
+  let winH = 800;
+  // Celda ≈ 96px ancho, 128px alto (icono + nombre + gap)
+  $: cols = Math.max(4, Math.min(9, Math.floor((winW * 0.82) / 112)));
+  $: rows = Math.max(2, Math.min(6, Math.floor((winH - 300) / 128)));
+  $: pageSize = cols * rows;
 
   $: if (visible) {
     loadDockerApps();
     loadMyApps();
+  }
+
+  // Al abrir: reset de estado + foco en el buscador
+  $: if (visible) {
+    query = '';
+    page = 0;
+    tick().then(() => searchEl && searchEl.focus());
   }
 
   async function loadMyApps() {
@@ -90,48 +94,51 @@
     return true;
   }
 
+  // Grid ÚNICO plano: apps de sistema + usuario + docker, todas juntas.
   $: systemApps = listAllApps()
     .map(a => ({ ...a, isSystem: true }))
     .filter(a => !a.hidden && canAccess(a.id));
 
-  // Apps NimOS de usuario (Notes, NimTorrent…) → van a "Aplicaciones"
-  $: nimUserApps = systemApps.filter(a => a.category === 'app');
+  $: allApps = [...systemApps, ...dockerApps.filter(a => canAccess(a.id))];
 
-  // Sección "Sistema NimOS": solo piezas del sistema y utilidades core
-  $: sysApps = systemApps.filter(a =>
-    a.category === 'system' || a.category === 'utilities'
-  );
+  // Filtro de búsqueda (nombre o id, sin acentos/caso)
+  function norm(s) {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  $: q = norm(query.trim());
+  $: filtered = q
+    ? allApps.filter(a => norm(a.name).includes(q) || norm(a.id).includes(q))
+    : allApps;
 
-  // Sección "Aplicaciones": apps NimOS de usuario + apps Docker
-  $: dkApps = [...nimUserApps, ...dockerApps.filter(a => canAccess(a.id))];
+  // Páginas
+  $: pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  $: safePage = Math.min(page, pageCount - 1);
+  $: pageApps = filtered.slice(safePage * pageSize, safePage * pageSize + pageSize);
 
-  // Sin buscador: se muestran todas directamente
-  $: filteredSys = sysApps;
-  $: filteredDk  = dkApps;
+  // Al cambiar la búsqueda, volver a la primera página
+  $: if (q !== undefined) page = 0;
 
   $: openAppIds = new Set($windowList.map(w => w.appId));
 
-  // Recalcular los fades cuando el menú se abre o cambia el contenido
-  // (al cargar dockerApps cambia la altura → puede aparecer/quitarse scroll).
-  $: if (visible && (filteredSys || filteredDk)) {
-    tick().then(updateScrollFades);
+  function goPage(i) {
+    page = Math.max(0, Math.min(pageCount - 1, i));
+  }
+
+  function onWheel(e) {
+    if (pageCount <= 1) return;
+    if (e.deltaY > 0 || e.deltaX > 0) goPage(safePage + 1);
+    else if (e.deltaY < 0 || e.deltaX < 0) goPage(safePage - 1);
   }
 
   function launch(app) {
     visible = false;
     if (app.openMode === 'game') {
-      // Servidor de juego · abre una VENTANA de NimOS (movible, con barra de
-      // título y cerrar) con el Panel de Juego dentro. No es webapp, no abre
-      // navegador. WindowFrame renderiza GamePanel cuando hay gameData.
       openWindow(app.id, { width: 600, height: 540 }, {
         gameData: { appId: app.id, appName: app.name, appIcon: app.icon },
       });
       return;
     }
     if (app.isWebApp) {
-      // openApp decide local vs dominio (módulo compartido launchApp.js · la
-      // misma lógica que usa AppStoreDetail). El backend ya compuso
-      // open_url_external; aquí solo se elige según cómo entró el usuario.
       openApp(app);
       return;
     } else {
@@ -145,8 +152,12 @@
     if (e.key === 'Escape') {
       visible = false;
     } else if (e.key === 'Enter') {
-      const first = filteredSys[0] || filteredDk[0];
+      const first = filtered[0];
       if (first) launch(first);
+    } else if (e.key === 'ArrowRight' && !query) {
+      goPage(safePage + 1);
+    } else if (e.key === 'ArrowLeft' && !query) {
+      goPage(safePage - 1);
     }
   }
 
@@ -159,59 +170,36 @@
   $: userInitial = userName.charAt(0).toUpperCase();
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window on:keydown={handleKeydown} bind:innerWidth={winW} bind:innerHeight={winH} />
 
 {#if visible}
-  <div class="overlay" on:click={() => visible = false} role="presentation"></div>
+  <div class="launcher" on:click={() => (visible = false)} on:wheel={onWheel} role="presentation">
 
-  <div class="start-menu" on:click|stopPropagation role="presentation" class:fade-top={!atTop} class:fade-bottom={!atBottom}>
+    <!-- ─── Buscador ─── -->
+    <div class="lx-search-wrap" on:click|stopPropagation role="presentation">
+      <div class="lx-search">
+        <svg class="lx-search-ic" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          class="lx-search-input"
+          bind:this={searchEl}
+          bind:value={query}
+          type="text"
+          placeholder="Buscar aplicaciones…"
+          spellcheck="false"
+          autocomplete="off"
+        />
+      </div>
+    </div>
 
-    <!-- ─── Scrollable content ─── -->
-    <div class="sm-content" bind:this={scrollEl} on:scroll={updateScrollFades}>
-
-      {#if filteredSys.length > 0}
-        <div class="sm-section-head">
-          <span>Sistema NimOS</span>
-          <span class="count">{filteredSys.length}</span>
-        </div>
-
-        <div class="sm-grid">
-          {#each filteredSys as app}
-            <button
-              class="app-tile"
-              on:click={() => launch(app)}
-              title={app.name}
-            >
-              <div class="app-tile-ico sys">
-                <AppIcon src={app.icon} alt={app.name} fallback={app.fallback || '📦'} size="md" />
-              </div>
-              <span class="app-tile-name">{app.name}</span>
-              {#if openAppIds.has(app.id)}
-                <span class="app-tile-running"></span>
-              {/if}
-            </button>
-          {/each}
-        </div>
-      {/if}
-
-      {#if filteredSys.length > 0 && filteredDk.length > 0}
-        <div class="sm-divider"></div>
-      {/if}
-
-      {#if filteredDk.length > 0}
-        <div class="sm-section-head">
-          <span>Aplicaciones</span>
-          <span class="count">{filteredDk.length}</span>
-        </div>
-
-        <div class="sm-grid">
-          {#each filteredDk as app}
-            <button
-              class="app-tile"
-              on:click={() => launch(app)}
-              title={app.name}
-            >
-              <div class="app-tile-ico dk">
+    <!-- ─── Grid de apps · clic en vacío cierra (los tiles paran con su launch) ─── -->
+    <div class="lx-stage" role="presentation">
+      {#if pageApps.length > 0}
+        <div class="lx-grid" style="grid-template-columns: repeat({cols}, 96px);">
+          {#each pageApps as app (app.id)}
+            <button class="app-tile" on:click={() => launch(app)} title={app.name}>
+              <div class="app-tile-ico">
                 <AppIcon src={app.icon} alt={app.name} fallback={app.fallback || '📦'} size="md" />
               </div>
               <span class="app-tile-name">{app.name}</span>
@@ -221,146 +209,120 @@
             </button>
           {/each}
         </div>
-      {/if}
-
-      {#if filteredSys.length === 0 && filteredDk.length === 0}
+      {:else}
         <div class="empty">
           <div class="empty-ic">◌</div>
-          <div class="empty-msg">Sin apps disponibles</div>
+          <div class="empty-msg">
+            {q ? `Sin resultados para “${query.trim()}”` : 'Sin apps disponibles'}
+          </div>
         </div>
       {/if}
-
     </div>
 
-    <!-- ─── Bottom · User + Power ─── -->
-    <div class="sm-footer">
-      <div class="sm-user" role="button" tabindex="0">
-        <div class="sm-user-avatar">{userInitial}</div>
-        <div class="sm-user-info">
-          <span class="sm-user-name">{userName}</span>
-          <span class="sm-user-status">online</span>
-        </div>
+    <!-- ─── Puntos de paginación ─── -->
+    {#if pageCount > 1}
+      <div class="lx-dots" on:click|stopPropagation role="presentation">
+        {#each Array(pageCount) as _, i}
+          <button
+            class="lx-dot"
+            class:active={i === safePage}
+            on:click={() => goPage(i)}
+            aria-label={`Página ${i + 1}`}
+          ></button>
+        {/each}
       </div>
-      <button
-        class="sm-power"
-        on:click={handlePower}
-        title="Cerrar sesión"
-      >⏻</button>
+    {/if}
+
+    <!-- ─── Esquina inferior · usuario + power ─── -->
+    <div class="lx-user" on:click|stopPropagation role="presentation">
+      <div class="lx-user-avatar">{userInitial}</div>
+      <div class="lx-user-info">
+        <span class="lx-user-name">{userName}</span>
+        <span class="lx-user-status">online</span>
+      </div>
+      <button class="lx-power" on:click={handlePower} title="Cerrar sesión">⏻</button>
     </div>
+
+    <div class="lx-hint"><span class="k">esc</span> cerrar</div>
 
   </div>
 {/if}
 
 <style>
   /* ═══════════════════════════════════════════════════════════
-     OVERLAY · captura click para cerrar
+     LAUNCHER · overlay a pantalla completa (activities-style)
      ═══════════════════════════════════════════════════════════ */
-  .overlay {
+  .launcher {
     position: fixed;
     inset: 0;
-    background: transparent;
-    z-index: 9100;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     START MENU · estilo W11, anclado al taskbar con separación
-     ═══════════════════════════════════════════════════════════ */
-  .start-menu {
-    position: fixed;
-    bottom: calc(var(--taskbar-height, 44px) + 12px);
-    left: 12px;
-    width: 640px;
-    height: 600px;
-    max-height: calc(100vh - var(--taskbar-height, 44px) - 24px);
-    background: rgba(20, 20, 26, 0.72);
-    backdrop-filter: blur(22px) saturate(1.3);
-    -webkit-backdrop-filter: blur(22px) saturate(1.3);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 14px;
     z-index: 9200;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    align-items: center;
+    padding: 7vh 4vw 4vh;
+    background: rgba(12, 12, 16, 0.55);
+    backdrop-filter: blur(30px) saturate(1.25);
+    -webkit-backdrop-filter: blur(30px) saturate(1.25);
     font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
-    box-shadow:
-      0 12px 40px rgba(0, 0, 0, 0.5),
-      0 0 0 1px rgba(0, 255, 159, 0.04);
-    animation: menu-in 0.2s cubic-bezier(0.2, 0, 0, 1.1);
+    animation: lx-in 0.22s cubic-bezier(0.2, 0, 0, 1.1);
   }
 
-  @keyframes menu-in {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
+  @keyframes lx-in {
+    from { opacity: 0; transform: scale(1.03); }
+    to   { opacity: 1; transform: scale(1); }
   }
 
-  /* ─── Scrollable content ─── */
-  .sm-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 18px 22px 18px;
+  /* ─── Buscador ─── */
+  .lx-search-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 5vh;
+    flex-shrink: 0;
   }
-
-  /* Fades de scroll · pistas visuales de contenido oculto.
-     Se anclan a la ventana y se activan con .fade-top / .fade-bottom.
-     pointer-events:none para no bloquear clicks sobre los iconos. */
-  .start-menu::before,
-  .start-menu::after {
-    content: '';
-    position: absolute;
-    left: 1px;
-    right: 6px; /* deja ver la scrollbar */
-    height: 38px;
-    pointer-events: none;
-    z-index: 5;
-    opacity: 0;
-    transition: opacity 0.18s ease;
-  }
-  .start-menu::before {
-    top: 1px;
-    border-radius: 14px 14px 0 0;
-    background: linear-gradient(to bottom, rgba(20, 20, 26, 0.95), transparent);
-  }
-  .start-menu::after {
-    /* justo encima del footer (altura aprox. del sm-footer) */
-    bottom: 57px;
-    background: linear-gradient(to top, rgba(20, 20, 26, 0.95), transparent);
-  }
-  .start-menu.fade-top::before { opacity: 1; }
-  .start-menu.fade-bottom::after { opacity: 1; }
-
-  .sm-content::-webkit-scrollbar { width: 5px; }
-  .sm-content::-webkit-scrollbar-track { background: transparent; }
-  .sm-content::-webkit-scrollbar-thumb {
-    background: var(--line);
-    border-radius: 3px;
-  }
-
-  .sm-section-head {
-    font-size: 10px;
-    color: var(--ink-faint);
-    letter-spacing: 1.5px;
-    font-weight: 600;
-    text-transform: uppercase;
-    padding: 10px 4px 12px;
+  .lx-search {
+    width: min(460px, 82vw);
+    height: 46px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 10px;
+    padding: 0 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    transition: border-color 0.15s, background 0.15s;
   }
-  .sm-section-head .count {
-    font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 10px;
-    color: var(--ink-trace);
-    font-weight: 500;
-    letter-spacing: 0.3px;
-    text-transform: none;
+  .lx-search:focus-within {
+    border-color: rgba(0, 255, 159, 0.35);
+    background: rgba(255, 255, 255, 0.08);
   }
+  .lx-search-ic { color: var(--ink-faint, #7a7a82); flex-shrink: 0; }
+  .lx-search:focus-within .lx-search-ic { color: var(--signal, #00ff9f); }
+  .lx-search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--ink, #e8e8ea);
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 0.2px;
+  }
+  .lx-search-input::placeholder { color: var(--ink-faint, #6a6a72); }
 
-  /* App grid · 6 columns */
-  .sm-grid {
+  /* ─── Grid ─── */
+  .lx-stage {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+  .lx-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: 26px 16px;
+    justify-content: center;
   }
 
   .app-tile {
@@ -368,31 +330,27 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    padding: 18px 6px 14px;
-    border-radius: 10px;
+    width: 96px;
+    padding: 12px 6px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.12s;
     position: relative;
     background: transparent;
     border: none;
     color: inherit;
     font-family: inherit;
+    transition: background 0.12s;
   }
-  .app-tile:hover {
-    background: rgba(255, 255, 255, 0.04);
-  }
-  .app-tile:hover .app-tile-ico {
-    transform: scale(1.05);
-  }
+  .app-tile:hover { background: rgba(255, 255, 255, 0.06); }
+  .app-tile:hover .app-tile-ico { transform: scale(1.06); }
   .app-tile:focus-visible {
     outline: none;
-    background: var(--ui-select-bg, rgba(122, 158, 177, 0.12));
+    background: rgba(0, 255, 159, 0.1);
   }
 
   .app-tile-ico {
-    width: 60px;
-    height: 60px;
-    border-radius: 13px;
+    width: 64px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -401,23 +359,14 @@
     flex-shrink: 0;
     overflow: hidden;
   }
-  /* Sin recuadro: el icono respira a sangre, como en móvil/macOS */
-
-  /* El AppIcon usa size="md" (48px) por defecto; dentro del tile lo dejamos
-     crecer a toda la celda (60px) sin alterar size-md en el resto de la app. */
   .app-tile-ico :global(.app-icon-frame) {
     width: 100%;
     height: 100%;
   }
-  .app-tile-ico.sys,
-  .app-tile-ico.dk {
-    background: transparent;
-    border: none;
-  }
 
   .app-tile-name {
-    font-size: 10.5px;
-    color: var(--ink-dim);
+    font-size: 11.5px;
+    color: var(--ink-dim, #c4c4cc);
     text-align: center;
     font-weight: 400;
     line-height: 1.2;
@@ -429,72 +378,71 @@
     width: 100%;
   }
 
-  /* Running indicator dot */
   .app-tile-running {
     position: absolute;
-    top: 8px;
-    right: 14px;
+    top: 6px;
+    right: 18px;
     width: 6px;
     height: 6px;
-    background: var(--signal);
+    background: var(--signal, #00ff9f);
     border-radius: 50%;
-    box-shadow: 0 0 4px var(--signal);
+    box-shadow: 0 0 5px var(--signal, #00ff9f);
   }
 
-  /* Divider between sections */
-  .sm-divider {
-    height: 1px;
-    background: var(--line));
-    margin: 8px 4px;
+  /* ─── Puntos de paginación ─── */
+  .lx-dots {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 3vh;
+    flex-shrink: 0;
+  }
+  .lx-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.22);
+    transition: background 0.15s, width 0.2s;
+  }
+  .lx-dot:hover { background: rgba(255, 255, 255, 0.4); }
+  .lx-dot.active {
+    width: 22px;
+    border-radius: 4px;
+    background: var(--signal, #00ff9f);
   }
 
-  /* Empty state */
+  /* ─── Empty ─── */
   .empty {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
-    gap: 12px;
-    color: var(--ink-faint);
+    gap: 14px;
+    color: var(--ink-faint, #6a6a72);
   }
-  .empty-ic {
-    font-size: 32px;
-    opacity: 0.5;
-  }
-  .empty-msg {
-    font-size: 12px;
-    text-align: center;
-  }
+  .empty-ic { font-size: 40px; opacity: 0.5; }
+  .empty-msg { font-size: 13px; text-align: center; }
 
-  /* ─── Bottom · User + Power ─── */
-  .sm-footer {
-    border-top: 1px solid var(--line));
-    padding: 10px 14px;
+  /* ─── Esquina · usuario + power ─── */
+  .lx-user {
+    position: absolute;
+    left: 24px;
+    bottom: 22px;
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(0, 0, 0, 0.2);
-  }
-  .sm-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
     padding: 6px 8px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.1s;
+    border-radius: 6px;
   }
-  .sm-user:hover {
-    background: rgba(255, 255, 255, 0.03);
-  }
-  .sm-user-avatar {
-    width: 28px;
-    height: 28px;
+  .lx-user-avatar {
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    background: var(--signal);
-    color: var(--panel);
+    background: var(--signal, #00ff9f);
+    color: #0d0d11;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -502,51 +450,44 @@
     font-size: 12px;
     flex-shrink: 0;
   }
-  .sm-user-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-  .sm-user-name {
-    font-size: 12.5px;
-    color: var(--ink);
-    font-weight: 500;
-  }
-  .sm-user-status {
+  .lx-user-info { display: flex; flex-direction: column; gap: 1px; }
+  .lx-user-name { font-size: 13px; color: var(--ink, #e8e8ea); font-weight: 500; }
+  .lx-user-status {
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 9px;
-    color: var(--signal);
+    color: var(--signal, #00ff9f);
     letter-spacing: 0.3px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
   }
-  .sm-user-status::before {
-    content: '';
-    width: 4px;
-    height: 4px;
-    background: var(--signal);
-    border-radius: 50%;
-    box-shadow: 0 0 3px var(--signal);
-  }
-
-  .sm-power {
+  .lx-power {
     width: 32px;
     height: 32px;
+    margin-left: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
-    color: var(--ink-mute);
+    color: var(--ink-mute, #9a9aa3);
     font-size: 14px;
-    transition: all 0.12s;
     border: 1px solid transparent;
     background: transparent;
+    transition: all 0.12s;
   }
-  .sm-power:hover {
-    color: var(--crit);
-    background: rgba(255, 90, 90, 0.06);
-    border-color: rgba(255, 90, 90, 0.2);
+  .lx-power:hover {
+    color: var(--crit, #ff5a5a);
+    background: rgba(255, 90, 90, 0.08);
+    border-color: rgba(255, 90, 90, 0.25);
   }
+
+  /* ─── Pista esc ─── */
+  .lx-hint {
+    position: absolute;
+    right: 24px;
+    bottom: 26px;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 11px;
+    color: var(--ink-faint, #6a6a72);
+    letter-spacing: 0.3px;
+  }
+  .lx-hint .k { color: var(--signal, #00ff9f); }
 </style>
