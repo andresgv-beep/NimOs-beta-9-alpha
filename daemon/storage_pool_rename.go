@@ -98,8 +98,8 @@ func (s *StorageService) applyPoolRenamePhysical(ctx context.Context, pool *Pool
 
 // rewriteFstabMountPoint reemplaza el mount point (campo 2) de la entrada de
 // fstab que apunta a oldMountPoint, dejándolo en newMountPoint. Conserva el
-// resto de campos (device/UUID, fstype, opciones). Mismo patrón de escritura
-// que removeFstabEntry (truncate-write con .bak, por ProtectSystem=strict).
+// resto de campos (device/UUID, fstype, opciones). Escritura atómica
+// (writeFstabAtomic, AUDIT F11/M5) con .bak recuperable.
 func rewriteFstabMountPoint(oldMountPoint, newMountPoint string) error {
 	data, err := os.ReadFile("/etc/fstab")
 	if err != nil {
@@ -109,9 +109,9 @@ func rewriteFstabMountPoint(oldMountPoint, newMountPoint string) error {
 	if replaced == 0 {
 		return fmt.Errorf("no se encontró entrada de fstab para %s", oldMountPoint)
 	}
-	// Backup recuperable antes de truncar (mismo motivo que removeFstabEntry).
+	// Backup recuperable antes de reemplazar (mismo patrón que removeFstabEntry).
 	_ = os.WriteFile(filepath.Join("/var/lib/nimos", "fstab.bak"), data, 0644)
-	return os.WriteFile("/etc/fstab", []byte(newContent), 0644)
+	return writeFstabAtomic([]byte(newContent))
 }
 
 // transformFstabMountPoint es la lógica PURA del rewrite (string→string),

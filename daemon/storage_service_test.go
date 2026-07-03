@@ -59,15 +59,15 @@ func setupTestService(t *testing.T) (*StorageService, *MockBtrfsExecutor, func()
 	// de los dos es ejecutable en tests.
 	origRemountComp := remountPoolCompressionFn
 	remountPoolCompressionFn = func(string, string) error { return nil }
-	origSyncFstab := syncFstabAfterCompressionFn
-	syncFstabAfterCompressionFn = func(context.Context) error { return nil }
+	origSyncFstab := syncFstabFromDBFn
+	syncFstabFromDBFn = func(context.Context) error { return nil }
 	wrappedCleanup := func() {
 		devicePathExists = origPathExists
 		applyPoolRenamePhysicalFn = origRename
 		verifyPoolMountedFn = origVerifyMount
 		defaultPoolWritableChecks = origWritableChecks
 		remountPoolCompressionFn = origRemountComp
-		syncFstabAfterCompressionFn = origSyncFstab
+		syncFstabFromDBFn = origSyncFstab
 		cleanupDB()
 	}
 

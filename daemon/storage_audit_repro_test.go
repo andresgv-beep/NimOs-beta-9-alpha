@@ -467,3 +467,39 @@ func TestReplaceDevice_PreflightBlocksNewDiskWithFilesystem(t *testing.T) {
 		t.Errorf("op.Status: got %q", final.Status)
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// AUDIT F11 · fstab derivado de la BD en create y destroy
+//
+// Antes: CreatePool usaba appendFstab (skip silencioso si el mountpoint ya
+// figuraba — heredando el UUID de un pool destruido homónimo — y con
+// compress=zstd hardcodeado) y DestroyPool NO tocaba fstab (entrada
+// huérfana hasta el siguiente boot).
+// ─────────────────────────────────────────────────────────────────────────
+
+func TestCreateAndDestroyPool_RegenerateFstabFromDB(t *testing.T) {
+	service, _, cleanup := setupTestService(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	syncCalls := 0
+	orig := syncFstabFromDBFn
+	syncFstabFromDBFn = func(context.Context) error { syncCalls++; return nil }
+	defer func() { syncFstabFromDBFn = orig }()
+
+	poolID, _ := createTestPool(t, service, ctx, "data", ProfileRaid1, 2)
+	if syncCalls != 1 {
+		t.Errorf("CreatePool debe regenerar fstab desde la BD: got %d syncs, want 1", syncCalls)
+	}
+
+	op, err := service.DestroyPool(ctx, poolID)
+	if err != nil {
+		t.Fatalf("DestroyPool: %v", err)
+	}
+	if op.Status != OpStatusCompleted {
+		t.Fatalf("destroy op: %q", op.Status)
+	}
+	if syncCalls != 2 {
+		t.Errorf("DestroyPool debe limpiar su entrada de fstab: got %d syncs, want 2", syncCalls)
+	}
+}

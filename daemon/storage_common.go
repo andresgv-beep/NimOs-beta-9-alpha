@@ -67,22 +67,49 @@ func removeFstabEntry(mountPoint string) {
 		// and possible permission issues).
 		return
 	}
-	// In-place write with a backup copy. We deliberately avoid the tmp+rename
-	// pattern here: rename into /etc would require /etc itself to be writable
-	// under systemd ProtectSystem=strict, which we don't grant (only the
-	// /etc/fstab file is in ReadWritePaths). Instead we keep a .bak alongside so
-	// a mid-write crash is recoverable, then truncate-write /etc/fstab directly.
+	// AUDIT F11 (M5): escritura ATÓMICA (tmp+fsync+rename). La razón
+	// documentada para el truncate-write ("ProtectSystem=strict no permite
+	// rename en /etc") está obsoleta: el unit real usa ProtectSystem=no y
+	// writeManagedFstab ya renombraba en /etc sin problema. Un crash a media
+	// escritura ya no puede dejar un fstab truncado.
 	newContent := []byte(strings.Join(kept, "\n") + "\n")
 	if orig, rerr := os.ReadFile("/etc/fstab"); rerr == nil {
-		// Best-effort backup; the backup path is the fstab file's own sibling
-		// name, also covered by being the same file target is not — so we write
-		// the backup into a path we ARE allowed to write: /var/lib/nimos.
 		_ = os.WriteFile("/var/lib/nimos/fstab.bak", orig, 0644)
 	}
-	if err := os.WriteFile("/etc/fstab", newContent, 0644); err != nil {
-		logMsg("removeFstabEntry: in-place write failed: %v", err)
+	if err := writeFstabAtomic(newContent); err != nil {
+		logMsg("removeFstabEntry: escritura atómica falló: %v", err)
 		return
 	}
+}
+
+// writeFstabAtomic escribe /etc/fstab de forma atómica y durable:
+// tmp en el mismo filesystem + fsync + rename. O el fstab viejo o el nuevo —
+// nunca uno a medias (AUDIT F11/M5; mismo patrón que journalSave).
+func writeFstabAtomic(content []byte) error {
+	const tmp = "/etc/fstab.nimos.tmp"
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(content); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return err
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, "/etc/fstab"); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 // ─── P5 · Auto-restore de /etc/fstab corrupto al boot ────────────────────────

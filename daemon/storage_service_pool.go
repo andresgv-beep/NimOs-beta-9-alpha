@@ -150,16 +150,17 @@ func (s *StorageService) SetPoolCompression(ctx context.Context, id, algorithm s
 
 	// fstab se deriva de la BD, así que va DESPUÉS del commit. Best-effort:
 	// si falla, el sync del arranque lo auto-cura (FIX-4).
-	if err := syncFstabAfterCompressionFn(ctx); err != nil {
+	if err := syncFstabFromDBFn(ctx); err != nil {
 		logMsg("SetPoolCompression: sync fstab falló (se auto-cura al arranque): %v", err)
 	}
 
 	return s.repo.GetOperation(ctx, op.ID)
 }
 
-// syncFstabAfterCompressionFn permite stubear la escritura real de fstab en
-// tests (patrón applyPoolRenamePhysicalFn).
-var syncFstabAfterCompressionFn = syncFstabFromDB
+// syncFstabFromDBFn permite stubear la escritura real de fstab en tests
+// (patrón applyPoolRenamePhysicalFn). Lo usan todas las mutaciones que
+// regeneran el bloque [nimos]: compresión, create, destroy, import.
+var syncFstabFromDBFn = syncFstabFromDB
 
 // CreatePool crea un nuevo pool BTRFS con los devices indicados.
 // Asíncrona conceptualmente (genera Operation) pero ejecuta inline en
@@ -315,20 +316,6 @@ func (s *StorageService) CreatePool(ctx context.Context, req CreatePoolRequest) 
 	}
 	logMsg("CreatePool: %s montado y verificado sobre %s", mountPoint, mountDevice)
 
-	// ─── Persistir en /etc/fstab para que sobreviva al reinicio ──────────
-	// Simétrico con importPoolBtrfs (storage_btrfs_import.go), que ya lo hace.
-	// SIN esto el pool no se remonta al arrancar y udisks2 (auto-mount del
-	// escritorio) lo monta en /media/<user>/, dejándolo fuera de /nimos/pools/
-	// → NimOS no lo encuentra y los servicios dependientes entran en error.
-	// appendFstab ya incluye `nofail` (no rompe el boot si falta el disco).
-	appendFstab(fsInfo.BtrfsUUID, mountPoint, "btrfs")
-
-	// Validar que la entrada no rompió fstab (un fstab malformado puede
-	// impedir el siguiente arranque). Si falla, lo dejamos registrado.
-	if vr, verr := runCmd("findmnt", []string{"--verify"}, CmdOptions{Timeout: 10 * time.Second}); verr != nil || strings.TrimSpace(vr.Stderr) != "" {
-		logMsg("CreatePool: WARNING findmnt --verify tras appendFstab: err=%v stderr=%s", verr, strings.TrimSpace(vr.Stderr))
-	}
-
 	// ─── Persistir en DB (pool + devices + capabilities) ───────────────
 	poolID := newUUID()
 	pool := &Pool{
@@ -367,6 +354,22 @@ func (s *StorageService) CreatePool(ctx context.Context, req CreatePoolRequest) 
 	if err != nil {
 		s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeInternal)
 		return s.repo.GetOperation(ctx, op.ID)
+	}
+
+	// ─── Persistir en /etc/fstab para que sobreviva al reinicio ──────────
+	// AUDIT F11 (M4): antes se usaba appendFstab ANTES del commit en BD, que
+	// (a) hacía skip si el mountpoint ya estaba en fstab — heredando el UUID
+	// de un pool destruido con el mismo nombre — y (b) hardcodeaba
+	// compress=zstd. syncFstabFromDB regenera el bloque [nimos] desde la BD:
+	// UUID correcto siempre y compresión la del pool. Va tras el commit
+	// porque el bloque se deriva de la BD. Best-effort: el sync del arranque
+	// (FIX-4) auto-cura si esto falla.
+	if err := syncFstabFromDBFn(ctx); err != nil {
+		logMsg("CreatePool: sync fstab falló (se auto-cura al arranque): %v", err)
+	}
+	// Validar que el fstab regenerado no rompe el siguiente arranque.
+	if vr, verr := runCmd("findmnt", []string{"--verify"}, CmdOptions{Timeout: 10 * time.Second}); verr != nil || strings.TrimSpace(vr.Stderr) != "" {
+		logMsg("CreatePool: WARNING findmnt --verify tras sync fstab: err=%v stderr=%s", verr, strings.TrimSpace(vr.Stderr))
 	}
 
 	return s.repo.GetOperation(ctx, op.ID)
@@ -436,6 +439,14 @@ func (s *StorageService) DestroyPool(ctx context.Context, poolID string) (*Opera
 	if err != nil {
 		s.markOperationFailed(ctx, op.ID, err.Error(), ErrCodeInternal)
 		return s.repo.GetOperation(ctx, op.ID)
+	}
+
+	// AUDIT F11 (M4): regenerar fstab tras borrar el pool de la BD. Antes la
+	// entrada UUID huérfana quedaba hasta el próximo boot y, combinada con el
+	// skip de appendFstab, hacía que un create con el mismo nombre heredara
+	// el UUID del pool destruido (el pool nuevo no montaba al arrancar).
+	if err := syncFstabFromDBFn(ctx); err != nil {
+		logMsg("DestroyPool: sync fstab falló (se auto-cura al arranque): %v", err)
 	}
 
 	return s.repo.GetOperation(ctx, op.ID)

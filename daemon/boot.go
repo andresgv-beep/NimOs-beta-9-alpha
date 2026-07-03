@@ -217,6 +217,16 @@ func bootStorage() {
 		logMsg("Storage observer disabled by NIMOS_NO_STORAGE_OBSERVER=1")
 	}
 
+	// AUDIT F11 (M3): curar /etc/fstab desde la BD ANTES de montar. El
+	// remontaje del caso a) de reconcileMountState hace `mount <mp>`, que
+	// resuelve DESDE fstab: con una entrada ausente/stale el mount fallaba
+	// en este boot, el fstab se curaba después… y el pool quedaba caído
+	// hasta el SIGUIENTE reinicio (dos boots para converger). Curar primero
+	// → converge en un solo boot.
+	if err := syncFstabFromDB(context.Background()); err != nil {
+		logMsg("startup: syncFstabFromDB (pre-mount) error: %v", err)
+	}
+
 	// FIRST: Reconciliar estado de montaje antes de que nada toque storage.
 	// Fase R1: monta pools no montados, desapila capas, reubica pools en
 	// sitio equivocado (/media/ por udisks2), detecta read-only.
@@ -236,15 +246,13 @@ func bootStorage() {
 	cleanOrphanPoolDirs()
 
 	// AUDIT F4: sembrar la compresión de la BD desde la realidad (opción de
-	// montaje) ANTES de regenerar fstab. Sin esto, el primer arranque tras
-	// el fix escribiría fstab desde una BD desactualizada ("none" heredado
-	// del hardcode antiguo) y la compresión se apagaría sola al siguiente
-	// reboot. Síncrono a propósito: fstab depende de este valor.
+	// montaje). Va DESPUÉS de reconcileMountState (necesita los pools
+	// montados para leer findmnt) y ANTES del re-sync de abajo.
 	seedCompressionFromReality(context.Background())
 
-	// FIX-4: regenerar el bloque [nimos] de /etc/fstab desde la BD. Auto-cura el
-	// drift que dejó a data8 fuera de fstab: cualquier pool en la BD que falte en
-	// fstab se añade aquí, con nofail. Idempotente y no destructivo.
+	// FIX-4: re-sync del bloque [nimos]. El sync pre-mount de arriba ya curó
+	// el fstab; este segundo pase solo escribe si la siembra de compresión
+	// cambió la BD (syncFstabFromDB es no-op sin cambios). Idempotente.
 	if err := syncFstabFromDB(context.Background()); err != nil {
 		logMsg("startup: syncFstabFromDB error: %v", err)
 	}

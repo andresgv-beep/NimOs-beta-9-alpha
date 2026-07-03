@@ -309,8 +309,13 @@ func importPoolBtrfs(body map[string]interface{}) map[string]interface{} {
 		return map[string]interface{}{"error": fmt.Sprintf("DB write failed: %s", err)}
 	}
 
-	// ── Añadir entrada de fstab para persistencia ──
-	appendFstab(uuid, mountPoint, "btrfs")
+	// ── Regenerar fstab para persistencia ──
+	// AUDIT F11: syncFstabFromDB en vez de appendFstab (que hacía skip con
+	// entradas stale del mismo mountpoint y hardcodeaba compress=zstd).
+	// La BD ya tiene el pool: el bloque [nimos] sale correcto.
+	if err := syncFstabFromDBFn(context.Background()); err != nil {
+		logMsg("importPoolBtrfs: sync fstab falló (se auto-cura al arranque): %v", err)
+	}
 
 	logMsg("importPoolBtrfs: imported UUID=%s as %q (mount=%s, primary=%v)",
 		uuid, name, mountPoint, isFirst)

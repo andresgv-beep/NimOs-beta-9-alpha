@@ -134,15 +134,11 @@ func writeManagedFstab(pools []*Pool) error {
 		return nil // sin cambios → no tocar nada
 	}
 
-	// Backup del fstab previo (por si acaso) + escritura atómica.
+	// Backup del fstab previo (por si acaso) + escritura atómica con fsync
+	// (AUDIT F11/M5: el tmp+rename anterior no sincronizaba a disco).
 	_ = os.WriteFile("/etc/fstab.nimos.bak", current, 0644)
-	tmp := "/etc/fstab.nimos.tmp"
-	if err := os.WriteFile(tmp, []byte(next), 0644); err != nil {
-		return fmt.Errorf("escribiendo fstab temporal: %w", err)
-	}
-	if err := os.Rename(tmp, "/etc/fstab"); err != nil {
-		_ = os.Remove(tmp)
-		return fmt.Errorf("renombrando fstab: %w", err)
+	if err := writeFstabAtomic([]byte(next)); err != nil {
+		return fmt.Errorf("escribiendo fstab: %w", err)
 	}
 
 	// systemd cachea fstab: sin daemon-reload, las entradas nuevas se ignoran
