@@ -6,9 +6,9 @@
   import { hdrs } from '$lib/stores/auth.js';
   import { goToSection, openShareInFiles } from '../mobileNav.js';
   import MobileStatCard from '../components/MobileStatCard.svelte';
-  // AUDIT F7: los volúmenes usan SI (base 1000) para mostrar la MISMA cifra
-  // que la app Storage — antes este card decía "3.6 TB" y la app "4.0 TB"
-  // para el mismo pool. El fmtBytes local (base 1024) se mantiene para RAM.
+  // AUDIT F7: los volúmenes usan el formateador COMPARTIDO de storage para
+  // mostrar la misma cifra que la app y el widget (convención binaria
+  // estilo NAS — Synology/Windows). El fmtBytes local queda para RAM/CPU.
   import { fmtBytes as fmtVolBytes } from '$lib/apps/storage/formatters.js';
 
   let sys = null;
@@ -174,8 +174,8 @@
         {#if volumes.length > 0}
           {#each volumes as v}
             <div class="pool-line">
-              <!-- AUDIT F7: unidades SI (fmtVolBytes) para cuadrar con la app
-                   Storage; F5: pool caído visible y marcado, no oculto. -->
+              <!-- AUDIT F7: formateador compartido (fmtVolBytes) para cuadrar
+                   con la app Storage; F5: pool caído visible, no oculto. -->
               <span class="pool-cap" class:down={v.down}>{v.down ? 'SIN MONTAR' : `${fmtVolBytes(v.used)} / ${fmtVolBytes(v.total)}`}</span>
               <span class="pool-prf"><span class="dot" class:down={v.down}></span>{v.name}{#if v.profile} · {v.profile}{/if}</span>
             </div>

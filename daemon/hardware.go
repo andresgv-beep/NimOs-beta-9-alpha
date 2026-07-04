@@ -80,19 +80,20 @@ func formatBytes(bytes int64) string {
 	if bytes == 0 {
 		return "0 B"
 	}
-	// AUDIT (menor): antes dividía por 1024 pero etiquetaba KB/MB/GB/TB —
-	// un disco de 4 TB salía como "3.6 TB". Base SI (1000) para que la
-	// etiqueta sea verdad y coincida con el frontend (formatters.js) y con
-	// cómo venden los discos los fabricantes.
+	// CONVENCIÓN DE PRODUCTO (2026-07-04, a petición del usuario): división
+	// binaria (1024) con etiquetas TB/GB — la convención de facto del
+	// ecosistema NAS (Synology/QNAP/Windows/lsblk): un disco "4 TB" de caja
+	// se muestra "3.6 TB". Lo importante (bug F7) es que backend y TODAS
+	// las superficies del frontend (formatters.js) usen la MISMA base.
 	sizes := []string{"B", "KB", "MB", "GB", "TB"}
-	i := int(math.Floor(math.Log10(math.Abs(float64(bytes))) / 3))
+	i := int(math.Floor(math.Log(math.Abs(float64(bytes))) / math.Log(1024)))
 	if i >= len(sizes) {
 		i = len(sizes) - 1
 	}
 	if i < 0 {
 		i = 0
 	}
-	return fmt.Sprintf("%.1f %s", float64(bytes)/math.Pow(1000, float64(i)), sizes[i])
+	return fmt.Sprintf("%.1f %s", float64(bytes)/math.Pow(1024, float64(i)), sizes[i])
 }
 
 func parseInt64(s string) int64 {

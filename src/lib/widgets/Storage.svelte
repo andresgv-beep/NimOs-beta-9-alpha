@@ -68,8 +68,9 @@
     if (pct >= 80) return 'hot';
     return '';
   }
-  // AUDIT F7: unidades SI compartidas con la app (antes: base 1024
-  // etiquetada TB/GB — "faltaban" 400 GB respecto a la app Storage).
+  // AUDIT F7: formateador COMPARTIDO con la app y el móvil (convención
+  // binaria estilo NAS). Lo que mató el bug es que todas las superficies
+  // usen la MISMA base — antes app y widget diferían en 400 GB.
   const split = splitBytes;
   function fmtBytes(b) {
     const s = split(b);

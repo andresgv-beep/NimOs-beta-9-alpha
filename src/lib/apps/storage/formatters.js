@@ -9,36 +9,39 @@
 
 /**
  * fmtBytes — Formatea bytes a la unidad más legible.
- * Usa SI (1e3) no IEC (1024) para coincidir con la UI de discos.
- * 0 o falsy → '0 B'.
+ *
+ * CONVENCIÓN DE PRODUCTO (decisión 2026-07-04, a petición del usuario):
+ * división BINARIA (1024) con etiquetas TB/GB — la convención de facto del
+ * ecosistema NAS (Synology, QNAP, Windows, lsblk). Un disco de 4 TB de
+ * caja se muestra "3.6 TB", igual que en Synology. Lo INNEGOCIABLE (bug
+ * F7 de la auditoría) es que TODAS las superficies usen la misma base:
+ * app, widget y móvil salen de este helper.
+ *
+ * null/undefined = dato AUSENTE → '—'; 0 real → '0 B'.
  */
+const KIB = 1024, MIB = 1024 ** 2, GIB = 1024 ** 3, TIB = 1024 ** 4;
+
 export function fmtBytes(b) {
-  // AUDIT (menor): null/undefined = dato AUSENTE → '—'; 0 real → '0 B'.
-  // Antes ambos daban '0 B' y el fallback `fmtBytes(x) || '—'` era código
-  // muerto (nunca devuelve falsy).
   if (b == null) return '—';
   if (!b || b === 0) return '0 B';
-  if (b >= 1e12) return (b / 1e12).toFixed(1) + ' TB';
-  if (b >= 1e9)  return (b / 1e9).toFixed(1)  + ' GB';
-  if (b >= 1e6)  return (b / 1e6).toFixed(0)  + ' MB';
-  if (b >= 1e3)  return (b / 1e3).toFixed(0)  + ' KB';
+  if (b >= TIB) return (b / TIB).toFixed(1) + ' TB';
+  if (b >= GIB) return (b / GIB).toFixed(1) + ' GB';
+  if (b >= MIB) return (b / MIB).toFixed(0) + ' MB';
+  if (b >= KIB) return (b / KIB).toFixed(0) + ' KB';
   return b + ' B';
 }
 
 /**
  * splitBytes — Como fmtBytes pero devuelve { n, u } por separado, para
  * UIs que renderizan número y unidad con estilos distintos (widgets).
- *
- * AUDIT F7: el widget de escritorio y el móvil dividían por 1024 pero
- * etiquetaban "GB/TB" — el mismo pool mostraba "4.0 TB" en la app y
- * "3.6 TB" en el widget. TODA la UI usa ahora SI (base 1000) desde aquí.
+ * Misma convención binaria estilo NAS que fmtBytes (ver arriba).
  */
 export function splitBytes(b) {
   if (b == null) return { n: '—', u: '' };
-  if (b >= 1e12) return { n: (b / 1e12).toFixed(1), u: 'TB' };
-  if (b >= 1e9)  return { n: (b / 1e9).toFixed(0),  u: 'GB' };
-  if (b >= 1e6)  return { n: (b / 1e6).toFixed(0),  u: 'MB' };
-  if (b >= 1e3)  return { n: (b / 1e3).toFixed(0),  u: 'KB' };
+  if (b >= TIB) return { n: (b / TIB).toFixed(1), u: 'TB' };
+  if (b >= GIB) return { n: (b / GIB).toFixed(0), u: 'GB' };
+  if (b >= MIB) return { n: (b / MIB).toFixed(0), u: 'MB' };
+  if (b >= KIB) return { n: (b / KIB).toFixed(0), u: 'KB' };
   return { n: String(b), u: 'B' };
 }
 
