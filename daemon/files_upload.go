@@ -4,11 +4,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 )
+
+// nimChunksDir es el almacén temporal de subidas por trozos, en la raíz del
+// share de destino (mismo filesystem que el fichero final → ensamblado barato).
+const nimChunksDir = ".nimchunks"
+
+// cleanupChunkDir borra los trozos de una subida y, si .nimchunks quedó
+// vacío, también el propio directorio — que no se quede una carpeta
+// fantasma en la raíz del share (FIX 2026-07-04: aparecía en Files y por
+// Samba). El Remove del padre es best-effort: falla en silencio si otra
+// subida tiene trozos dentro.
+func cleanupChunkDir(root *os.Root, tmpDirRel string) {
+	_ = removeAllIn(root, tmpDirRel)
+	_ = root.Remove(nimChunksDir)
+}
 
 func handleFileUpload(w http.ResponseWriter, r *http.Request) {
 	session := requireAuth(w, r)
@@ -236,7 +251,7 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store chunks on the destination pool (not system disk), vía root.
-	tmpDirRel := joinRel(".nimchunks", fmt.Sprintf("%x", hashStr(uploadPath+fileName)))
+	tmpDirRel := joinRel(nimChunksDir, fmt.Sprintf("%x", hashStr(uploadPath+fileName)))
 	if err := mkdirAllIn(root, tmpDirRel, 0755); err != nil {
 		jsonError(w, 500, "Cannot create chunk dir")
 		return
@@ -261,14 +276,14 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 	if idx == total-1 {
 		if err := mkdirAllIn(root, relDir(rel), 0755); err != nil {
 			jsonError(w, 500, err.Error())
-			removeAllIn(root, tmpDirRel)
+			cleanupChunkDir(root, tmpDirRel)
 			return
 		}
 
 		finalFile, err := root.Create(rel)
 		if err != nil {
 			jsonError(w, 500, err.Error())
-			removeAllIn(root, tmpDirRel)
+			cleanupChunkDir(root, tmpDirRel)
 			return
 		}
 
@@ -291,7 +306,7 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 		finalFile.Close()
 
 		// Cleanup temp chunks
-		removeAllIn(root, tmpDirRel)
+		cleanupChunkDir(root, tmpDirRel)
 
 		if writeErr != nil {
 			root.Remove(rel)
@@ -349,7 +364,7 @@ func handleUploadStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	defer root.Close()
 
-	tmpDirRel := joinRel(".nimchunks", fmt.Sprintf("%x", hashStr(uploadPath+fileName)))
+	tmpDirRel := joinRel(nimChunksDir, fmt.Sprintf("%x", hashStr(uploadPath+fileName)))
 	dir, err := root.Open(tmpDirRel)
 	if err != nil {
 		// No chunks exist — fresh upload
@@ -412,8 +427,8 @@ func handleUploadCancel(w http.ResponseWriter, r *http.Request) {
 	}
 	defer root.Close()
 
-	tmpDirRel := joinRel(".nimchunks", fmt.Sprintf("%x", hashStr(uploadPath+fileName)))
-	removeAllIn(root, tmpDirRel)
+	tmpDirRel := joinRel(nimChunksDir, fmt.Sprintf("%x", hashStr(uploadPath+fileName)))
+	cleanupChunkDir(root, tmpDirRel)
 
 	jsonOk(w, map[string]interface{}{"ok": true})
 }

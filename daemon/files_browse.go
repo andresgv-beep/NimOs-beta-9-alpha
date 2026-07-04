@@ -140,6 +140,12 @@ func filesBrowse(w http.ResponseWriter, r *http.Request, session *DBSession) {
 		if rel == "." && e.Name() == recycleBinDir {
 			continue
 		}
+		// Ocultar .nimchunks: almacén temporal de subidas por trozos —
+		// infraestructura del daemon, no contenido del usuario (FIX
+		// 2026-07-04: aparecía como carpeta normal en Files).
+		if e.Name() == nimChunksDir {
+			continue
+		}
 		info, err := e.Info()
 		size := int64(0)
 		var modified interface{}
