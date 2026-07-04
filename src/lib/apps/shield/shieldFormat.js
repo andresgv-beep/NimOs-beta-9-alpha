@@ -16,10 +16,23 @@ export const repLevelMeta = {
   distrust: { label: 'desconfianza', cls: 'lvl-distrust' },
 };
 
-export function fmtTime(ts) {
+// Hora sola si el evento es de HOY ("21:40:13"); con fecha si es de otro día
+// ("29/6 21:40", y "29/6/25 21:40" si además es de otro año). Sin la fecha,
+// un evento antiguo en una lista de "más recientes" parece de hoy y confunde
+// (las barras de 24h dicen 0 pero la lista enseña rojos de hace días).
+export function fmtTime(ts, now = Date.now()) {
   const d = new Date(ts);
   if (isNaN(d)) return '—';
-  return d.toLocaleTimeString('es-ES', { hour12: false });
+  const n = new Date(now);
+  const sameDay = d.getDate() === n.getDate() && d.getMonth() === n.getMonth()
+    && d.getFullYear() === n.getFullYear();
+  if (sameDay) return d.toLocaleTimeString('es-ES', { hour12: false });
+  const hm = d.toLocaleTimeString('es-ES', { hour12: false, hour: '2-digit', minute: '2-digit' });
+  const dm = `${d.getDate()}/${d.getMonth() + 1}`;
+  if (d.getFullYear() !== n.getFullYear()) {
+    return `${dm}/${String(d.getFullYear() % 100).padStart(2, '0')} ${hm}`;
+  }
+  return `${dm} ${hm}`;
 }
 
 // countdown "23m 14s" / "23h 41m" / "3d 2h"

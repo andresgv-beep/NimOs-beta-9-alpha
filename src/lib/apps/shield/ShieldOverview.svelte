@@ -88,7 +88,7 @@
     {#each recentCritical as ev (ev.id)}
       <div class="event-row">
         <span class="event-led {sevClass[ev.severity] || 'med'}"></span>
-        <span class="event-time">{fmtTime(ev.timestamp)}</span>
+        <span class="event-time">{fmtTime(ev.timestamp, now)}</span>
         <span class="event-cat {ev.category}">{catShort[ev.category] || ev.category}</span>
         <span class="event-endpoint">{ev.endpoint || '—'}</span>
         <span class="event-ip">{ev.sourceIP || '—'}</span>
