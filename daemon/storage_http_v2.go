@@ -623,6 +623,7 @@ func (h *StorageHTTPHandler) removeDevice(w http.ResponseWriter, r *http.Request
 
 type replaceDeviceBody struct {
 	NewDeviceID string `json:"new_device_id"`
+	Force       bool   `json:"force,omitempty"`
 }
 
 func (h *StorageHTTPHandler) replaceDevice(w http.ResponseWriter, r *http.Request, poolID, oldDeviceID string) {
@@ -639,6 +640,7 @@ func (h *StorageHTTPHandler) replaceDevice(w http.ResponseWriter, r *http.Reques
 		PoolID:      poolID,
 		OldDeviceID: oldDeviceID,
 		NewDeviceID: body.NewDeviceID,
+		Force:       body.Force,
 	})
 	if err != nil {
 		writeServiceError(w, err)
