@@ -211,6 +211,11 @@ func createTables() error {
 		return fmt.Errorf("download tokens table: %v", err)
 	}
 
+	// Create temp shares table (Files → Compartir temporal)
+	if err := createTempSharesTable(); err != nil {
+		return fmt.Errorf("temp shares table: %v", err)
+	}
+
 	// ── Apps module (Beta 8.1) ─────────────────────────────
 	// Schema: docker_apps + native_apps (separado de app_registry).
 	// Repo: AppsRepo gestiona CRUD; vive en db_apps.go.

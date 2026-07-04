@@ -44,6 +44,7 @@
   import FilesContextMenu from './files/FilesContextMenu.svelte';
   import FilesModals from './files/FilesModals.svelte';
   import FilesRecycleBin from './files/FilesRecycleBin.svelte';
+  import ShareTempModal from './files/ShareTempModal.svelte';
 
   // Deep-link opcional: abrir directamente en un share + ruta (p. ej. desde el
   // Panel de Juego → carpeta del server). Si no se pasan, comportamiento normal.
@@ -252,8 +253,12 @@
       case 'rename':   startRename(file); break;
       case 'info':     showInfo(file); break;
       case 'delete':   deleteFile(file); break;
+      case 'share':    shareTempTarget = { file, share: currentShare, path: filePath(file) }; break;
     }
   }
+
+  // ── Compartir temporal · target del modal ({ file, share, path } | null) ──
+  let shareTempTarget = null;
 
   // ── Acciones ──
   async function deleteFile(file) {
@@ -602,6 +607,11 @@
      CTX MENU · componente (position:fixed, fuera del AppShell)
      ════════════════════════════════════════════════════════════ -->
 <FilesContextMenu menu={ctxMenu} {clipboard} on:action={handleCtxAction} />
+
+<!-- ════════════════════════════════════════════════════════════
+     COMPARTIR TEMPORAL · modal (enlace /s/token con caducidad)
+     ════════════════════════════════════════════════════════════ -->
+<ShareTempModal target={shareTempTarget} on:close={() => (shareTempTarget = null)} />
 
 <!-- ════════════════════════════════════════════════════════════
      MODALES · componente (rename / info / new folder)

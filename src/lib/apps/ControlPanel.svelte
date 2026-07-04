@@ -19,6 +19,7 @@
   import AppShell from '$lib/components/AppShell.svelte';
   import CPUsers from './controlpanel/CPUsers.svelte';
   import CPShares from './controlpanel/CPShares.svelte';
+  import CPTempLinks from './controlpanel/CPTempLinks.svelte';
   import CPServices from './controlpanel/CPServices.svelte';
   import CPPermissions from './controlpanel/CPPermissions.svelte';
   import CPPortal from './controlpanel/CPPortal.svelte';
@@ -33,6 +34,7 @@
       items: [
         { id: 'users',       label: 'Usuarios' },
         { id: 'shares',      label: 'Carpetas compartidas' },
+        { id: 'templinks',   label: 'Enlaces compartidos' },
         { id: 'services',    label: 'Servicios' },
         { id: 'permissions', label: 'Permisos de apps' },
         { id: 'portal',      label: 'Portal · 2FA' },
@@ -45,6 +47,7 @@
   const meta = {
     users:       { t: 'Usuarios',         s: '· cuentas y accesos' },
     shares:      { t: 'Carpetas compartidas', s: '· acceso en red' },
+    templinks:   { t: 'Enlaces compartidos', s: '· archivos temporales que compartes' },
     services:    { t: 'Servicios',        s: '· SMB · WebDAV · SSH' },
     permissions: { t: 'Permisos de apps', s: '· qué puede usar cada usuario' },
     portal:      { t: 'Portal · 2FA',     s: '· seguridad de acceso' },
@@ -70,6 +73,8 @@
       <CPUsers />
     {:else if active === 'shares'}
       <CPShares />
+    {:else if active === 'templinks'}
+      <CPTempLinks />
     {:else if active === 'services'}
       <CPServices />
     {:else if active === 'permissions'}

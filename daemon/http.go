@@ -460,6 +460,11 @@ func startHTTPServer() {
 	mux.HandleFunc("/api/files", handleFilesRoutes)
 	mux.HandleFunc("/api/files/", handleFilesRoutes)
 
+	// ── Temp shares (Files → Compartir temporal · enlaces /s/{token}) ──
+	mux.HandleFunc("/api/tempshares", handleTempSharesRoutes)
+	mux.HandleFunc("/api/tempshares/", handleTempSharesRoutes)
+	mux.HandleFunc("/s/", handleTempSharePublic)
+
 	// ── Storage v2 routes (Beta 8 stack) ──
 	// El stack legacy /api/storage (Beta 7) fue eliminado en Sesión 4.
 	// Todas las rutas storage viven ahora bajo /api/storage/v2/.
