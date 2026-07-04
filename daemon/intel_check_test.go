@@ -164,3 +164,48 @@ func TestIntelC_ObserveRateLimit(t *testing.T) {
 		t.Error("el contador debe subir en cada match, con o sin evento")
 	}
 }
+
+// Los contadores observed/blocked sobreviven un "reinicio" (flush → reset de
+// atómicos → load). Antes eran solo-memoria y cada deploy los devolvía a 0.
+func TestIntelC_CountersPersistAcrossRestart(t *testing.T) {
+	defer setupIntelTest(t)()
+
+	// estado previo conocido
+	prevObs, prevBlk := intelObservedTotal.Load(), intelBlockedTotal.Load()
+	prevSavedObs, prevSavedBlk := intelSavedObserved.Load(), intelSavedBlocked.Load()
+	defer func() {
+		intelObservedTotal.Store(prevObs)
+		intelBlockedTotal.Store(prevBlk)
+		intelSavedObserved.Store(prevSavedObs)
+		intelSavedBlocked.Store(prevSavedBlk)
+	}()
+
+	intelObservedTotal.Store(42)
+	intelBlockedTotal.Store(7)
+	intelSavedObserved.Store(0)
+	intelSavedBlocked.Store(0)
+
+	// flush → escribe ambos (difieren del último persistido)
+	intelFlushCounters()
+
+	// "reinicio": atómicos a cero y restore desde la DB
+	intelObservedTotal.Store(0)
+	intelBlockedTotal.Store(0)
+	dbIntelLoadCounters()
+
+	if got := intelObservedTotal.Load(); got != 42 {
+		t.Errorf("observed tras restart = %d, quiero 42", got)
+	}
+	if got := intelBlockedTotal.Load(); got != 7 {
+		t.Errorf("blocked tras restart = %d, quiero 7", got)
+	}
+
+	// flush sin cambios: no debe tocar los valores persistidos
+	intelFlushCounters()
+	intelObservedTotal.Store(0)
+	intelBlockedTotal.Store(0)
+	dbIntelLoadCounters()
+	if intelObservedTotal.Load() != 42 || intelBlockedTotal.Load() != 7 {
+		t.Error("un flush no-op no debe corromper los valores persistidos")
+	}
+}

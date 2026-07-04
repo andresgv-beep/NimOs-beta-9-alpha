@@ -101,6 +101,7 @@ func installShutdownHandler(listener interface{ Close() error }) {
 		logMsg("Shutting down (signal: %v)...", sig)
 		stopBackupScheduler()
 		stopAutoDiscovery()
+		intelFlushCounters() // snapshot final: que un restart no pierda la ventana
 		listener.Close()
 		os.Remove(socketPath)
 		os.Exit(0)

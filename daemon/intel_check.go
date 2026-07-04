@@ -26,6 +26,59 @@ var (
 	intelBlockedTotal  atomic.Int64 // bloqueos efectivos por el feed
 )
 
+// ─── Persistencia de contadores ───
+//
+// Los atómicos son la verdad en caliente; intel_meta guarda un snapshot para
+// que los totales sobrevivan reinicios del daemon (antes se reseteaban a 0 en
+// cada deploy y el panel mentía). El flush es periódico (startIntel) y al
+// apagar (installShutdownHandler) — NUNCA en el hot path: una IP listada
+// aporreando el NAS no debe traducirse en un write SQLite por petición.
+// Pérdida máxima en un crash duro: una ventana de flush.
+
+const intelCounterFlushInterval = 60 * time.Second
+
+// Último valor persistido de cada contador · el flush compara contra esto
+// para ser no-op (dos loads atómicos) cuando no hay tráfico del feed.
+var (
+	intelSavedObserved atomic.Int64
+	intelSavedBlocked  atomic.Int64
+)
+
+// dbIntelLoadCounters restaura los contadores desde intel_meta al arrancar.
+// Si no hay filas (primera ejecución), los atómicos se quedan en 0.
+func dbIntelLoadCounters() {
+	if db == nil {
+		return
+	}
+	var v int64
+	if err := db.QueryRow(`SELECT value FROM intel_meta WHERE key = 'observed_total'`).Scan(&v); err == nil {
+		intelObservedTotal.Store(v)
+		intelSavedObserved.Store(v)
+	}
+	if err := db.QueryRow(`SELECT value FROM intel_meta WHERE key = 'blocked_total'`).Scan(&v); err == nil {
+		intelBlockedTotal.Store(v)
+		intelSavedBlocked.Store(v)
+	}
+}
+
+// intelFlushCounters persiste los contadores que hayan cambiado desde el
+// último flush. Barato de llamar aunque no haya cambios.
+func intelFlushCounters() {
+	if db == nil {
+		return
+	}
+	if o := intelObservedTotal.Load(); o != intelSavedObserved.Load() {
+		if _, err := db.Exec(`INSERT OR REPLACE INTO intel_meta (key, value) VALUES ('observed_total', ?)`, o); err == nil {
+			intelSavedObserved.Store(o)
+		}
+	}
+	if b := intelBlockedTotal.Load(); b != intelSavedBlocked.Load() {
+		if _, err := db.Exec(`INSERT OR REPLACE INTO intel_meta (key, value) VALUES ('blocked_total', ?)`, b); err == nil {
+			intelSavedBlocked.Store(b)
+		}
+	}
+}
+
 // intelEnforce controla si el feed bloquea en duro. Arranca en FALSE: aunque
 // el feed trajera action="block", NimOS no bloquea hasta que el admin lo
 // active explícitamente (doble salvaguarda sobre el modo observación del feed).

@@ -18,6 +18,18 @@ const intelRefreshInterval = 48 * time.Hour
 func startIntel() {
 	// restaurar el flag de enforcement persistido (por defecto: observación)
 	intelEnforce.Store(dbIntelGetEnforce())
+	// restaurar los contadores observed/blocked persistidos (intel_check.go)
+	dbIntelLoadCounters()
+
+	// Flush periódico de contadores a intel_meta. No-op barato si no hay
+	// cambios; el flush final va en installShutdownHandler (main.go).
+	go func() {
+		t := time.NewTicker(intelCounterFlushInterval)
+		defer t.Stop()
+		for range t.C {
+			intelFlushCounters()
+		}
+	}()
 
 	go func() {
 		// 1. Arranque inmediato: primero intenta la red; si falla, la caché.
