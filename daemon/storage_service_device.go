@@ -195,9 +195,8 @@ func (s *StorageService) AddDevice(ctx context.Context, req AddDeviceRequest) (*
 		return s.repo.CreateOperation(ctx, tx, op)
 	})
 	if err != nil {
-		// Si esto falla por INV-1 (UNIQUE parcial), error útil al caller
-		return nil, errFromCode(ErrCodeOperationInProgress,
-			fmt.Sprintf("another layout operation is in progress on pool %s", pool.ID))
+		// INV-1 (UNIQUE parcial) → "op in progress"; otros errores → su causa real
+		return nil, opCreateError(err, pool.ID)
 	}
 
 	// ─── Path verificado, ANTES de lanzar nada (fail-fast al caller) ───
@@ -314,8 +313,7 @@ func (s *StorageService) RemoveDevice(ctx context.Context, req RemoveDeviceReque
 		return s.repo.CreateOperation(ctx, tx, op)
 	})
 	if err != nil {
-		return nil, errFromCode(ErrCodeOperationInProgress,
-			fmt.Sprintf("another layout operation is in progress on pool %s", pool.ID))
+		return nil, opCreateError(err, pool.ID)
 	}
 
 	// Path verificado ANTES de lanzar nada (fail-fast al caller).
@@ -459,8 +457,7 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 		return s.repo.CreateOperation(ctx, tx, op)
 	})
 	if err != nil {
-		return nil, errFromCode(ErrCodeOperationInProgress,
-			fmt.Sprintf("another layout operation is in progress on pool %s", pool.ID))
+		return nil, opCreateError(err, pool.ID)
 	}
 
 	// Paths verificados ANTES de lanzar nada (fail-fast al caller).

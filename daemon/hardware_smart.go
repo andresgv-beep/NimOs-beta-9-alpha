@@ -20,17 +20,27 @@ import (
 func readSmartWithFallback(safe string) (out string, usedDevType string, ok bool) {
 	dev := "/dev/" + safe
 
+	// AUDIT (F13-bis): `-n standby` en TODOS los intentos — sin él, cada
+	// ciclo del monitor despertaba los discos dormidos (spin-up cada 30
+	// min = desgaste y ruido). Un disco en standby se salta el ciclo y
+	// conserva su último estado conocido; es la condición que permite
+	// bajar el intervalo del monitor sin coste.
 	attempts := []struct {
 		devType string
 		args    []string
 	}{
-		{"", []string{"-i", "-A", "-H", dev}},
-		{"sat", []string{"-d", "sat", "-i", "-A", "-H", dev}},
-		{"ata", []string{"-d", "ata", "-i", "-A", "-H", dev}},
+		{"", []string{"-n", "standby", "-i", "-A", "-H", dev}},
+		{"sat", []string{"-n", "standby", "-d", "sat", "-i", "-A", "-H", dev}},
+		{"ata", []string{"-n", "standby", "-d", "ata", "-i", "-A", "-H", dev}},
 	}
 
 	for _, a := range attempts {
 		o, runOk := runSafe("smartctl", a.args...)
+		if strings.Contains(o, "STANDBY") || strings.Contains(o, "SLEEP") {
+			// Disco dormido: no insistir con más device-types (los
+			// siguientes intentos también lo respetarían, pero es inútil).
+			return o, "standby", false
+		}
 		if runOk && smartOutputIsUsable(o) {
 			return o, a.devType, true
 		}
@@ -98,6 +108,12 @@ func getDiskSmart(diskName string) map[string]interface{} {
 	// marcaba sano por defecto. Probamos device-types en orden hasta que uno
 	// devuelva una tabla SMART real.
 	out, usedDevType, ok := readSmartWithFallback(safe)
+	if usedDevType == "standby" {
+		// Disco dormido a propósito: no es un fallo de lectura. El monitor
+		// conserva el último estado conocido sin contar fallo consecutivo.
+		result["standby"] = true
+		return result
+	}
 	if !ok || out == "" {
 		result["error"] = "Could not read SMART data"
 		logMsg("SMART: no se pudo leer /dev/%s con ningún device-type (auto/sat/ata)", safe)
@@ -293,12 +309,15 @@ func startSmartMonitor() {
 		return
 	}
 
-	logMsg("SMART monitor started (interval: 30min)")
+	// AUDIT (F13-bis): 10 min en vez de 30 — un deterioro SMART tardaba
+	// hasta media hora en verse. Bajarlo es gratis porque `-n standby`
+	// garantiza que los discos dormidos NO se despiertan por el chequeo.
+	logMsg("SMART monitor started (interval: 10min, standby-safe)")
 
 	// Initial scan
 	checkAllDisksSmart()
 
-	ticker := time.NewTicker(30 * time.Minute)
+	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -337,6 +356,11 @@ func checkAllDisksSmart() {
 		present[diskName] = true
 
 		smartResult := getDiskSmart(diskName)
+		if standby, _ := smartResult["standby"].(bool); standby {
+			// Disco dormido (-n standby): conservar el último estado sin
+			// tocar el contador de fallos — dormir no es fallar.
+			continue
+		}
 		currentStatus, _ := smartResult["status"].(string)
 		if currentStatus == "" {
 			// El disco no devolvió un status legible. AUDIT F13: tras

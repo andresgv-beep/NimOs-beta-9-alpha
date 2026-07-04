@@ -12,6 +12,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -209,6 +210,10 @@ func resolveMountPointByName(poolName string) string {
 // POST /api/storage/scrub { pool }
 func startScrub(body map[string]interface{}) map[string]interface{} {
 	pool := bodyStr(body, "pool")
+	trigger := bodyStr(body, "trigger")
+	if trigger == "" {
+		trigger = "manual"
+	}
 
 	// Resolve mount point via service v2
 	mountPoint := resolveMountPointByName(pool)
@@ -217,10 +222,124 @@ func startScrub(body map[string]interface{}) map[string]interface{} {
 		return map[string]interface{}{"ok": false, "error": "Pool not found or not a BTRFS filesystem"}
 	}
 
-	if err := startScrubOnPool(mountPoint, pool); err != nil {
-		return map[string]interface{}{"ok": false, "error": fmt.Sprintf("btrfs scrub failed: %s", err)}
+	if err := startScrubTracked(pool, mountPoint, trigger); err != nil {
+		return map[string]interface{}{"ok": false, "error": err.Error()}
 	}
 	return map[string]interface{}{"ok": true, "type": "btrfs"}
+}
+
+// startScrubTracked lanza un scrub CON Operation en el timeline (AUDIT B6:
+// los scrubs manuales eran invisibles en el histórico y el índice INV-2
+// —un scrub por pool— nunca se ejercitaba). Flujo:
+//
+//  1. Crear Operation start_scrub in_progress (INV-2 rechaza el duplicado)
+//  2. Lanzar el scrub en el kernel
+//  3. Watcher en goroutine: cierra la op cuando el scrub termina
+//
+// Si el pool no está en la BD (huérfano/legacy) o el service no está listo,
+// degrada al comportamiento anterior: scrub sin Operation, con log.
+func startScrubTracked(poolName, mountPoint, trigger string) error {
+	if storageService == nil {
+		logMsg("startScrubTracked: service no inicializado — scrub sin Operation")
+		return startScrubOnPool(mountPoint, poolName)
+	}
+	ctx := context.Background()
+	pool, err := storageService.repo.GetPoolByName(ctx, poolName)
+	if err != nil || pool == nil {
+		logMsg("startScrubTracked: pool %q no está en la BD — scrub sin Operation", poolName)
+		return startScrubOnPool(mountPoint, poolName)
+	}
+
+	op := &Operation{
+		ID:     newUUID(),
+		Type:   OpTypeStartScrub,
+		PoolID: &pool.ID,
+		Status: OpStatusInProgress,
+		Data:   rawJSON(map[string]string{"pool_name": poolName, "trigger": trigger}),
+	}
+	err = storageService.runInTx(ctx, func(tx *sql.Tx) error {
+		return storageService.repo.CreateOperation(ctx, tx, op)
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return fmt.Errorf("ya hay un scrub en curso en el pool %q", poolName)
+		}
+		return fmt.Errorf("no se pudo registrar la operación de scrub: %v", err)
+	}
+
+	if serr := startScrubOnPool(mountPoint, poolName); serr != nil {
+		storageService.markOperationFailed(ctx, op.ID, serr.Error(), ErrCodeBtrfsCommandFailed)
+		return serr
+	}
+
+	watchScrubFn(op.ID, mountPoint, poolName)
+	return nil
+}
+
+// watchScrubFn arranca el watcher del scrub. Var inyectable para tests (el
+// watcher real hace polling de btrfs durante horas).
+var watchScrubFn = func(opID, mountPoint, poolName string) {
+	go watchScrubOperation(opID, mountPoint, poolName)
+}
+
+// watchScrubOperation hace polling de `btrfs scrub status` hasta que el
+// scrub termina y cierra la Operation con el desenlace real (completed /
+// cancelled / failed). El scrub corre en el KERNEL: sobrevive a esta
+// goroutine (y al daemon); si el daemon se reinicia a mitad, el recovery
+// re-adopta la op (resolveOrphanScrub) y relanza este watcher.
+func watchScrubOperation(opID, mountPoint, poolName string) {
+	ctx := context.Background()
+	deadline := time.Now().Add(48 * time.Hour)
+	tick := time.NewTicker(15 * time.Second)
+	defer tick.Stop()
+
+	for range tick.C {
+		if time.Now().After(deadline) {
+			storageService.markOperationFailed(ctx, opID,
+				"scrub sin terminar tras 48h — estado desconocido", ErrCodeRecoveryInconclusive)
+			return
+		}
+		out, ok := runSafe("btrfs", "scrub", "status", mountPoint)
+		if !ok {
+			continue // transitorio (¿pool remontándose?); el deadline acota
+		}
+		st := parseScrubStatusOutput(out)
+		switch st["status"] {
+		case "scrubbing":
+			continue
+		case "done":
+			errs, _ := st["errors"].(int)
+			err := storageService.runInTx(ctx, func(tx *sql.Tx) error {
+				return storageService.repo.UpdateOperationStatus(ctx, tx, opID, OpStatusCompleted, nil, nil)
+			})
+			if err != nil {
+				logMsg("watchScrubOperation: no se pudo cerrar op %s: %v", opID, err)
+			}
+			if errs > 0 {
+				addNotification("warning", "system", "Scrub con errores",
+					fmt.Sprintf("El scrub de %s terminó con %d errores. Revisa SMART y considera un replace.", poolName, errs))
+			} else {
+				addNotification("info", "system", "Verificación completada",
+					fmt.Sprintf("Scrub de %s completado sin errores.", poolName))
+			}
+			return
+		case "canceled":
+			err := storageService.runInTx(ctx, func(tx *sql.Tx) error {
+				return storageService.repo.UpdateOperationStatus(ctx, tx, opID, OpStatusCancelled, nil, nil)
+			})
+			if err != nil {
+				logMsg("watchScrubOperation: no se pudo marcar cancelled op %s: %v", opID, err)
+			}
+			return
+		default:
+			// never/idle con una op viva: estado ilegible (¿pool desmontado
+			// a mitad?) — cerrar como failed para no dejar el lock colgado.
+			storageService.markOperationFailed(ctx, opID,
+				fmt.Sprintf("estado de scrub ilegible (%v) — pool desmontado o reiniciado", st["status"]),
+				ErrCodeRecoveryInconclusive)
+			return
+		}
+	}
 }
 
 // startScrubOnPool lanza un `btrfs scrub` (NO bloqueante: el kernel lo corre en
@@ -449,7 +568,7 @@ func checkAndRunScheduledScrubs() {
 		}
 		if shouldRunNow(freq, h, m, dow, dom, lastRunStr, now) {
 			logMsg("Scrub scheduler: starting scheduled scrub on %s", poolName)
-			res := startScrub(map[string]interface{}{"pool": poolName})
+			res := startScrub(map[string]interface{}{"pool": poolName, "trigger": "scheduled"})
 
 			// FIX2: solo marcar como ejecutado si el scrub REALMENTE arrancó.
 			// Si falló (pool degradado, otro scrub en curso, error), NO tocar

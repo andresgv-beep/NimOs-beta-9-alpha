@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 )
 
 // validPoolName valida nombres de pool en Beta 8.1.
@@ -187,6 +188,25 @@ func (e *ServiceError) Error() string {
 // errFromCode devuelve un ServiceError con el código y mensaje dados.
 func errFromCode(code, msg string) error {
 	return &ServiceError{Code: code, Msg: msg}
+}
+
+// opCreateError traduce el fallo de CreateOperation a su causa real.
+// AUDIT (B2): antes CUALQUIER error aquí (un SQLITE_BUSY transitorio, disco
+// lleno, corrupción) se reportaba como "another layout operation is in
+// progress" — mentira que además sugería esperar a una op inexistente.
+// Solo el choque con los índices únicos parciales (INV-1 layout / INV-2
+// scrub) significa exclusión; el resto se reporta como error interno con
+// la causa de verdad.
+func opCreateError(err error, poolID string) error {
+	if err == nil {
+		return nil
+	}
+	if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+		return errFromCode(ErrCodeOperationInProgress,
+			fmt.Sprintf("another layout operation is in progress on pool %s", poolID))
+	}
+	return errFromCode(ErrCodeInternal,
+		fmt.Sprintf("no se pudo registrar la operación: %v", err))
 }
 
 // errFromCodeWithDetails devuelve un ServiceError con código, mensaje y

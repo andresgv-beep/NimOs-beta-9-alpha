@@ -58,8 +58,7 @@ func (s *StorageService) ConvertProfile(ctx context.Context, req ConvertProfileR
 		return s.repo.CreateOperation(ctx, tx, op)
 	})
 	if err != nil {
-		return nil, errFromCode(ErrCodeOperationInProgress,
-			fmt.Sprintf("another layout operation is in progress on pool %s", pool.ID))
+		return nil, opCreateError(err, pool.ID)
 	}
 
 	// ─── ASYNC: el balance corre en background ─────────────────────────────

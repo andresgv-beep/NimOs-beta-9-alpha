@@ -91,7 +91,13 @@ func (s *StorageService) RecoverPendingOperations(ctx context.Context) (*Recover
 			result.Readopted++
 			if op.PoolID != nil {
 				if pool, gErr := s.repo.GetPool(ctx, *op.PoolID); gErr == nil && pool != nil {
-					go s.watchReadoptedBalance(op.ID, pool.ID, pool.MountPoint)
+					if op.Type == OpTypeStartScrub {
+						// AUDIT B6: scrub vivo tras restart → mismo watcher
+						// que en el arranque normal del scrub.
+						go watchScrubOperation(op.ID, pool.MountPoint, pool.Name)
+					} else {
+						go s.watchReadoptedBalance(op.ID, pool.ID, pool.MountPoint)
+					}
 				}
 			}
 			continue
@@ -145,6 +151,11 @@ func (s *StorageService) resolveOrphanOperation(ctx context.Context, op *Operati
 		return s.resolveOrphanDestroyPool(ctx, op)
 	case OpTypeImportPool:
 		return s.resolveOrphanImportPool(ctx, op)
+	case OpTypeStartScrub:
+		// AUDIT B6: un scrub corre en el KERNEL y sobrevive al restart del
+		// daemon. Consultar su estado real: vivo → re-adoptar (el caller
+		// relanza el watcher); terminado → completed; ilegible → inconclusive.
+		return s.resolveOrphanScrub(ctx, op)
 	case OpTypeAddDevice, OpTypeRemoveDevice, OpTypeReplaceDevice, OpTypeConvertProfile:
 		// Estas ops mutan un pool existente vía un balance BTRFS que corre
 		// en el kernel. Un balance SOBREVIVE al restart del daemon (la
@@ -163,6 +174,32 @@ func (s *StorageService) resolveOrphanOperation(ctx context.Context, op *Operati
 		// pero si ocurre, inconclusive.
 		return inconclusiveOutcome(fmt.Sprintf(
 			"sync operation %s found orphan (should not happen)", op.Type))
+	}
+}
+
+// resolveOrphanScrub — caso start_scrub interrumpido por restart del daemon.
+// El scrub del kernel sigue su curso sin nosotros; se decide por su estado real.
+func (s *StorageService) resolveOrphanScrub(ctx context.Context, op *Operation) recoveryOutcome {
+	if op.PoolID == nil {
+		return inconclusiveOutcome("scrub op sin pool asociado")
+	}
+	pool, err := s.repo.GetPool(ctx, *op.PoolID)
+	if err != nil || pool == nil {
+		return inconclusiveOutcome("el pool del scrub ya no existe en la BD")
+	}
+	out, ok := runSafe("btrfs", "scrub", "status", pool.MountPoint)
+	if !ok {
+		return inconclusiveOutcome("btrfs scrub status ilegible en " + pool.MountPoint)
+	}
+	switch st := parseScrubStatusOutput(out); st["status"] {
+	case "scrubbing":
+		return recoveryOutcome{NewStatus: OpStatusInProgress, Readopted: true}
+	case "done":
+		return recoveryOutcome{NewStatus: OpStatusCompleted}
+	case "canceled":
+		return recoveryOutcome{NewStatus: OpStatusCancelled}
+	default:
+		return inconclusiveOutcome(fmt.Sprintf("estado de scrub %v tras restart", st["status"]))
 	}
 }
 
