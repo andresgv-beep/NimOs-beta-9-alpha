@@ -219,10 +219,10 @@ func TestCompressionFromMountOpts(t *testing.T) {
 	cases := map[string]string{
 		// Las opciones reales del pool data1 el día de la auditoría:
 		"rw,noatime,compress=zstd:3,space_cache=v2,subvolid=5,subvol=/": "zstd:3",
-		"rw,noatime,space_cache=v2":                                    "none",
-		"rw,compress=no,space_cache=v2":                                "none",
-		"rw,compress-force=lzo":                                        "lzo",
-		"rw,compress=zstd":                                             "zstd",
+		"rw,noatime,space_cache=v2":                                     "none",
+		"rw,compress=no,space_cache=v2":                                 "none",
+		"rw,compress-force=lzo":                                         "lzo",
+		"rw,compress=zstd":                                              "zstd",
 	}
 	for opts, want := range cases {
 		if got := compressionFromMountOpts(opts); got != want {

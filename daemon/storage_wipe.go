@@ -528,6 +528,7 @@ func parseBlkidExport(out string) map[string]string {
 //  7. Clear remaining signatures with wipefs
 //  8. Force kernel to re-read partition table
 //  9. VERIFY: lsblk must show zero partitions
+//
 // verifyWipeTargetIdentity confirma que el disco que vive HOY en diskPath
 // es el que el cliente vio al listar (mismo serial). AUDIT F10: los paths
 // /dev/sdX se renumeran (replug, reinicio, USB); el serial es la identidad

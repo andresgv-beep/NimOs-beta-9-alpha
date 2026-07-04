@@ -32,8 +32,8 @@ package main
 // Lecturas del endpoint hacen atomic.Load → lock-free, miles/seg sin contención.
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
