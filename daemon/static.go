@@ -264,15 +264,16 @@ func resolveTorrentSavePath(w http.ResponseWriter, session *DBSession, body []by
 		return nil, false
 	}
 
-	// Destino final: <share>/torrents — confinado dentro del share.
-	savePath := filepath.Join(share.Path, "torrents")
-	// Defensa en profundidad: tras Join+Clean, el destino debe seguir
-	// colgando del path del share (nunca escaparse con ../).
-	if savePath != share.Path && !strings.HasPrefix(savePath, share.Path+string(filepath.Separator)) {
-		jsonError(w, 400, "Ruta de destino inválida")
-		return nil, false
-	}
-	os.MkdirAll(savePath, 0755)
+	// Destino final: la carpeta compartida TAL CUAL la eligió el usuario.
+	//
+	// FIX (2026-07-04): antes se colgaba una subcarpeta hardcodeada
+	// "torrents" del share — con DOS efectos nefastos: (1) cada share
+	// elegida acumulaba una carpeta torrents/ que nadie pidió, y (2) el
+	// MkdirAll lo ejecutaba ESTE daemon (root, 0755), así que torrentd
+	// (usuario nimos) no podía escribir dentro → descargas eternamente al
+	// 0%. El share ya existe con permisos correctos (grupo + ACLs): no hay
+	// nada que crear ni que romper.
+	savePath := share.Path
 
 	// Reescribir body: quitar `share`, fijar `save_path` real validado.
 	delete(req, "share")
@@ -317,12 +318,9 @@ func handleTorrentUploadGo(w http.ResponseWriter, r *http.Request, session *DBSe
 		jsonError(w, 409, "La carpeta no está en un pool montado")
 		return
 	}
-	savePath := filepath.Join(share.Path, "torrents")
-	if savePath != share.Path && !strings.HasPrefix(savePath, share.Path+string(filepath.Separator)) {
-		jsonError(w, 400, "Ruta de destino inválida")
-		return
-	}
-	os.MkdirAll(savePath, 0755)
+	// Mismo FIX que en el add por magnet: destino = share elegido tal cual
+	// (sin subcarpeta "torrents" hardcodeada root-owned que rompía permisos).
+	savePath := share.Path
 
 	file, header, err := r.FormFile("torrent")
 	if err != nil {
