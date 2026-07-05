@@ -18,6 +18,7 @@
   import Taskbar from './Taskbar.svelte';
   import WindowFrame from './WindowFrame.svelte';
   import WidgetLayer from './WidgetLayer.svelte';
+  import { APP_META } from '$lib/apps.js';
   import NimosLogo from '$lib/ui/NimosLogo.svelte';
 
   let pollInterval;
@@ -86,7 +87,7 @@
 
   <!-- Ventanas flotantes -->
   {#each $windowList as win (win.id)}
-    {#if !win.minimized}
+    {#if !win.minimized || APP_META[win.appId]?.keepAlive}
       <WindowFrame {win} />
     {/if}
   {/each}

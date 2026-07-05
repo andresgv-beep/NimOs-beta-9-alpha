@@ -147,6 +147,10 @@ export const APP_META = {
     width:    1040,
     height:   660,
     category: 'app',
+    // keepAlive: la ventana NO se destruye al minimizar (se oculta y sigue
+    // montada) para que la música/vídeo siga sonando en segundo plano, como
+    // cualquier reproductor. El resto de apps sí se destruyen al minimizar.
+    keepAlive: true,
   },
 };
 

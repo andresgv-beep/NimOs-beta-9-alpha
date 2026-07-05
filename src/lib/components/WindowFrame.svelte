@@ -153,6 +153,7 @@
   class:maximized={win.maximized}
   class:dragging
   class:inactive={!isFocused}
+  class:minimized={win.minimized}
   style="z-index:{win.zIndex}; left:{x}px; top:{y}px; width:{w}px; height:{h}px;"
   on:mousedown={() => focusWindow(win.id)}
   role="application"
@@ -276,6 +277,13 @@
      · Sin backdrop-filter · sin border-radius
      · Estados activa/inactiva con atenuación sutil
      ═══════════════════════════════════════════════════════════ */
+  /* Minimizada (solo apps keepAlive, p.ej. MediaPlayer): oculta pero VIVA —
+     el componente sigue montado y la reproducción no se corta. Las apps
+     normales no llegan aquí (Desktop no las renderiza si están minimizadas). */
+  .window.minimized {
+    display: none;
+  }
+
   .window {
     position: fixed;
     display: flex;
