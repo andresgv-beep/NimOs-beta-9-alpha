@@ -190,11 +190,20 @@
     } catch { analyser = null; }
   }
 
+  // startAnalyser · engancha la Web Audio en cuanto SUENA (autoplay o manual),
+  // no solo al pulsar play. Antes solo se creaba en togglePlay → en la 1ª
+  // reproducción las ondas eran las decorativas de relleno hasta pausar+play.
+  // Solo en modo audio (es donde se ven las ondas); el vídeo no reencamina su
+  // audio. La activación pegajosa del clic que abrió la ventana resume el ctx.
+  function startAnalyser() {
+    if (mode !== 'audio') return;
+    ensureAnalyser();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
   async function togglePlay() {
     if (!videoEl) return;
     if (videoEl.paused) {
-      ensureAnalyser();
-      if (audioCtx?.state === 'suspended') audioCtx.resume();
       try { await videoEl.play(); } catch { /* formato no soportado */ }
     } else {
       videoEl.pause();
@@ -342,7 +351,7 @@
             class:hidden={mode === 'audio'}
             crossorigin="use-credentials"
             preload="metadata"
-            on:play={() => { playing = true; applySubsMode(); }}
+            on:play={() => { playing = true; startAnalyser(); applySubsMode(); }}
             on:pause={() => (playing = false)}
             on:ended={onEnded}
             on:timeupdate={onTimeUpdate}
