@@ -1,6 +1,6 @@
 # DESIGN — Nimos Library
 
-**Estado:** Borrador de diseño (v0.3) · pre-código · LISTO PARA FASE 0
+**Estado:** Borrador de diseño (v0.4) · pre-código · LISTO PARA FASE 0
 **Autor:** Andrés + Claude (co-dev)
 **Contexto:** NimOS Beta 9 alpha · app diferenciadora del ecosistema
 **Fecha:** 2026-07 (sesión de diseño)
@@ -8,6 +8,16 @@
 ---
 
 ## Changelog
+
+### v0.4 — Empaquetado Docker (sección §5.5 ampliada)
+- **Dockerfile de referencia** (multi-stage: compila UI Svelte + shim Go → caja
+  mínima alpine con binario estático). Explicado línea a línea.
+- **docker-compose de dos servicios** (library + kiwix cableados, patrón
+  WordPress+MariaDB). El motor no se expone, solo lo consume el shim por red interna.
+- **Separación de repos:** código en repo propio `nimos-library` (NO en el AppStore,
+  que es solo catálogo). Apps propias marcadas con `vendor: "nimos"` (D5).
+- **Flujo "sin instalar nada"** documentado: todo va en la caja, solo salen datos
+  por volúmenes.
 
 ### v0.3 — Coherencia interna (segundo pase de review)
 Correcciones de coherencia (no de arquitectura). El documento se cierra aquí:
@@ -448,20 +458,123 @@ WebApp.svelte  →  <iframe src="http://<nas>:<puerto-library>">
 - Ej: NimHealth podría reportar "3 colecciones desactualizadas", o un job podría
   descargar la última Wikipedia automáticamente.
 
-### 5.5. Empaquetado Docker
+### 5.5. Empaquetado Docker — "ejecutable sin instalar nada"
+
+**Objetivo:** Nimos Library viaja dentro de cajas Docker selladas. Ni el usuario
+ni NimOS instalan Go/Node ni copian ficheros al sistema anfitrión. Solo "ejecuta
+esta caja". Todo (binario del shim, UI compilada, dependencias) va DENTRO de la
+imagen; lo único que sale fuera son los datos, vía volúmenes (la DB de notas, los
+.zim) — igual que WordPress guarda su web en un volumen.
 
 **v0 (validación):** kiwix-serve tal cual en el catálogo NimOS (entrada de
 catalog.json + icono), como Downtify/Forgejo/WordPress. Wikipedia offline en
 minutos, sin construir nada. Sirve para aprender el comportamiento del motor.
 
-**v1 (producto):** DOS contenedores:
+**v1 (producto):** DOS contenedores (patrón multi-contenedor tipo WordPress+MariaDB):
 ```
-Contenedor 1: ghcr.io/kiwix/kiwix-serve:3.8.2   (motor · no lo tocamos)
-Contenedor 2: nimos-library-ui                   (shim + UI Svelte · lo construimos)
+Contenedor 1: ghcr.io/kiwix/kiwix-serve:3.8.2   (motor · NO lo construimos, ya existe)
+Contenedor 2: nimos-library                      (shim Go + UI Svelte · lo construimos)
 ```
-- La UI (SvelteKit → estáticos) + shim en una imagen. Dockerfile propio (~pocas
-  líneas: base, copiar build, arrancar). Se explica paso a paso al llegar la fase.
-- Ambos en un `compose` (patrón multi-contenedor tipo WordPress que ya hicimos).
+
+#### Dónde vive el código (separación de repos)
+
+El código NO va en el repo del AppStore (que es un CATÁLOGO: fichas, iconos,
+configs — apunta a imágenes, no las almacena). Estructura:
+```
+NimOs-appstore/          ← catálogo · aquí van las FICHAS de kiwix y de Library
+    catalog.json  icons/  configs/  screenshots/
+
+nimos-library/           ← repo PROPIO (Fase 1+) · el código
+    shim/                (Go · valida auth, reescribe links, API REST)
+    ui/                  (SvelteKit · el mockup)
+    Dockerfile           (la receta de la caja)
+    .github/workflows/   (CI · construye la imagen y la publica en ghcr)
+```
+Las apps propias se distinguen en el catálogo con un campo `vendor: "nimos"`
+(badge "NimOS Original") SIN sacarlas de su categoría funcional (Library sigue en
+`homelab`). El AppStore trata la imagen propia igual que una de terceros.
+
+#### Dockerfile de referencia (multi-stage · una sola caja para shim+UI)
+
+```dockerfile
+# ─── 1. Compilar la UI Svelte a ficheros estáticos ───
+FROM node:20-alpine AS build-ui
+WORKDIR /ui
+COPY ui/package*.json ./
+RUN npm ci
+COPY ui/ .
+RUN npm run build                 # → /ui/dist (HTML/JS/CSS estáticos)
+
+# ─── 2. Compilar el shim Go a UN binario sin dependencias ───
+FROM golang:1.24-alpine AS build-shim
+WORKDIR /src
+COPY shim/go.* ./
+RUN go mod download
+COPY shim/ .
+RUN CGO_ENABLED=0 go build -o /library-shim .   # binario estático
+
+# ─── 3. Caja final mínima: binario + estáticos + arranque ───
+FROM alpine:latest
+RUN adduser -S -u 1001 library                  # usuario no-root (seguridad)
+COPY --from=build-shim /library-shim /usr/local/bin/library-shim
+COPY --from=build-ui   /ui/dist       /www
+USER library
+EXPOSE 8090
+CMD ["library-shim"]              # ← lo que se ejecuta al abrir la caja
+```
+**Léelo como:** "compila la UI, compila el shim, mételos en una caja mínima y di
+qué se ejecuta al abrirla". El `CMD` es el ejecutable. `CGO_ENABLED=0` da un
+binario estático que corre en `alpine` sin librerías del sistema → caja
+pequeñísima. Multi-stage = las herramientas de compilación (node, go) NO acaban
+en la imagen final, solo el resultado.
+
+> **Nota si el shim usa python-libzim (v2, engine propio):** ese camino SÍ linka
+> libzim (GPL) y necesita las libs en la imagen final → Dockerfile distinto (base
+> python + libzim). Por eso v1 con shim Go que solo proxya kiwix-serve por HTTP es
+> más simple Y de licencia más limpia (§2.1, D1).
+
+#### docker-compose (los dos servicios cableados)
+
+```yaml
+services:
+  library:                                     # NUESTRA caja (shim + UI)
+    image: ghcr.io/andresgv-beep/nimos-library:latest
+    container_name: nimos-library
+    ports:
+      - '8090:8090'
+    environment:
+      - KIWIX_URL=http://kiwix:8080            # habla con el motor por red interna
+    volumes:
+      - ${CONFIG_PATH}/data:/data              # library.db (notas, favoritos)
+    depends_on:
+      - kiwix
+    restart: unless-stopped
+
+  kiwix:                                        # motor (imagen oficial · no la tocamos)
+    image: ghcr.io/kiwix/kiwix-serve:3.8.2
+    container_name: nimos-library-kiwix
+    volumes:
+      - ${LIBRARY_PATH}:/data                   # los .zim
+    command: ['--library', '/data/library.xml', '--monitorLibrary']
+    restart: unless-stopped
+```
+- `library` habla con `kiwix` por el nombre de servicio (`http://kiwix:8080`) en la
+  red interna de Docker — el motor NO se expone fuera, solo lo consume el shim.
+- `--monitorLibrary` recarga colecciones en caliente al añadir/quitar .zim.
+- Es el mismo esquema de dos servicios que WordPress+MariaDB (ya hecho hoy).
+
+#### Flujo completo "sin liarse"
+
+1. Escribes el código en `nimos-library/` (shim + UI).
+2. Un `Dockerfile` (arriba) = la receta de la caja.
+3. CI construye la caja y la publica en **ghcr** en cada release (automático).
+4. En el AppStore, ficha con el `compose` de dos servicios (como WordPress).
+5. Usuario pulsa "instalar" → NimOS baja las dos cajas y las ejecuta. **Cero
+   instalación manual, cero ficheros sueltos, cero dependencias en el anfitrión.**
+
+Docker no es el obstáculo — es lo que SIMPLIFICA el final. Se empaqueta al terminar
+el código, no antes. El Dockerfile (~20 líneas) es la parte fácil; lo difícil es el
+código de dentro (shim + UI).
 
 ---
 
@@ -576,7 +689,11 @@ fases). Nada de WebSocket en v1.
   full-text en v1.*
 - **D4 — Descargas de .zim:** ¿las gestiona el shim (integrado, con progreso NimOS)
   o se delega al FileManager de NimOS? → *Propuesta: shim, para progreso unificado.*
-- **D5 — Nombre/branding e icono** de la app en el catálogo.
+- **D5 — Nombre/branding e icono** de la app en el catálogo. Además: marcar apps
+  propias con campo **`vendor: "nimos"`** (badge "NimOS Original") SIN sacarlas de
+  su categoría funcional — Library va en `homelab`, no en una categoría aparte
+  (§5.5). El código de apps propias vive en repo separado (`nimos-library`), NO en
+  el repo del AppStore (que es solo catálogo).
 - **D6 — Auth (⛔ BLOQUEANTE, ver §6):** mecanismo de autenticación para exposición
   pública (reutilizar sesión NimOS vs API key propia del shim). **Postura firme e
   innegociable:** v0.1 solo LAN + el shim valida el token de NimOS en todos los
