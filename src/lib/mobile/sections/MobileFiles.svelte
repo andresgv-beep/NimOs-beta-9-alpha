@@ -70,8 +70,21 @@
     loadDir(currentShare, parts.join('/'));
   }
 
+  // &download=1 fuerza el servido como adjunto (si no, el navegador reproduce
+  // audio/vídeo inline). El <a download> evita la pestaña fantasma.
+  function triggerDownload(url, name) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name || '';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   async function download(e) {
     const fp = currentPath ? `${currentPath}/${e.name}` : e.name;
+    const base = `/api/files/download?share=${currentShare}&path=${encodeURIComponent(fp)}&download=1`;
     try {
       const res = await fetch('/api/files/download-token', {
         method: 'POST', headers: hdrs(),
@@ -79,12 +92,12 @@
       });
       if (res.ok) {
         const data = await res.json();
-        window.open(`/api/files/download?share=${currentShare}&path=${encodeURIComponent(fp)}&dl=${data.token}`, '_blank');
+        triggerDownload(`${base}&dl=${data.token}`, e.name);
       } else {
-        window.open(`/api/files/download?share=${currentShare}&path=${encodeURIComponent(fp)}&token=${getToken()}`, '_blank');
+        triggerDownload(`${base}&token=${getToken()}`, e.name);
       }
-    } catch (e) {
-      window.open(`/api/files/download?share=${currentShare}&path=${encodeURIComponent(fp)}&token=${getToken()}`, '_blank');
+    } catch (err) {
+      triggerDownload(`${base}&token=${getToken()}`, e.name);
     }
   }
 

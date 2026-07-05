@@ -136,7 +136,13 @@ func serveFileDownload(w http.ResponseWriter, r *http.Request, root *os.Root, re
 	if ct, ok := mimeTypes[ext]; ok {
 		contentType = ct
 	}
-	isDownload := contentType == "application/octet-stream"
+	// forceDownload: la acción "Descargar" pide ?download=1 para bajar el
+	// fichero como ADJUNTO aunque sea reproducible (audio/vídeo). Sin esto el
+	// navegador reproduce el media inline en una pestaña en vez de guardarlo.
+	// El servido INLINE (sin el flag) se conserva para "Abrir"/preview y para
+	// el streaming con Range del futuro MediaPlayer de NimOS.
+	forceDownload := r.URL.Query().Get("download") == "1"
+	isDownload := forceDownload || contentType == "application/octet-stream"
 
 	// Range request support (audio/video seeking)
 	rangeHeader := r.Header.Get("Range")
@@ -163,6 +169,11 @@ func serveFileDownload(w http.ResponseWriter, r *http.Request, root *os.Root, re
 			w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, stat.Size()))
 			w.Header().Set("Accept-Ranges", "bytes")
 			w.Header().Set("Content-Length", fmt.Sprintf("%d", chunkSize))
+			// Un descargador que pida rangos (?download=1) también debe recibir
+			// el fichero como adjunto, no reproducirlo.
+			if isDownload {
+				w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, fileName))
+			}
 			w.WriteHeader(206)
 			io.CopyN(w, f, chunkSize)
 			return

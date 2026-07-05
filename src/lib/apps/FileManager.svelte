@@ -223,18 +223,30 @@
   function closeCtx() { ctxMenu = null; ctxTarget = null; }
 
   // Descarga (antes inline en el menú contextual)
+  // triggerDownload · fuerza una descarga REAL vía un <a download> temporal.
+  // El &download=1 hace que el backend sirva el fichero como adjunto aunque
+  // sea audio/vídeo (si no, el navegador lo reproduce inline en una pestaña).
+  // El anchor evita la pestaña fantasma del window.open y el bloqueo de popups.
+  function triggerDownload(url, name) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name || '';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   async function downloadFile(file) {
     const fp = filePath(file);
+    const base = `/api/files/download?share=${currentShare}&path=${encodeURIComponent(fp)}&download=1`;
     try {
       const res = await fetch('/api/files/download-token', { method: 'POST', headers: hdrs(), body: JSON.stringify({ share: currentShare, path: fp }) });
       const data = await res.json();
-      if (data.token) {
-        window.open(`/api/files/download?share=${currentShare}&path=${encodeURIComponent(fp)}&dl=${data.token}`, '_blank');
-      } else {
-        window.open(`/api/files/download?share=${currentShare}&path=${encodeURIComponent(fp)}&token=${getToken()}`, '_blank');
-      }
+      const url = data.token ? `${base}&dl=${data.token}` : `${base}&token=${getToken()}`;
+      triggerDownload(url, file.name);
     } catch {
-      window.open(`/api/files/download?share=${currentShare}&path=${encodeURIComponent(fp)}&token=${getToken()}`, '_blank');
+      triggerDownload(`${base}&token=${getToken()}`, file.name);
     }
     closeCtx();
   }
