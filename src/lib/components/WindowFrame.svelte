@@ -201,6 +201,14 @@
           initialPath={win.filesTarget?.path || '/'}
         />
       {/await}
+    {:else if win.appId === 'mediaplayer'}
+      {#await import('$lib/apps/MediaPlayer.svelte') then module}
+        <svelte:component
+          this={module.default}
+          initialShare={win.mediaTarget?.share || null}
+          initialPath={win.mediaTarget?.path || null}
+        />
+      {/await}
     {:else if win.appId === 'nimsettings'}
       {#await import('$lib/apps/Settings.svelte') then module}
         <svelte:component this={module.default} />

@@ -460,6 +460,9 @@ func startHTTPServer() {
 	mux.HandleFunc("/api/files", handleFilesRoutes)
 	mux.HandleFunc("/api/files/", handleFilesRoutes)
 
+	// ── MediaPlayer (probe/remux/subs vía ffmpeg) ──
+	mux.HandleFunc("/api/media/", handleMediaRoutes)
+
 	// ── Temp shares (Files → Compartir temporal · enlaces /s/{token}) ──
 	mux.HandleFunc("/api/tempshares", handleTempSharesRoutes)
 	mux.HandleFunc("/api/tempshares/", handleTempSharesRoutes)

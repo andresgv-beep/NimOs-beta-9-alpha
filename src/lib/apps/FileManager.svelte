@@ -37,6 +37,9 @@
   import AppShell from '$lib/components/AppShell.svelte';
   import TreeNode from '$lib/components/TreeNode.svelte';
   import { getToken, jsonHdrs as hdrs } from '$lib/stores/auth.js';
+  import { openWindow } from '$lib/stores/windows.js';
+  import { APP_META } from '$lib/apps.js';
+  import { isMediaFile } from './mediaplayer/mediaUtils.js';
   import { notifySuccess, notifyError, notifyWarning } from '$lib/stores/notifications.js';
   import { addTask } from '$lib/stores/uploadTasks.js';
   import FilesGridView from './files/FilesGridView.svelte';
@@ -129,11 +132,27 @@
     closeCtx();
     fetchFiles();
   }
+  // playInMediaPlayer · abre el reproductor nativo con el fichero (y su
+  // carpeta como cola). El streaming va con la cookie de sesión, sin tokens.
+  function playInMediaPlayer(file) {
+    const meta = APP_META.mediaplayer;
+    openWindow('mediaplayer', { width: meta.width, height: meta.height }, {
+      mediaTarget: { share: currentShare, path: filePath(file) },
+    });
+    closeCtx();
+  }
+
   async function openItem(file) {
     closeCtx();
     if (file.isDirectory) {
       currentPath = currentPath === '/' ? `/${file.name}` : `${currentPath}/${file.name}`;
       fetchFiles();
+      return;
+    }
+    // Media → reproductor nativo de NimOS (doble clic = reproducir, como en
+    // cualquier escritorio). "Descargar" sigue bajando el fichero.
+    if (isMediaFile(file.name)) {
+      playInMediaPlayer(file);
       return;
     }
     const fp = filePath(file);
@@ -256,6 +275,7 @@
     const { type, file } = e.detail;
     switch (type) {
       case 'open':     openItem(file); break;
+      case 'play':     playInMediaPlayer(file); break;
       case 'copy':     copyFile(file); break;
       case 'cut':      cutFile(file); break;
       case 'paste':    pasteFile(); break;

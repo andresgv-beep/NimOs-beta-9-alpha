@@ -139,6 +139,15 @@ export const APP_META = {
     height:   620,
     category: 'app',
   },
+
+  mediaplayer: {
+    name:     'MediaPlayer',
+    icon:     'mediaplayer',
+    fallback: '🎬',
+    width:    1040,
+    height:   660,
+    category: 'app',
+  },
 };
 
 /**

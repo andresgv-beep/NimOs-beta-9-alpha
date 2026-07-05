@@ -6,11 +6,12 @@
    * y emite un evento `action` con el tipo de acción. El padre
    * (FileManager) despacha cada acción contra su lógica.
    *
-   * Acciones: open · copy · cut · paste · download · zip · unzip ·
+   * Acciones: open · play · copy · cut · paste · download · zip · unzip ·
    *           rename · info · delete
    */
   import { createEventDispatcher } from 'svelte';
   import { isZipFile } from './filesStore.js';
+  import { isMediaFile } from '../mediaplayer/mediaUtils.js';
 
   const dispatch = createEventDispatcher();
 
@@ -29,6 +30,13 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         Abrir
       </div>
+      {#if !menu.file.isDirectory && isMediaFile(menu.file.name)}
+        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+        <div class="ctx-item" on:click={() => act('play')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10 9 15 12 10 15 10 9" fill="currentColor" stroke="none"/></svg>
+          Reproducir
+        </div>
+      {/if}
       <div class="ctx-sep"></div>
       <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
       <div class="ctx-item" on:click={() => act('copy')}>

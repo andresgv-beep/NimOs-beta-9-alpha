@@ -96,6 +96,7 @@ export function openWindow(appId, options = {}, webAppData = null) {
       webAppLandingPath: webAppData?.landingPath || '',
       gameData: webAppData?.gameData || null,
       filesTarget: webAppData?.filesTarget || null,
+      mediaTarget: webAppData?.mediaTarget || null,
     },
   }));
 
