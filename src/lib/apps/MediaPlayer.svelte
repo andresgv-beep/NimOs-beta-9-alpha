@@ -69,7 +69,9 @@
 
   $: current = currentIndex >= 0 ? queue[currentIndex] : null;
   $: mode = current && isAudioFile(current.name) ? 'audio' : 'video';
-  $: src = !current || playback.tooHeavy
+  // tooHeavy solo bloquea VÍDEO — el audio (aunque lleve carátula) siempre suena.
+  $: blocked = mode === 'video' && playback.tooHeavy;
+  $: src = !current || blocked
     ? ''
     : playback.streaming
       ? remuxUrl(share, joinPath(dir, current.name), timeOffset, selectedAudio)
@@ -150,9 +152,9 @@
     if (currentIndex !== i) return; // el usuario saltó a otra mientras tanto
     playback = pickPlayback(probe);
 
-    // Vídeo demasiado pesado para el navegador (4K/HEVC): no lo intentamos —
-    // NimOS es visor, no media server. El aviso invita a Jellyfin/Descargar.
-    if (playback.tooHeavy) { playing = false; return; }
+    // Vídeo con códec/resolución que el navegador no reproduce: no lo
+    // intentamos (solo aplica a vídeo; el audio nunca se bloquea).
+    if (mode === 'video' && playback.tooHeavy) { playing = false; return; }
 
     if (mode === 'video') loadSubtitles(name);
     else dropSub();
@@ -368,20 +370,20 @@
             </div>
           {/if}
 
-          {#if playback.tooHeavy}
+          {#if blocked}
             <div class="oops">
               <svg class="oops-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none"/></svg>
-              <div class="oops-t">Vídeo 4K / HEVC — demasiado para el navegador</div>
-              <div class="oops-s">NimOS es un visor rápido, no un centro multimedia. Para verlo fluido, ábrelo en Jellyfin (App Store) o descárgalo y reprodúcelo en tu equipo.</div>
+              <div class="oops-t">Formato no compatible</div>
+              <div class="oops-s">Resolución o códec de vídeo que el navegador no puede reproducir.</div>
             </div>
           {:else if unsupported}
             <div class="oops">
-              <div class="oops-t">El navegador no puede reproducir este formato</div>
-              <div class="oops-s">{current?.name} · usa Descargar en Files para verlo en tu equipo</div>
+              <div class="oops-t">Formato no compatible</div>
+              <div class="oops-s">El navegador no puede reproducir este archivo.</div>
             </div>
           {/if}
 
-          {#if !playing && !unsupported && !playback.tooHeavy && current}
+          {#if !playing && !unsupported && !blocked && current}
             <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
             <div class="bigplay" on:click={togglePlay}>
               <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"/></svg>

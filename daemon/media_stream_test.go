@@ -8,6 +8,26 @@ import (
 	"testing"
 )
 
+func TestParseProbeJSON_SkipsCoverArt(t *testing.T) {
+	// Un .m4a con carátula: ffprobe reporta la portada como stream de vídeo
+	// mjpeg con disposition.attached_pic=1. NO debe contar como vídeo (si no,
+	// el player lo toma por peli rara y bloquea la música).
+	raw := []byte(`{
+		"streams": [
+			{"codec_type":"audio","codec_name":"aac","channels":2},
+			{"codec_type":"video","codec_name":"mjpeg","disposition":{"attached_pic":1}}
+		],
+		"format": {"duration": "151.0"}
+	}`)
+	streams, _, err := parseProbeJSON(raw)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(streams) != 1 || streams[0].Type != "audio" {
+		t.Fatalf("la carátula debe descartarse; quedan: %+v", streams)
+	}
+}
+
 func TestParseProbeJSON_RealWorldShape(t *testing.T) {
 	// Forma real de un mkv HEVC + EAC3/AC3 + subrip (el caso "peli muda").
 	raw := []byte(`{

@@ -106,12 +106,15 @@ type MediaStreamInfo struct {
 // ffprobeOut refleja lo mínimo del JSON de ffprobe.
 type ffprobeOut struct {
 	Streams []struct {
-		CodecType string `json:"codec_type"`
-		CodecName string `json:"codec_name"`
-		Channels  int    `json:"channels"`
-		Width     int    `json:"width"`
-		Height    int    `json:"height"`
-		Tags      struct {
+		CodecType   string `json:"codec_type"`
+		CodecName   string `json:"codec_name"`
+		Channels    int    `json:"channels"`
+		Width       int    `json:"width"`
+		Height      int    `json:"height"`
+		Disposition struct {
+			AttachedPic int `json:"attached_pic"`
+		} `json:"disposition"`
+		Tags struct {
 			Language string `json:"language"`
 			Title    string `json:"title"`
 		} `json:"tags"`
@@ -133,6 +136,13 @@ func parseProbeJSON(raw []byte) (streams []MediaStreamInfo, duration float64, er
 	for _, s := range out.Streams {
 		t := s.CodecType
 		if t != "video" && t != "audio" && t != "subtitle" {
+			continue
+		}
+		// La CARÁTULA incrustada (attached_pic) es un "stream de vídeo" mjpeg/
+		// png, no un vídeo reproducible: un .m4a con portada la reportaba como
+		// vídeo de códec raro y el player lo tomaba por peli 4K/HEVC → bloqueaba
+		// la música. Se descarta.
+		if t == "video" && s.Disposition.AttachedPic == 1 {
 			continue
 		}
 		streams = append(streams, MediaStreamInfo{

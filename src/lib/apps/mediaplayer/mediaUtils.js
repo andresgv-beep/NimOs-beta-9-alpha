@@ -118,11 +118,16 @@ export async function probeMedia(share, path, headers) {
 //   · tooHeavy=true: vídeo HEVC y/o >1080p que el navegador no maneja. NO se
 //     transcodifica (eso es territorio Jellyfin) → el player muestra un aviso
 //     limpio para verlo en Jellyfin o descargarlo.
+// Códecs de imagen: son carátulas incrustadas (portada del álbum), no vídeo.
+const IMAGE_CODECS = new Set(['mjpeg', 'png', 'bmp', 'gif', 'webp', 'jpeg']);
+
 export function pickPlayback(probe) {
   const none = { streaming: false, tooHeavy: false, audioTracks: [], subTracks: [], duration: 0, ffmpeg: false };
   if (!probe || !probe.ffmpeg || !Array.isArray(probe.streams)) return none;
   const audioTracks = probe.streams.filter((s) => s.type === 'audio');
-  const video = probe.streams.find((s) => s.type === 'video');
+  // Refuerzo sobre el filtro del backend: un "vídeo" con códec de imagen es
+  // una carátula, no un vídeo reproducible → no cuenta.
+  const video = probe.streams.find((s) => s.type === 'video' && !IMAGE_CODECS.has(s.codec));
   const subTracks = probe.streams.filter((s) => s.type === 'subtitle');
   const audioOK = audioTracks.length === 0 || BROWSER_AUDIO_OK.has(audioTracks[0].codec);
   // Vídeo que el navegador no puede: códec no amigable (HEVC…) o resolución
