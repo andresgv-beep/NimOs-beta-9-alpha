@@ -182,6 +182,7 @@ func bootHTTP() {
 	maintenanceManager.Register(&dockerImagePruneTask{})
 	maintenanceManager.Register(&dockerNetworkPruneTask{})
 	maintenanceManager.Register(&appUpdateCheckTask{})
+	maintenanceManager.Register(&ghostAppSweepTask{})
 	startMaintenanceScheduler()
 }
 
