@@ -23,6 +23,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"sync"
 	"time"
@@ -182,6 +183,14 @@ func (r *DeviceReconciler) runCycle(ctx context.Context) error {
 		return fmt.Errorf("scan: %w", err)
 	}
 
+	// P3 (F5) — reconstruir la membresía pool→device desde la verdad de btrfs.
+	// Cierra el gap por el que un `btrfs replace`/`device add` hecho fuera del
+	// daemon dejaba storage_pool_devices desincronizado (la UI veía el pool con
+	// un disco de más/menos y no dejaba gestionarlo). No fatal para el ciclo.
+	if err := r.reconcilePoolMembership(ctx); err != nil {
+		logMsg("DeviceReconciler: reconcilePoolMembership: %v", err)
+	}
+
 	// P2 — detectar devices que pasan de missing→present (reaparición).
 	// El escenario real: corte de luz → la Pi bootea antes de que el HDD USB
 	// termine su spin-up → el mount inicial falla → el disco aparece 40s
@@ -213,6 +222,77 @@ func (r *DeviceReconciler) runCycle(ctx context.Context) error {
 	}
 	r.prevMissing = currMissing
 
+	return nil
+}
+
+// reconcilePoolMembership reconstruye la membresía pool→device desde la verdad
+// de btrfs (observerFilesystemsFn). Cierra el gap por el que la BD quedaba
+// desincronizada tras un `btrfs replace`/`device add` hecho fuera del daemon (o
+// un disco reaparecido con un devid nuevo): la membresía en storage_pool_devices
+// solo se mutaba vía operaciones del daemon (import/create/add/replace), sin
+// ningún reconciliador que la reconstruyera desde el estado real → la UI mostraba
+// el pool con un disco de más/de menos y no permitía gestionarlo.
+//
+// Política: SOLO AÑADE. Si btrfs reporta un device online en el FS de un pool
+// managed y ese device no está en storage_pool_devices, lo asigna. NUNCA
+// desasigna — un device temporalmente ausente no debe perder su membresía; la
+// ausencia se maneja aparte (missing/degraded). Idempotente y conservador: si un
+// pool no está observado ahora (desmontado), no infiere nada sobre él.
+func (r *DeviceReconciler) reconcilePoolMembership(ctx context.Context) error {
+	fss := observerFilesystemsFn()
+	if len(fss) == 0 {
+		return nil // sin observación de btrfs este ciclo: no tocar nada
+	}
+	fsByUUID := make(map[string]*ObservedBtrfs, len(fss))
+	for i := range fss {
+		if fss[i].UUID != "" {
+			fsByUUID[fss[i].UUID] = &fss[i]
+		}
+	}
+
+	pools, err := r.service.repo.ListPoolsByControlState(ctx, ControlStateManaged)
+	if err != nil {
+		return fmt.Errorf("list managed pools: %w", err)
+	}
+
+	for _, p := range pools {
+		fs := fsByUUID[p.BtrfsUUID]
+		if fs == nil {
+			continue // pool no observado ahora (desmontado/ausente): no inferir
+		}
+		current, err := r.service.repo.ListDevicesInPool(ctx, p.ID)
+		if err != nil {
+			logMsg("reconcilePoolMembership: ListDevicesInPool(%s): %v", p.Name, err)
+			continue
+		}
+		assigned := make(map[string]bool, len(current))
+		for _, d := range current {
+			assigned[d.ID] = true
+		}
+
+		for _, od := range fs.Devices {
+			if od.ByIDPath == "" {
+				continue // sin by-id estable no mapeamos con seguridad
+			}
+			dev, err := r.service.repo.GetDeviceByByIDPath(ctx, od.ByIDPath)
+			if err != nil || dev == nil {
+				continue // aún no en la BD; el ScanDevices del ciclo lo traerá
+			}
+			if assigned[dev.ID] {
+				continue
+			}
+			// Nuevo miembro observado que la BD no tenía → asignar.
+			if err := r.service.runInTx(ctx, func(tx *sql.Tx) error {
+				return r.service.repo.AssignDeviceToPool(ctx, tx, p.ID, dev.ID)
+			}); err != nil {
+				logMsg("reconcilePoolMembership: assign %s→%q: %v", dev.CurrentPath, p.Name, err)
+				continue
+			}
+			assigned[dev.ID] = true
+			logMsg("reconcilePoolMembership: %q: device %s (serial %s) presente en btrfs pero ausente en BD → asignado al pool",
+				p.Name, dev.CurrentPath, dev.Serial)
+		}
+	}
 	return nil
 }
 
