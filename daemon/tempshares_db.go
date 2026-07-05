@@ -24,15 +24,15 @@ import (
 )
 
 const (
-	tempShareTokenLen   = 10  // base62 → ~59 bits de entropía
-	tempShareMaxTTLHrs  = 720 // 30 días de tope
-	tempShareGraceMs    = 24 * 60 * 60 * 1000 // expirados visibles 24h, luego se limpian
+	tempShareTokenLen  = 10                  // base62 → ~59 bits de entropía
+	tempShareMaxTTLHrs = 720                 // 30 días de tope
+	tempShareGraceMs   = 24 * 60 * 60 * 1000 // expirados visibles 24h, luego se limpian
 )
 
 type TempShare struct {
 	Token         string `json:"token"`
 	Share         string `json:"share"`
-	Path          string `json:"path"`      // relativa al share (ya validada)
+	Path          string `json:"path"` // relativa al share (ya validada)
 	FileName      string `json:"fileName"`
 	SizeBytes     int64  `json:"sizeBytes"`
 	Scope         string `json:"scope"` // "lan" | "public"

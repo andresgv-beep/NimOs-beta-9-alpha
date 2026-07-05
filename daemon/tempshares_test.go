@@ -95,9 +95,9 @@ func TestTempShareSlots(t *testing.T) {
 
 func TestTempShareHumanSize(t *testing.T) {
 	cases := map[int64]string{
-		512:               "512 B",
-		2048:              "2.0 KB",
-		5 * 1024 * 1024:   "5.0 MB",
+		512:                "512 B",
+		2048:               "2.0 KB",
+		5 * 1024 * 1024:    "5.0 MB",
 		1024 * 1024 * 1024: "1.0 GB",
 	}
 	for in, want := range cases {
