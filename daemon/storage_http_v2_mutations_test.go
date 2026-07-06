@@ -242,6 +242,19 @@ func TestStorageHTTPAddDeviceHappy(t *testing.T) {
 		t.Errorf("status: got %d (body: %s)", rec.Code, rec.Body.String())
 	}
 
+	// Modelo ASYNC (AUDIT F9): el endpoint devuelve la op in_progress y la
+	// membresía se persiste en el goroutine. Esperar a que complete —
+	// assertar antes era una carrera que dejaba este test en rojo perpetuo.
+	var resp struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil || resp.Data.ID == "" {
+		t.Fatalf("no se pudo extraer op.ID de la respuesta: %v (body: %s)", err, rec.Body.String())
+	}
+	waitForOperation(t, service, context.Background(), resp.Data.ID, 3*time.Second)
+
 	pool, _ := service.GetPool(context.Background(), poolID)
 	if len(pool.Devices) != 3 {
 		t.Errorf("devices in pool: got %d, want 3", len(pool.Devices))
@@ -287,6 +300,18 @@ func TestStorageHTTPRemoveDeviceHappy(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Errorf("status: got %d (body: %s)", rec.Code, rec.Body.String())
 	}
+
+	// Modelo ASYNC (AUDIT F9): esperar a que el goroutine persista la
+	// desasignación antes de assertar (ver comentario en AddDeviceHappy).
+	var resp struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil || resp.Data.ID == "" {
+		t.Fatalf("no se pudo extraer op.ID de la respuesta: %v (body: %s)", err, rec.Body.String())
+	}
+	waitForOperation(t, service, context.Background(), resp.Data.ID, 3*time.Second)
 
 	pool, _ := service.GetPool(context.Background(), poolID)
 	if len(pool.Devices) != 2 {

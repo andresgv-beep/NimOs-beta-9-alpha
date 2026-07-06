@@ -364,6 +364,14 @@ func checkStorageHealthGo() []map[string]interface{} {
 				}
 			}
 		}
+
+		// AUDIT-R7 · UI honesta: una operación de layout FALLIDA (replace,
+		// add, remove, convert) era invisible — la op quedaba failed en la BD
+		// y nadie la mostraba. El caso doloroso: un replace que falla o queda
+		// inconclusive tras un reinicio dejaba el pool degradado en silencio.
+		// Aquí se convierte en alerta persistente (banner) hasta que deje de
+		// ser reciente o el usuario resuelva. Una por pool (la más reciente).
+		alerts = append(alerts, failedLayoutOpAlerts(context.Background())...)
 	}
 	if alerts == nil {
 		alerts = []map[string]interface{}{}
@@ -372,6 +380,60 @@ func checkStorageHealthGo() []map[string]interface{} {
 	storageAlertsGo = alerts
 	storageAlertsMu.Unlock()
 	return alerts
+}
+
+// failedLayoutOpAlerts devuelve una alerta por pool para la op de layout
+// fallida más reciente (últimas 48h). Ventana corta a propósito: la alerta es
+// "acaba de pasar algo grave", no un historial (para eso están las ops).
+func failedLayoutOpAlerts(ctx context.Context) []map[string]interface{} {
+	if storageService == nil {
+		return nil
+	}
+	since := time.Now().Add(-48 * time.Hour)
+	failed := OpStatusFailed
+	ops, err := storageService.repo.ListOperations(ctx, OperationFilter{
+		Status: &failed,
+		Since:  &since,
+		Limit:  50,
+	})
+	if err != nil {
+		logMsg("failedLayoutOpAlerts: ListOperations: %v", err)
+		return nil
+	}
+
+	layoutOps := map[OperationType]string{
+		OpTypeReplaceDevice:  "reemplazo de disco",
+		OpTypeAddDevice:      "añadir disco",
+		OpTypeRemoveDevice:   "quitar disco",
+		OpTypeConvertProfile: "cambio de RAID",
+	}
+
+	var out []map[string]interface{}
+	seenPool := map[string]bool{} // ListOperations viene más reciente primero
+	for _, op := range ops {
+		label, isLayout := layoutOps[op.Type]
+		if !isLayout || op.PoolID == nil || seenPool[*op.PoolID] {
+			continue
+		}
+		seenPool[*op.PoolID] = true
+
+		poolName := *op.PoolID
+		if p, perr := storageService.repo.GetPool(ctx, *op.PoolID); perr == nil && p != nil {
+			poolName = p.Name
+		}
+		msg := fmt.Sprintf("La operación de %s en el pool %s FALLÓ", label, poolName)
+		if op.Error != nil && *op.Error != "" {
+			msg += ": " + *op.Error
+		}
+		out = append(out, map[string]interface{}{
+			"severity":     "critical",
+			"pool":         poolName,
+			"message":      msg,
+			"operation_id": op.ID,
+			"kind":         "operation_failed",
+		})
+	}
+	return out
 }
 
 // ─── Wipe (implemented in storage_wipe.go) ──────────────────────────────────

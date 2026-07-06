@@ -29,6 +29,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -91,11 +93,18 @@ func (s *StorageService) RecoverPendingOperations(ctx context.Context) (*Recover
 			result.Readopted++
 			if op.PoolID != nil {
 				if pool, gErr := s.repo.GetPool(ctx, *op.PoolID); gErr == nil && pool != nil {
-					if op.Type == OpTypeStartScrub {
+					switch op.Type {
+					case OpTypeStartScrub:
 						// AUDIT B6: scrub vivo tras restart → mismo watcher
 						// que en el arranque normal del scrub.
 						go watchScrubOperation(op.ID, pool.MountPoint, pool.Name)
-					} else {
+					case OpTypeReplaceDevice:
+						// AUDIT-R3: un replace re-adoptado necesita SU watcher
+						// (consulta replace status y persiste el swap old→new).
+						// El watcher de balance lo cerraría al instante sin
+						// swap: completed mentiroso + membresía divorciada.
+						go s.watchReadoptedReplace(op, pool.ID, pool.MountPoint)
+					default:
 						go s.watchReadoptedBalance(op.ID, pool.ID, pool.MountPoint)
 					}
 				}
@@ -349,6 +358,100 @@ func (s *StorageService) resolveOrphanImportPool(ctx context.Context, op *Operat
 // apunta a readBalanceStatus.
 var readBalanceStatusFn = readBalanceStatus
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT-R2 (2026-07-06) · Estado del replace del kernel
+//
+// Un `btrfs replace` NO aparece en `btrfs balance status`: tiene su propio
+// `btrfs replace status`. Con solo el check de balance, TODA op de replace
+// huérfana caía a inconclusive→failed: el lock se liberaba con el kernel aún
+// copiando, un reintento chocaba con el críptico "already running" de btrfs,
+// y el swap old→new en BD jamás se persistía (membresía divorciada de la
+// realidad). Estas funciones dan al recovery la vista real del replace.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// replaceKernelState resume la salida de `btrfs replace status -1`.
+type replaceKernelState struct {
+	Active   bool    // copia en curso
+	Finished bool    // terminó con éxito ("finished on ...")
+	// AUDIT-R5: tras un REBOOT completo de la máquina (no solo del daemon),
+	// btrfs SUSPENDE el replace y solo lo reanuda al montar el pool en rw.
+	// Como NimOS monta los pools degradados en `degraded,ro`, un replace
+	// suspendido se quedaría suspendido para siempre y su status no dice
+	// ni "% done" ni "finished" — sin este estado, la recovery lo daría
+	// por muerto (inconclusive) con la copia a medias en el disco.
+	Suspended bool
+	Pct       float64 // % de progreso si Active
+}
+
+// readReplaceStateFn es inyectable para tests. Producción: readReplaceState.
+var readReplaceStateFn = readReplaceState
+
+func readReplaceState(mountPoint string) replaceKernelState {
+	// `-1` obligatorio: sin él, replace status monitoriza en bucle y no
+	// retorna (mismo bug que ya mordió en storage_health).
+	out, ok := runSafe("btrfs", "replace", "status", "-1", mountPoint)
+	if !ok {
+		return replaceKernelState{}
+	}
+	pct, running := parseReplaceProgress(out)
+	st := replaceKernelState{
+		Active: running,
+		// parseReplaceProgress devuelve (100,false) SOLO con "finished"/"completed"
+		Finished: !running && pct == 100,
+		Pct:      pct,
+	}
+	// Detección defensiva por substring: el formato exacto de la línea de
+	// suspensión varía entre versiones de btrfs-progs, pero la palabra
+	// "suspended" es constante.
+	if !st.Active && !st.Finished && strings.Contains(strings.ToLower(out), "suspended") {
+		st.Suspended = true
+	}
+	return st
+}
+
+// missingDevidCheckFn es inyectable para tests. Producción: missingDevidForPool
+// (storage_executor_real.go) — devuelve "" si el pool no tiene disco missing.
+var missingDevidCheckFn = missingDevidForPool
+
+// kernelPoolHasDeviceFn verifica que un device es MIEMBRO REAL del filesystem
+// según el kernel (btrfs filesystem show). Inyectable para tests.
+//
+// AUDIT-R6 (endurecimiento del swap): el check de "sin disco missing" no
+// basta en un caso estrecho — daemon crasheado DESPUÉS de crear la op pero
+// ANTES de que `replace start` ejecutara, sobre un pool que ya tuvo un
+// replace terminado antes (status residual "finished") y cuyo disco a
+// reemplazar sigue vivo (reemplazo proactivo: no hay missing). Sin esta
+// verificación, el watcher persistiría un swap que el kernel jamás hizo.
+// Regla 16: la membresía en BD solo cambia si el kernel confirma que el
+// disco NUEVO está dentro.
+var kernelPoolHasDeviceFn = kernelPoolHasDevice
+
+func kernelPoolHasDevice(mountPoint string, dev *Device) bool {
+	if dev == nil {
+		return false
+	}
+	out, ok := runSafe("btrfs", "filesystem", "show", mountPoint)
+	if !ok {
+		return false // sin lectura del kernel no hay certeza → no confirmar
+	}
+	// `filesystem show` imprime paths /dev/sdX; el by-id es un symlink que
+	// puede no aparecer literal. Comprobar ambos y, como refuerzo, resolver
+	// el symlink del by-id a su target real.
+	if dev.CurrentPath != "" && strings.Contains(out, dev.CurrentPath) {
+		return true
+	}
+	if dev.ByIDPath != "" {
+		if strings.Contains(out, dev.ByIDPath) {
+			return true
+		}
+		if target, err := filepath.EvalSymlinks(dev.ByIDPath); err == nil && target != "" &&
+			strings.Contains(out, target) {
+			return true
+		}
+	}
+	return false
+}
+
 // resolveOrphanLayoutOp decide el desenlace de una op de layout (add/remove/
 // replace device, convert profile) interrumpida por un restart del daemon.
 //
@@ -369,6 +472,29 @@ func (s *StorageService) resolveOrphanLayoutOp(ctx context.Context, op *Operatio
 		return inconclusiveOutcome(fmt.Sprintf(
 			"layout op %s on pool %v interrupted by daemon restart (pool no resoluble)",
 			op.Type, derefStr(op.PoolID)))
+	}
+
+	// AUDIT-R2: un replace del kernel vive en `replace status`, no en
+	// `balance status`. Consultar SU estado antes de dar la op por muerta.
+	// Si sigue copiando (Active), quedó suspendido por un reboot completo
+	// (Suspended, AUDIT-R5) o ya terminó (Finished — el swap en BD quedó
+	// pendiente porque el goroutine murió con el daemon), re-adoptar:
+	// watchReadoptedReplace reanuda/espera y cierra la op con certeza.
+	if op.Type == OpTypeReplaceDevice {
+		rst := readReplaceStateFn(pool.MountPoint)
+		if rst.Active || rst.Finished || rst.Suspended {
+			state := "TERMINADO"
+			if rst.Active {
+				state = "ACTIVO"
+			} else if rst.Suspended {
+				state = "SUSPENDIDO (reboot a media copia)"
+			}
+			logMsg("Recovery: op %s (replace) en pool %s tiene replace del kernel %s (%.1f%%) → re-adoptando",
+				op.ID, pool.Name, state, rst.Pct)
+			return recoveryOutcome{NewStatus: OpStatusInProgress, Readopted: true}
+		}
+		// Sin replace vivo, suspendido ni terminado ("Never started" o
+		// cancelado): cae al camino inconclusive de abajo (seguro).
 	}
 
 	st := readBalanceStatusFn(pool.MountPoint)
@@ -428,6 +554,154 @@ func (s *StorageService) watchReadoptedBalance(opID, poolID, mountPoint string) 
 				"balance re-adoptado excedió el tiempo máximo de espera (24h)",
 				ErrCodeRecoveryInconclusive)
 			logMsg("Recovery: watcher de balance del pool %s excedió 24h → op %s failed", poolID, opID)
+			return
+		}
+
+		time.Sleep(pollInterval)
+	}
+}
+
+// watchReadoptedReplace espera a que el `btrfs replace` del kernel de una op
+// re-adoptada termine y entonces PERSISTE EL SWAP old→new en BD y cierra la op.
+//
+// AUDIT-R3: watchReadoptedBalance solo cierra la op y reconcilia el profile —
+// nunca la MEMBRESÍA. Para un replace re-adoptado eso dejaba el disco viejo
+// asignado y el nuevo huérfano en BD para siempre (el reconciler de membresía
+// solo AÑADE miembros observados, no desasigna). Este watcher replica el final
+// del goroutine original de ReplaceDevice: swap atómico + completed.
+//
+// Regla 16 antes de tocar la BD: el swap solo se persiste si el kernel dice
+// "finished" Y el pool ya no reporta ningún disco missing. Ante cualquier otra
+// cosa → failed/inconclusive sin tocar membresía.
+// replaceWatchPollInterval es el intervalo de sondeo del watcher de replace.
+// Var (no const) para que los tests puedan acelerarlo sin dormir 10s reales.
+var replaceWatchPollInterval = 10 * time.Second
+
+func (s *StorageService) watchReadoptedReplace(op *Operation, poolID, mountPoint string) {
+	bgCtx := context.Background()
+	pollInterval := replaceWatchPollInterval
+	const maxWait = 48 * time.Hour // un replace de TB puede superar las 24h del balance
+
+	var data struct {
+		OldDeviceID string `json:"old_device_id"`
+		NewDeviceID string `json:"new_device_id"`
+	}
+	if err := json.Unmarshal(op.Data, &data); err != nil ||
+		data.OldDeviceID == "" || data.NewDeviceID == "" {
+		s.markOperationFailed(bgCtx, op.ID,
+			"replace re-adoptado sin old/new device en Data; la membresía queda sin tocar (revisión manual)",
+			ErrCodeRecoveryInconclusive)
+		notifError("Reemplazo de disco: recuperación incompleta",
+			"El reemplazo interrumpido no guarda qué discos intervenían; revisa el pool en Almacenamiento.")
+		return
+	}
+
+	notifWarning("Reinicio durante un reemplazo de disco",
+		"NimOS se reinició con una reconstrucción en marcha; se ha re-adoptado y continúa. Verás el progreso en Almacenamiento.")
+
+	deadline := time.Now().Add(maxWait)
+	for {
+		st := readReplaceStateFn(mountPoint)
+
+		// AUDIT-R5: reboot completo → el kernel SUSPENDE el replace y solo lo
+		// reanuda al montar rw. NimOS monta los pools degradados en ro, así
+		// que sin este empujón la copia quedaría congelada para siempre.
+		if st.Suspended {
+			if poolMountIsReadOnly(mountPoint) {
+				logMsg("watchReadoptedReplace: replace SUSPENDIDO y pool %s en ro; remontando degraded,rw para reanudar", mountPoint)
+				if err := remountPoolReadWriteDegraded(mountPoint); err != nil {
+					s.markOperationFailed(bgCtx, op.ID,
+						fmt.Sprintf("replace suspendido tras reboot y no se pudo remontar rw para reanudarlo: %v", err),
+						ErrCodeBtrfsCommandFailed)
+					notifError("Reemplazo de disco suspendido",
+						"Tras el reinicio, la reconstrucción quedó suspendida y no se pudo reanudar automáticamente. Revisa el pool en Almacenamiento.")
+					return
+				}
+				notifInfo("Reconstrucción reanudada",
+					"El reemplazo de disco suspendido por el reinicio se ha reanudado automáticamente.")
+			}
+			// darle tiempo al kernel a reanudar y volver a mirar
+			time.Sleep(pollInterval)
+			if time.Now().After(deadline) {
+				s.markOperationFailed(bgCtx, op.ID,
+					"replace re-adoptado excedió el tiempo máximo de espera (48h)",
+					ErrCodeRecoveryInconclusive)
+				return
+			}
+			continue
+		}
+
+		if !st.Active {
+			if !st.Finished {
+				// Cancelado o estado ilegible: sin certeza no hay completed
+				// ni swap (Regla 16). El pool sigue como esté; el usuario
+				// puede relanzar el replace.
+				s.markOperationFailed(bgCtx, op.ID,
+					"el replace del kernel terminó sin estado 'finished' (¿cancelado?); membresía sin tocar",
+					ErrCodeRecoveryInconclusive)
+				notifError("Reemplazo de disco interrumpido",
+					"La reconstrucción no llegó a terminar (posiblemente cancelada). El pool no ha cambiado; puedes relanzar el reemplazo desde Almacenamiento.")
+				return
+			}
+			// Reality check 1: tras un replace finished no debe quedar disco
+			// missing en el pool. Si lo hay, el 'finished' es de otro replace
+			// anterior y NO corresponde a esta op → no tocar membresía.
+			if devid := missingDevidCheckFn(mountPoint); devid != "" {
+				s.markOperationFailed(bgCtx, op.ID,
+					fmt.Sprintf("replace 'finished' pero el pool aún reporta un disco missing (devid %s); membresía sin tocar", devid),
+					ErrCodeRecoveryInconclusive)
+				notifError("Reemplazo de disco: estado incoherente",
+					"El kernel reporta un reemplazo terminado pero al pool aún le falta un disco. NimOS no ha tocado nada; revisa Almacenamiento.")
+				return
+			}
+			// Reality check 2 (AUDIT-R6): el disco NUEVO debe ser miembro real
+			// del filesystem según el kernel. Cubre el caso estrecho de un
+			// 'finished' residual de un replace ANTERIOR con esta op creada
+			// pero jamás ejecutada (reemplazo proactivo sin disco missing).
+			newDev, derr := s.repo.GetDevice(bgCtx, data.NewDeviceID)
+			if derr != nil || newDev == nil || !kernelPoolHasDeviceFn(mountPoint, newDev) {
+				s.markOperationFailed(bgCtx, op.ID,
+					"replace 'finished' pero el kernel no confirma el disco nuevo como miembro del pool; membresía sin tocar",
+					ErrCodeRecoveryInconclusive)
+				notifError("Reemplazo de disco: sin confirmación del kernel",
+					"No se pudo confirmar que el disco nuevo forma parte del pool. NimOS no ha cambiado nada; revisa Almacenamiento.")
+				return
+			}
+			// Swap atómico old→new + completed (mismo cierre que el goroutine
+			// original de ReplaceDevice).
+			err := s.runInTx(bgCtx, func(tx *sql.Tx) error {
+				if err := s.repo.UnassignDeviceFromPool(bgCtx, tx, poolID, data.OldDeviceID); err != nil {
+					return err
+				}
+				if err := s.repo.AssignDeviceToPool(bgCtx, tx, poolID, data.NewDeviceID); err != nil {
+					return err
+				}
+				return s.repo.UpdateOperationStatus(bgCtx, tx, op.ID, OpStatusCompleted, nil, nil)
+			})
+			if err != nil {
+				s.markOperationFailed(bgCtx, op.ID,
+					fmt.Sprintf("watcher de replace no pudo persistir el swap: %v", err),
+					ErrCodeInternal)
+				return
+			}
+			logMsg("Recovery: replace re-adoptado del pool %s terminó → swap %s→%s persistido, op %s completed",
+				poolID, data.OldDeviceID, data.NewDeviceID, op.ID)
+			notifSuccess("Reemplazo de disco completado",
+				"La reconstrucción que sobrevivió al reinicio ha terminado y el pool vuelve a tener redundancia completa.")
+			// Scrub de verificación, igual que en el flujo normal (best-effort).
+			if serr := startScrubOnPool(mountPoint, poolID); serr != nil {
+				logMsg("watchReadoptedReplace: no se pudo lanzar el scrub post-replace en %s: %v", mountPoint, serr)
+			}
+			return
+		}
+
+		if time.Now().After(deadline) {
+			s.markOperationFailed(bgCtx, op.ID,
+				"replace re-adoptado excedió el tiempo máximo de espera (48h)",
+				ErrCodeRecoveryInconclusive)
+			logMsg("Recovery: watcher de replace del pool %s excedió 48h → op %s failed", poolID, op.ID)
+			notifError("Reemplazo de disco atascado",
+				"La reconstrucción lleva más de 48h sin terminar. Revisa la salud de los discos en Almacenamiento.")
 			return
 		}
 

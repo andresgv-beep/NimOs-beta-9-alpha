@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -378,10 +379,22 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 		return nil, err
 	}
 
-	// FIX-1: gate de montaje. `btrfs replace start` exige el pool montado
-	// (también en degradado rw, el caso típico de reparación).
+	// FIX-1: gate de montaje. `btrfs replace start` exige el pool montado.
+	//
+	// AUDIT-R1 (2026-07-06): EXCEPCIÓN para read_only. NimOS monta los pools
+	// degradados en `degraded,ro` por seguridad (storage_btrfs_import,
+	// mount_reconcile) — exactamente el estado desde el que se repara. El
+	// guard genérico rechazaba read_only y el flujo de reparación se
+	// AUTO-BLOQUEABA: el remount `degraded,rw` vive en el goroutine de más
+	// abajo y jamás se alcanzaba. El usuario acababa remontando a mano.
+	// Para REPLACE (y solo para replace, que sabe remontar y revertir),
+	// toleramos read_only; mount_missing y el resto siguen cortando.
 	if err := assertLayoutOpAllowed(pool); err != nil {
-		return nil, err
+		var pwe *PoolWritableError
+		if !(errors.As(err, &pwe) && pwe.Code == "read_only") {
+			return nil, err
+		}
+		logMsg("ReplaceDevice: pool %s montado en read-only (degradado); se permite el replace — la reparación remontará degraded,rw", pool.Name)
 	}
 
 	// Old debe estar en el pool
@@ -506,9 +519,15 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 				s.markOperationFailed(bgCtx, op.ID,
 					fmt.Sprintf("no se pudo poner el pool en modo escritura para repararlo: %v", err),
 					ErrCodeBtrfsCommandFailed)
+				// UI honesta: el fallo tiene que ser un EVENTO visible, no
+				// solo una op failed que nadie consulta.
+				notifError(fmt.Sprintf("Reparación de %s fallida", poolName),
+					"No se pudo poner el pool en modo escritura para iniciar el reemplazo. Revisa Almacenamiento.")
 				return
 			}
 			remountedForRepair = true
+			notifInfo(fmt.Sprintf("Reparación de %s iniciada", poolName),
+				"El pool se ha puesto temporalmente en escritura (degradado) para reconstruir la redundancia en el disco nuevo.")
 		}
 
 		// Ejecutar btrfs replace (incluye wipefs seguro del old)
@@ -523,6 +542,8 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 				}
 			}
 			s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
+			notifError(fmt.Sprintf("Reemplazo de disco en %s FALLÓ", poolName),
+				fmt.Sprintf("La reconstrucción no pudo completarse: %v. El pool sigue degradado; revisa Almacenamiento.", err))
 			return
 		}
 
@@ -551,6 +572,8 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 			return
 		}
 		logMsg("ReplaceDevice async: pool %s — %s sustituido por %s", poolID, oldDevID, newDevID)
+		notifSuccess(fmt.Sprintf("Disco reemplazado en %s", poolName),
+			"La reconstrucción ha terminado y se ha lanzado una verificación (scrub). El pool vuelve a tener redundancia completa.")
 	}()
 
 	return s.repo.GetOperation(ctx, op.ID)

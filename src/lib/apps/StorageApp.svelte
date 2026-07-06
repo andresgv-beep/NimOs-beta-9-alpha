@@ -409,12 +409,14 @@
     replaceError = '';
     try {
       const oldId = replaceOldDisk.id || replaceOldDisk.device_id || replaceOldDisk.serial;
-      await api.replaceDevice(replacePool.id || replacePool.name, oldId, replaceNewDeviceId,
+      const op = await api.replaceDevice(replacePool.id || replacePool.name, oldId, replaceNewDeviceId,
         { force: replaceNeedsForce });
       replaceProcessing = false;
       closeReplaceDialog();
-      await loadAll();         // refresco inmediato → el disco se mueve al pool
-      startRepairPolling();    // refresco acelerado mientras dura el replace
+      // UI honesta: la API devuelve la operación IN_PROGRESS — el swap en BD
+      // ocurre al terminar la copia (minutos/horas). No afirmar éxito aún.
+      await loadAll();
+      startRepairPolling(op?.id || op?.data?.id || null);
     } catch (err) {
       console.error('replace error:', err);
       if (err.code === 'DISK_HAS_FILESYSTEM') {
@@ -430,14 +432,53 @@
     }
   }
 
-  // Polling acelerado (cada 3s) mientras algún pool está reparándose, para que
-  // la barra de progreso avance de forma fluida. Cuando ningún pool tiene
-  // resilver activo, vuelve al polling normal (20s).
+  // Polling acelerado (cada 3s) mientras dura una reparación.
+  //
+  // UI HONESTA (AUDIT-R8): antes el polling paraba cuando resilver_active
+  // pasaba a false — que también ocurre cuando el replace FALLA (remount
+  // imposible, error de btrfs, reinicio...). El fallo desaparecía en
+  // silencio y el pool quedaba degradado sin que la UI dijera nada.
+  // Ahora: si tenemos el id de la operación, se sigue LA OPERACIÓN hasta
+  // su estado terminal. failed → banner persistente con el error real.
   let repairPollInterval = null;
-  function startRepairPolling() {
+  let repairOpId = null;
+  let repairFailedMsg = '';   // banner de fallo de reparación (persistente)
+  function startRepairPolling(opId = null) {
+    if (opId) repairOpId = opId;
     if (repairPollInterval) return;
     repairPollInterval = setInterval(async () => {
       await loadAll();
+
+      // Con id de op: la op manda (fuente de verdad del desenlace).
+      if (repairOpId) {
+        try {
+          const ops = await api.getOperations({ limit: 20 });
+          const op = (ops?.operations || ops || []).find(o => o.id === repairOpId);
+          if (op && op.status === 'failed') {
+            repairFailedMsg = op.error
+              ? `El reemplazo de disco FALLÓ: ${op.error}`
+              : 'El reemplazo de disco FALLÓ. Revisa las alertas y el estado del pool.';
+            repairOpId = null;
+            clearInterval(repairPollInterval);
+            repairPollInterval = null;
+            return;
+          }
+          if (op && (op.status === 'completed')) {
+            repairFailedMsg = '';
+            repairOpId = null;
+            clearInterval(repairPollInterval);
+            repairPollInterval = null;
+            return;
+          }
+          // in_progress (o aún no visible) → seguir
+          return;
+        } catch (e) {
+          // sin lectura de ops este ciclo: seguir intentando, no concluir nada
+          return;
+        }
+      }
+
+      // Sin id (reparaciones re-adoptadas tras reinicio): heurística previa.
       const anyRepairing = (pools || []).some(p => p.health?.resilver_active);
       if (!anyRepairing) {
         clearInterval(repairPollInterval);
@@ -608,6 +649,14 @@
       <Spinner label="Cargando volúmenes y discos..." />
     </div>
   {:else}
+
+  {#if repairFailedMsg}
+    <div class="repair-failed" role="alert">
+      ⛔ {repairFailedMsg}
+      <button class="repair-failed-dismiss" on:click={() => repairFailedMsg = ''}
+        title="Ocultar este aviso (la alerta persiste en el resumen)">✕</button>
+    </div>
+  {/if}
 
   {#if active === 'overview'}
     <div class="st-kpis-wrap">
@@ -843,6 +892,33 @@
     border: 1px solid var(--warn);
     border-radius: var(--radius-sm, 4px);
     background: color-mix(in srgb, var(--warn) 8%, transparent);
+  }
+
+  /* AUDIT-R8 · Banner persistente de reparación fallida: un replace que
+     falla NUNCA debe desaparecer en silencio. Descartable, pero la alerta
+     de backend sigue viva en el resumen. */
+  .repair-failed {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--danger, #f87171);
+    border: 1px solid var(--danger, #f87171);
+    border-radius: var(--radius-sm, 4px);
+    background: color-mix(in srgb, var(--danger, #f87171) 10%, transparent);
+  }
+  .repair-failed-dismiss {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0 4px;
   }
 
   /* Loading state */
