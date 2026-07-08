@@ -147,6 +147,46 @@ func dockerAppRepair(w http.ResponseWriter, r *http.Request, appID string) {
 	}
 	stackPath := filepath.Dir(composePath)
 
+	// APP-REPAIR-ASYNC · el repair re-descarga la imagen perdida (Immich: varios
+	// GB, minutos) → síncrono chocaba con el timeout del proxy y el frontend veía
+	// "invalid JSON response (status 502)" AUNQUE el repair terminara bien en el
+	// backend. Con ?async=true respondemos 202 {operationId} al instante y el
+	// frontend hace polling. Mismo patrón que dockerPull (APP-053) y updateApp
+	// (UPD-ASYNC). El path síncrono se mantiene para clientes antiguos.
+	if isAsyncRequested(r) {
+		op, err := operationsRepo.Create(r.Context(), "docker.repair", session.Username)
+		if err != nil {
+			jsonError(w, 500, "Failed to create operation: "+err.Error())
+			return
+		}
+		runWorkerAsync(op.ID, func(ctx context.Context) (map[string]interface{}, error) {
+			return runDockerRepairWork(ctx, appID, composePath, stackPath, op.ID)
+		})
+		writeAsyncAccepted(w, op)
+		return
+	}
+
+	// Sync path (legacy)
+	result, err := runDockerRepairWork(r.Context(), appID, composePath, stackPath, "")
+	if err != nil {
+		writeWorkerError(w, err)
+		return
+	}
+	jsonOk(w, result)
+}
+
+// runDockerRepairWork · trabajo real del repair. Función pura sin acceso a HTTP.
+// Recrea el stack: `down` (limpia los contenedores rotos, conserva config y
+// volúmenes) + `up -d --pull always --force-recreate` (re-pull de la imagen
+// perdida + recrea reusando la config bind-montada en el pool). Si opID != ""
+// reporta progreso a operationsRepo (modo async).
+//
+// Returns:
+//   - map: {"ok": true, "appId": appID}
+//   - error: *httpStatusError(500) si `docker compose up` falla (output real)
+func runDockerRepairWork(ctx context.Context, appID, composePath, stackPath, opID string) (map[string]interface{}, error) {
+	updateOpProgressSafe(ctx, opID, 5, "Limpiando el contenedor roto…")
+
 	// 1. down · quita el/los contenedor(es) roto(s). SIN -v: conserva los
 	// volúmenes; la config bind-montada vive en el pool y no se toca.
 	// --remove-orphans limpia restos. Best-effort: si el contenedor está tan roto
@@ -162,24 +202,26 @@ func dockerAppRepair(w http.ResponseWriter, r *http.Request, appID string) {
 	// 2. up -d --pull always --force-recreate · re-pull de la imagen perdida y
 	// recrea el contenedor. Timeout 15 min (imágenes grandes / red doméstica).
 	// commitContext(): no matar el subprocess si el cliente se desconecta.
+	updateOpProgressSafe(ctx, opID, 20, "Descargando imagen y recreando el contenedor…")
 	upCtx, cancel2 := context.WithTimeout(commitContext(), 15*time.Minute)
 	defer cancel2()
 	upCmd := exec.CommandContext(upCtx, "docker", "compose", "-f", composePath, "up", "-d", "--pull", "always", "--force-recreate")
 	upCmd.Dir = stackPath
 	if out, err := upCmd.CombinedOutput(); err != nil {
 		logMsg("docker: repair up -d falló para %s: %v (output: %s)", appID, err, string(out))
-		jsonError(w, 500, "Repair failed: "+string(out))
-		return
+		return nil, asHTTPError(500, "%s", "Repair failed: "+string(out))
 	}
 
 	// Invalidación inmediata de la caché de estado (igual que deploy/update): sin
 	// esto, /api/services no refleja el contenedor recreado hasta el siguiente
 	// tick (≤30s) y la UI deja "Abrir" bloqueado hasta salir y volver a entrar.
 	// commitContext() · no atar el refresco a la conexión del cliente.
+	updateOpProgressSafe(ctx, opID, 90, "Refrescando estado…")
 	ForceDockerCacheRefresh(commitContext())
 
 	logMsg("docker: app %s reparada (recreada desde compose)", appID)
 	addNotification("info", "system", "Contenedor reparado",
 		"Se recreó el contenedor de "+appID+" reusando su configuración.")
-	jsonOk(w, map[string]interface{}{"ok": true, "appId": appID})
+	updateOpProgressSafe(ctx, opID, 100, "Reparación completada")
+	return map[string]interface{}{"ok": true, "appId": appID}, nil
 }

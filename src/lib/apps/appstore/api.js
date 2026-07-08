@@ -654,12 +654,24 @@ export async function checkAppBroken(appId) {
 
 /**
  * Repara (recrea) el contenedor de una app stack: re-pull de la imagen perdida +
- * recreate, conservando su configuración (bind-mounts en el pool). Síncrono ·
- * puede tardar minutos por la descarga de imagen. Lanza Error si falla.
+ * recreate, conservando su configuración (bind-mounts en el pool).
+ *
+ * Con `async: true` (APP-REPAIR-ASYNC) el backend responde 202 {operationId} al
+ * instante y hay que pollear con waitForOperation(). Imprescindible para apps
+ * grandes (Immich: varios GB) donde el repair síncrono chocaba con el timeout
+ * del proxy → "invalid JSON response (status 502)" aunque el repair funcionara.
+ * Sin async, bloquea hasta terminar (puede tardar minutos). Lanza Error si falla.
+ *
+ * @param {string} appId
+ * @param {Object} [opts]
+ * @param {boolean} [opts.async]
+ * @returns {Promise<Object>}
  */
-export async function repairApp(appId) {
+export async function repairApp(appId, { async: asyncMode = false } = {}) {
   if (!appId) throw new Error('repairApp: appId required');
-  const res = await fetch(`/api/docker/app/${encodeURIComponent(appId)}/repair`, {
+  const path = `/api/docker/app/${encodeURIComponent(appId)}/repair`;
+  const url = asyncMode ? `${path}?async=true` : path;
+  const res = await fetch(url, {
     method: 'POST',
     headers: hdrs(),
   });

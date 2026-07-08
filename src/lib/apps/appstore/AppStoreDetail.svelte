@@ -312,7 +312,17 @@
     repairProcessing = true;
     repairError = '';
     try {
-      await repairApp(appId);
+      // Async (APP-REPAIR-ASYNC) · el backend responde 202 {operationId} al
+      // instante y hacemos polling. Así el repair de apps grandes (Immich:
+      // varios GB de re-pull) no choca con el timeout del proxy → adiós al
+      // "invalid JSON response (status 502)" con el contenedor reparado igual.
+      const resp = await repairApp(appId, { async: true });
+      if (resp?.operationId) {
+        const op = await waitForOperation(resp.operationId);
+        if (op.status !== 'succeeded') {
+          repairError = op.error || 'La reparación falló';
+        }
+      }
       // Recargar para reflejar el nuevo estado (debería pasar a 'running').
       await load();
     } catch (err) {
