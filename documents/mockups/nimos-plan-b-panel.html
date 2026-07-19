@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NimOS Plan B Panel Mockup</title>
+  <style>
+    :root {
+      --canvas: #090a0d;
+      --desktop: #0d1015;
+      --window: #151821;
+      --window-2: #191d28;
+      --side: #10131a;
+      --panel: #1c212d;
+      --panel-2: #202737;
+      --panel-3: #151922;
+      --line: rgba(226, 236, 255, 0.095);
+      --line-2: rgba(226, 236, 255, 0.16);
+      --ink: #eef3f5;
+      --ink-2: #c6d0d7;
+      --ink-3: #8996a2;
+      --ink-4: #596673;
+      --app: #69d2ff;
+      --app-soft: rgba(105, 210, 255, 0.12);
+      --app-line: rgba(105, 210, 255, 0.32);
+      --ok: #50e6a5;
+      --warn: #f2c14e;
+      --crit: #ff6b78;
+      --mag: #d58cff;
+      --shadow: rgba(0, 0, 0, 0.62);
+      --mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+      --sans: Inter, "Segoe UI", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: var(--sans);
+      background:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px) 0 0 / 42px 42px,
+        linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px) 0 0 / 42px 42px,
+        radial-gradient(ellipse 900px 480px at 18% 12%, rgba(105,210,255,0.12), transparent 60%),
+        radial-gradient(ellipse 760px 420px at 88% 86%, rgba(80,230,165,0.08), transparent 64%),
+        var(--desktop);
+      overflow: hidden;
+    }
+
+    .desktop-noise,
+    .window::before,
+    .main::before,
+    .card::before,
+    .sidebar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 3px),
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.05) 0 1px, transparent 1px),
+        radial-gradient(circle at 80% 70%, rgba(255,255,255,0.035) 0 1px, transparent 1px);
+      background-size: auto, 23px 23px, 31px 31px;
+      mix-blend-mode: screen;
+      opacity: 0.26;
+    }
+
+    .desktop-noise {
+      opacity: 0.16;
+    }
+
+    .mock-shell {
+      position: fixed;
+      inset: 34px 42px 70px;
+      display: grid;
+      place-items: center;
+    }
+
+    .window {
+      position: relative;
+      width: min(1180px, calc(100vw - 84px));
+      height: min(720px, calc(100vh - 104px));
+      min-height: 620px;
+      display: grid;
+      grid-template-columns: 224px 1fr;
+      overflow: hidden;
+      background: var(--window);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        0 0 0 1px rgba(0,0,0,0.55),
+        0 18px 48px var(--shadow),
+        0 38px 110px rgba(0,0,0,0.55);
+    }
+
+    .window::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      box-shadow: inset 0 0 42px rgba(105,210,255,0.045);
+    }
+
+    .traffic {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 5;
+    }
+
+    .ctl {
+      width: 11px;
+      height: 11px;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 3px;
+      background: var(--ink-4);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+    }
+    .ctl.min { background: var(--warn); }
+    .ctl.max { background: var(--ok); }
+    .ctl.close { background: var(--crit); }
+
+    .sidebar {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.025), transparent 32%),
+        var(--side);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      position: relative;
+      padding: 18px 16px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .app-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cube {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.2), transparent 42%),
+        var(--app);
+      box-shadow: 0 0 18px rgba(105,210,255,0.22);
+      display: grid;
+      place-items: center;
+      color: #071017;
+      font: 800 13px var(--mono);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+    }
+
+    .brand small {
+      display: block;
+      margin-top: 5px;
+      color: var(--ink-4);
+      font: 10px var(--mono);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      padding: 12px 10px;
+      overflow: auto;
+    }
+
+    .nav-label {
+      padding: 16px 8px 7px;
+      color: var(--ink-4);
+      font: 700 9px var(--mono);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .nav-item {
+      display: grid;
+      grid-template-columns: 18px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 0 9px;
+      color: var(--ink-3);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .nav-item.active {
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, var(--app-soft), rgba(255,255,255,0.025));
+      border-color: var(--app-line);
+      box-shadow: inset 3px 0 0 var(--app);
+    }
+
+    .nav-ic {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border: 1px solid currentColor;
+      opacity: 0.8;
+    }
+
+    .pill {
+      border: 1px solid var(--line-2);
+      border-radius: 999px;
+      padding: 2px 6px;
+      color: var(--ink-4);
+      font: 700 9px var(--mono);
+    }
+
+    .side-foot {
+      margin-top: auto;
+      padding: 13px 16px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 6px;
+      font: 10px var(--mono);
+      color: var(--ink-4);
+    }
+
+    .side-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .side-row b { color: var(--ink-2); font-weight: 600; }
+
+    .main {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.035), transparent 24%),
+        radial-gradient(ellipse at 40% 0%, rgba(105,210,255,0.08), transparent 48%),
+        var(--window-2);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      position: relative;
+      min-height: 76px;
+      padding: 18px 92px 14px 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .title-stack {
+      min-width: 0;
+    }
+
+    .path {
+      color: var(--ink-4);
+      font: 10px var(--mono);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .path span { color: var(--app); }
+
+    .header h2 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0;
+      font-weight: 700;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .icon-btn,
+    .primary-btn {
+      height: 34px;
+      border-radius: 6px;
+      border: 1px solid var(--line-2);
+      background: rgba(255,255,255,0.035);
+      color: var(--ink-2);
+      display: grid;
+      place-items: center;
+      font: 700 12px var(--mono);
+    }
+
+    .icon-btn { width: 34px; }
+
+    .primary-btn {
+      grid-auto-flow: column;
+      gap: 8px;
+      padding: 0 13px;
+      color: #071017;
+      border-color: rgba(255,255,255,0.22);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.22), transparent 80%),
+        var(--app);
+      box-shadow: 0 0 18px rgba(105,210,255,0.16);
+    }
+
+    .content {
+      position: relative;
+      flex: 1;
+      overflow: auto;
+      padding: 18px 22px 22px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .kpis {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.035), transparent 50%),
+        var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.045),
+        0 1px 0 rgba(0,0,0,0.45);
+    }
+
+    .kpi {
+      min-height: 108px;
+      padding: 13px 14px;
+      display: grid;
+      align-content: space-between;
+    }
+
+    .kpi-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink-4);
+      font: 700 9px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+    }
+
+    .led {
+      width: 8px;
+      height: 8px;
+      border-radius: 3px;
+      background: var(--ok);
+      box-shadow: 0 0 9px rgba(80,230,165,0.5);
+    }
+    .led.warn { background: var(--warn); box-shadow: 0 0 9px rgba(242,193,78,0.5); }
+    .led.crit { background: var(--crit); box-shadow: 0 0 9px rgba(255,107,120,0.5); }
+    .led.info { background: var(--app); box-shadow: 0 0 9px rgba(105,210,255,0.45); }
+
+    .kpi-value {
+      margin-top: 16px;
+      font: 700 28px var(--mono);
+      letter-spacing: -0.5px;
+    }
+
+    .kpi-sub {
+      color: var(--ink-4);
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .bar {
+      height: 7px;
+      overflow: hidden;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.06);
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.22) 0 5px, transparent 5px 10px),
+        var(--app);
+    }
+
+    .pool-panel {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .panel-head {
+      padding: 14px 15px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .panel-title {
+      font: 700 11px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .table {
+      display: grid;
+      grid-template-columns: 42px 1.35fr .7fr .7fr .8fr 92px;
+      font-size: 12px;
+    }
+
+    .th, .td {
+      min-width: 0;
+      padding: 11px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.055);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .th {
+      color: var(--ink-4);
+      font: 700 9px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      background: rgba(0,0,0,0.12);
+    }
+
+    .td {
+      color: var(--ink-2);
+      font-family: var(--mono);
+    }
+
+    .row-ok { color: var(--ok); }
+    .row-warn { color: var(--warn); }
+    .row-crit { color: var(--crit); }
+
+    .status-pill {
+      justify-self: start;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font: 700 9px var(--mono);
+      text-transform: uppercase;
+    }
+
+    .right-stack {
+      display: grid;
+      gap: 14px;
+      min-height: 0;
+      grid-template-rows: auto 1fr;
+    }
+
+    .health-map {
+      padding: 15px;
+    }
+
+    .ring-wrap {
+      display: grid;
+      grid-template-columns: 118px 1fr;
+      gap: 16px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .ring {
+      width: 118px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, var(--panel) 0 51%, transparent 52%),
+        conic-gradient(var(--ok) 0 68%, var(--warn) 68% 82%, var(--crit) 82% 89%, rgba(255,255,255,0.06) 89% 100%);
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.45);
+    }
+
+    .ring b {
+      font: 800 24px var(--mono);
+    }
+
+    .legend {
+      display: grid;
+      gap: 9px;
+      color: var(--ink-3);
+      font-size: 12px;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-family: var(--mono);
+    }
+
+    .timeline {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .events {
+      overflow: hidden;
+      padding: 8px 10px 12px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .event {
+      display: grid;
+      grid-template-columns: 8px 1fr auto;
+      gap: 9px;
+      align-items: start;
+      padding: 10px;
+      background: rgba(0,0,0,0.16);
+      border: 1px solid rgba(255,255,255,0.055);
+      border-radius: 7px;
+    }
+
+    .event h3 {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .event p {
+      margin: 4px 0 0;
+      color: var(--ink-4);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    .event time {
+      color: var(--ink-4);
+      font: 10px var(--mono);
+    }
+
+    .taskbar {
+      position: fixed;
+      left: 20px;
+      right: 20px;
+      bottom: 16px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      background: rgba(12,14,19,0.78);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 8px;
+      box-shadow: 0 12px 34px rgba(0,0,0,0.48);
+      backdrop-filter: blur(10px);
+    }
+
+    .dock {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .dock-ic {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.035);
+      color: var(--ink-3);
+      font: 800 11px var(--mono);
+    }
+
+    .dock-ic.active {
+      color: #071017;
+      background: var(--app);
+      box-shadow: 0 0 18px rgba(105,210,255,0.2);
+    }
+
+    .clock {
+      color: var(--ink-2);
+      font: 700 12px var(--mono);
+      letter-spacing: 1px;
+    }
+
+    @media (max-width: 980px) {
+      .mock-shell { inset: 16px 14px 64px; }
+      .window {
+        width: calc(100vw - 28px);
+        height: calc(100vh - 96px);
+        min-height: 0;
+        grid-template-columns: 1fr;
+      }
+      .sidebar { display: none; }
+      .content { grid-template-columns: 1fr; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .right-stack { grid-template-rows: auto auto; }
+      .table { grid-template-columns: 36px 1.3fr .7fr .7fr; }
+      .hide-sm { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="desktop-noise"></div>
+  <main class="mock-shell">
+    <section class="window" aria-label="Storage control panel">
+      <div class="traffic" aria-hidden="true">
+        <span class="ctl min"></span>
+        <span class="ctl max"></span>
+        <span class="ctl close"></span>
+      </div>
+
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="app-mark">
+            <div class="cube">S</div>
+            <div>
+              <h1>Storage</h1>
+              <small>nimos://storage</small>
+            </div>
+          </div>
+        </div>
+        <nav class="nav">
+          <div class="nav-label">Monitor</div>
+          <div class="nav-item active"><span class="nav-ic"></span><span>Overview</span><span class="pill">4</span></div>
+          <div class="nav-item"><span class="nav-ic"></span><span>Disks</span><span></span></div>
+          <div class="nav-item"><span class="nav-ic"></span><span>Snapshots</span><span class="pill">18</span></div>
+          <div class="nav-item"><span class="nav-ic"></span><span>Scrub</span><span></span></div>
+          <div class="nav-label">Actions</div>
+          <div class="nav-item"><span class="nav-ic"></span><span>Create pool</span><span></span></div>
+          <div class="nav-item"><span class="nav-ic"></span><span>Import</span><span></span></div>
+          <div class="nav-item"><span class="nav-ic"></span><span>Recovery</span><span class="pill">1</span></div>
+        </nav>
+        <div class="side-foot">
+          <div class="side-row"><span>daemon</span><b>running</b></div>
+          <div class="side-row"><span>profile</span><b>raid1</b></div>
+        </div>
+      </aside>
+
+      <section class="main">
+        <header class="header">
+          <div class="title-stack">
+            <div class="path">nimos / <span>storage</span> / overview</div>
+            <h2>Storage Control</h2>
+          </div>
+          <div class="actions" aria-label="panel actions">
+            <button class="icon-btn" title="Refresh">R</button>
+            <button class="icon-btn" title="Search">/</button>
+            <button class="primary-btn"><span>+</span><span>Create Pool</span></button>
+          </div>
+        </header>
+
+        <div class="content">
+          <section class="kpis">
+            <article class="card kpi">
+              <div class="kpi-top"><span>Pool Health</span><span class="led"></span></div>
+              <div>
+                <div class="kpi-value">96%</div>
+                <div class="kpi-sub">all arrays mounted</div>
+              </div>
+            </article>
+            <article class="card kpi">
+              <div class="kpi-top"><span>Capacity</span><span class="led info"></span></div>
+              <div>
+                <div class="kpi-value">11.8T</div>
+                <div class="kpi-sub">of 18.4T usable</div>
+              </div>
+              <div class="bar"><span style="width:64%"></span></div>
+            </article>
+            <article class="card kpi">
+              <div class="kpi-top"><span>Scrub</span><span class="led warn"></span></div>
+              <div>
+                <div class="kpi-value">2d</div>
+                <div class="kpi-sub">next scheduled run</div>
+              </div>
+            </article>
+            <article class="card kpi">
+              <div class="kpi-top"><span>Risk</span><span class="led crit"></span></div>
+              <div>
+                <div class="kpi-value">1</div>
+                <div class="kpi-sub">disk requires attention</div>
+              </div>
+            </article>
+          </section>
+
+          <section class="card pool-panel">
+            <div class="panel-head">
+              <div class="panel-title">Pools</div>
+              <span class="pill">live</span>
+            </div>
+            <div class="table">
+              <div class="th">#</div><div class="th">Name</div><div class="th">Profile</div><div class="th">Used</div><div class="th hide-sm">Mount</div><div class="th hide-sm">State</div>
+              <div class="td">01</div><div class="td">data-main</div><div class="td">raid1</div><div class="td">64%</div><div class="td hide-sm">/nimos/pools/data-main</div><div class="td hide-sm row-ok"><span class="status-pill">ok</span></div>
+              <div class="td">02</div><div class="td">media-vault</div><div class="td">raid10</div><div class="td">71%</div><div class="td hide-sm">/nimos/pools/media-vault</div><div class="td hide-sm row-ok"><span class="status-pill">ok</span></div>
+              <div class="td">03</div><div class="td">backup-usb</div><div class="td">single</div><div class="td">38%</div><div class="td hide-sm">/nimos/pools/backup-usb</div><div class="td hide-sm row-warn"><span class="status-pill">slow</span></div>
+              <div class="td">04</div><div class="td">lab-cache</div><div class="td">single</div><div class="td">88%</div><div class="td hide-sm">/nimos/pools/lab-cache</div><div class="td hide-sm row-crit"><span class="status-pill">risk</span></div>
+              <div class="td">05</div><div class="td">cold-archive</div><div class="td">raid1</div><div class="td">52%</div><div class="td hide-sm">/nimos/pools/cold-archive</div><div class="td hide-sm row-ok"><span class="status-pill">ok</span></div>
+            </div>
+          </section>
+
+          <aside class="right-stack">
+            <section class="card health-map">
+              <div class="panel-title">Disk Mix</div>
+              <div class="ring-wrap">
+                <div class="ring"><b>18</b></div>
+                <div class="legend">
+                  <div class="legend-row"><span>healthy</span><b style="color:var(--ok)">14</b></div>
+                  <div class="legend-row"><span>warn</span><b style="color:var(--warn)">3</b></div>
+                  <div class="legend-row"><span>critical</span><b style="color:var(--crit)">1</b></div>
+                  <div class="legend-row"><span>idle</span><b>0</b></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card timeline">
+              <div class="panel-head">
+                <div class="panel-title">Recent Events</div>
+                <span class="pill">12:42</span>
+              </div>
+              <div class="events">
+                <article class="event">
+                  <span class="led crit"></span>
+                  <div><h3>lab-cache disk temperature</h3><p>sdd reports 58 C during sustained write.</p></div>
+                  <time>now</time>
+                </article>
+                <article class="event">
+                  <span class="led warn"></span>
+                  <div><h3>backup-usb latency spike</h3><p>read latency crossed warning threshold.</p></div>
+                  <time>08m</time>
+                </article>
+                <article class="event">
+                  <span class="led"></span>
+                  <div><h3>media-vault scrub complete</h3><p>no checksum errors detected.</p></div>
+                  <time>1h</time>
+                </article>
+                <article class="event">
+                  <span class="led info"></span>
+                  <div><h3>snapshot policy applied</h3><p>daily retention updated for 3 shares.</p></div>
+                  <time>3h</time>
+                </article>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="taskbar">
+    <div class="dock">
+      <div class="dock-ic">N</div>
+      <div class="dock-ic">F</div>
+      <div class="dock-ic active">S</div>
+      <div class="dock-ic">H</div>
+      <div class="dock-ic">A</div>
+    </div>
+    <div class="clock">22:27</div>
+  </footer>
+</body>
+</html>
