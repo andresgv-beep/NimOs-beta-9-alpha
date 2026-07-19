@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // nimChunksDir es el almacén temporal de subidas por trozos, en la raíz del
@@ -175,6 +176,18 @@ func handleChunkedUpload(w http.ResponseWriter, r *http.Request) {
 	if session == nil {
 		return
 	}
+
+	// Subidas grandes: este endpoint recibe trozos de 20MB y, en el ÚLTIMO
+	// trozo, ensambla el fichero final concatenando todos los trozos en disco
+	// (un fichero de 50GB = varios minutos de I/O ANTES de responder). Ni el
+	// ReadTimeout global (30s, lectura del cuerpo del trozo — se dispararía si
+	// subes por una conexión lenta) ni el WriteTimeout (120s, que cubre el
+	// ensamblado previo a la respuesta) deben cortar aquí, o el fichero se
+	// ensambla en disco pero el cliente ve un error y cree que la subida falló.
+	// Se anulan SOLO para este handler; el resto de la API conserva sus timeouts.
+	rc := http.NewResponseController(w)
+	_ = rc.SetReadDeadline(time.Time{})
+	_ = rc.SetWriteDeadline(time.Time{})
 
 	shareName := r.Header.Get("X-Share")
 	uploadPath := r.Header.Get("X-Path")

@@ -290,12 +290,40 @@ func filesUnzip(w http.ResponseWriter, r *http.Request, session *DBSession) {
 		return
 	}
 
-	// Presupuesto anti zip-bomb: tope de entradas, por-fichero y total expandido.
-	const (
-		unzipMaxEntries    = 20000
-		unzipMaxFileBytes  = 2 << 30 // 2 GiB por fichero descomprimido
-		unzipMaxTotalBytes = 5 << 30 // 5 GiB total expandido en la extracción
-	)
+	// Defensa anti zip-bomb REPLANTEADA para un NAS. El enemigo no es el tamaño
+	// absoluto (aquí se descomprimen temporadas enteras de 30-100GB), sino la
+	// EXPANSIÓN desmesurada: un zip minúsculo que revienta el disco. Nos
+	// defendemos por dos vías, sin topes de tamaño artificiales:
+	//   1) ESPACIO REAL: si lo que el zip declara descomprimido no cabe en el
+	//      disco, ni empezamos (evita llenar el pool con una bomba "honesta"
+	//      que declara petabytes, o simplemente un archivo legítimo sin sitio).
+	//   2) HEADER MENTIROSO: cada fichero se copia acotado a su tamaño DECLARADO
+	//      +1 byte; si el stream deflate escupe más de lo que dice, es una bomba
+	//      clásica (header "1KB" → 1GB real) y se descarta ese fichero.
+	// Un presupuesto vivo de disco corta la extracción si algo se desmadra.
+	const unzipMaxEntries = 100000 // colecciones enormes; sigue frenando bombas de millones de entradas
+
+	availableBytes := getAvailableBytes(share.Path)
+
+	// Suma declarada del contenido descomprimido. Si no cabe, aborta antes de
+	// escribir un solo byte.
+	var declaredTotal int64
+	for _, f := range zr.File {
+		declaredTotal += int64(f.UncompressedSize64)
+	}
+	if availableBytes >= 0 && declaredTotal > availableBytes {
+		jsonError(w, 507, fmt.Sprintf("No cabe: el zip se expande a %s y solo hay %s libres",
+			fmtSizeFiles(declaredTotal), fmtSizeFiles(availableBytes)))
+		return
+	}
+
+	// Presupuesto vivo de bytes que aún podemos escribir. Si no pudimos medir el
+	// disco (-1), no bloqueamos por espacio (dejamos que el FS falle si se llena).
+	budget := availableBytes
+	if budget < 0 {
+		budget = 1 << 62
+	}
+
 	var count, skipped int
 	var totalBytes int64
 	for _, f := range zr.File {
@@ -324,6 +352,15 @@ func filesUnzip(w http.ResponseWriter, r *http.Request, session *DBSession) {
 			continue
 		}
 
+		declared := int64(f.UncompressedSize64)
+		// Límite de copia: lo declarado + 1 byte para DETECTAR desbordes (header
+		// mentiroso). Si el tamaño es desconocido (0, p.ej. zip en streaming),
+		// acota al presupuesto de disco vivo para no quedar sin cota.
+		limit := declared + 1
+		if declared <= 0 || limit > budget+1 {
+			limit = budget + 1
+		}
+
 		rc, err := f.Open()
 		if err != nil {
 			skipped++
@@ -335,23 +372,25 @@ func filesUnzip(w http.ResponseWriter, r *http.Request, session *DBSession) {
 			skipped++
 			continue
 		}
-		// Copia ACOTADA: nunca más de unzipMaxFileBytes por fichero (pilla un
-		// fichero que se expande enorme aunque el zip venga pequeño = zip bomb).
-		n, copyErr := io.Copy(dst, io.LimitReader(rc, unzipMaxFileBytes+1))
+		n, copyErr := io.Copy(dst, io.LimitReader(rc, limit))
 		dst.Close()
 		rc.Close()
-		if copyErr != nil || n > unzipMaxFileBytes {
+
+		// El fichero escupió más de lo declarado → bomba de expansión: fuera.
+		if copyErr != nil || (declared > 0 && n > declared) {
 			root.Remove(entryRel)
 			skipped++
 			continue
 		}
-		totalBytes += n
-		if totalBytes > unzipMaxTotalBytes {
+		// Consumió el presupuesto de disco → aborta la extracción entera.
+		if n > budget {
 			root.Remove(entryRel)
-			logMsg("unzip: presupuesto total de %d bytes excedido; abortando extracción", int64(unzipMaxTotalBytes))
+			logMsg("unzip: presupuesto de disco (%s) agotado; abortando extracción", fmtSizeFiles(availableBytes))
 			skipped++
 			break
 		}
+		budget -= n
+		totalBytes += n
 		count++
 	}
 

@@ -286,6 +286,16 @@ func (r *statusRecorder) Flush() {
 	}
 }
 
+// Unwrap expone el ResponseWriter subyacente para que http.ResponseController
+// pueda alcanzar la conexión real. Es lo que permite a los handlers de descarga
+// y subida por trozos anular los deadlines globales (SetWriteDeadline /
+// SetReadDeadline) en transferencias grandes. Sin este método, al ir envueltos
+// en statusRecorder esas llamadas devolverían "feature not supported" y los
+// timeouts de 120s/30s seguirían matando las transferencias largas.
+func (r *statusRecorder) Unwrap() http.ResponseWriter {
+	return r.ResponseWriter
+}
+
 func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if h, ok := r.ResponseWriter.(http.Hijacker); ok {
 		return h.Hijack()

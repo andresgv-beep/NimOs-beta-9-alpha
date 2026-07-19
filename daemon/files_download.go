@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func handleFileDownload(w http.ResponseWriter, r *http.Request) {
@@ -105,6 +106,15 @@ func serveFileDownload(w http.ResponseWriter, r *http.Request, root *os.Root, re
 		jsonError(w, 404, "File not found")
 		return
 	}
+
+	// Descargas grandes: anular el WriteTimeout global (120s) SOLO para este
+	// handler. Ese timeout es un tope duro sobre la escritura de la respuesta
+	// entera, así que cualquier fichero que tarde >120s en bajar (p.ej. un zip
+	// de 1.2 GB a la velocidad típica de LAN) moría a mitad y el navegador lo
+	// marcaba "Cancelado". El deadline global sigue protegiendo al resto de la
+	// API; aquí lo limpiamos porque una descarga puede durar lo que dure.
+	rc := http.NewResponseController(w)
+	_ = rc.SetWriteDeadline(time.Time{})
 
 	fileName := relBase(rel)
 	ext := strings.ToLower(filepath.Ext(fileName))
