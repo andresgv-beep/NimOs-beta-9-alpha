@@ -1,13 +1,10 @@
 <script>
   /**
-   * SectionHead · Heading asimétrico estilo /etc/motd
+   * SectionHead · Título de sección (sans, peso 600 + contador mute)
    * ────────────────────────────────────────────────────
    * Uso:
    *   <SectionHead>Eventos live</SectionHead>
    *   <SectionHead count="· 142 en últimos 60s">Eventos live</SectionHead>
-   *
-   * Renderiza:
-   *   ── EVENTOS LIVE ──────── · 142 en últimos 60s
    */
   export let count = '';
 </script>
@@ -20,38 +17,21 @@
 <style>
   .section-head {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--fg-dim);
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--font-sans);
+    font-size: var(--fs-13);
+    font-weight: 600;
+    color: var(--ink);
     padding: 0 0 6px;
-  }
-  .section-head::before {
-    content: '──';
-    color: var(--fg-faint);
   }
   .title {
     white-space: nowrap;
   }
-  .section-head::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(
-      to right,
-      var(--border) 0%,
-      var(--border) 70%,
-      transparent 100%
-    );
-  }
   .count {
-    color: var(--accent);
-    font-weight: 600;
-    margin-left: -4px;
-    order: 2;
+    font-family: var(--font-mono);
+    font-size: var(--fs-11);
+    font-weight: 500;
+    color: var(--ink-mute);
   }
-  .section-head::after { order: 3; }
 </style>

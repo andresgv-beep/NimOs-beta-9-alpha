@@ -115,7 +115,7 @@
     </SectionHead>
     <div class="section-actions">
       <button class="btn-secondary" on:click={() => dispatch('rescan')} disabled={scanning}>
-        {scanning ? '▸ Escaneando...' : '↻ Escanear'}
+        {scanning ? 'Escaneando…' : 'Escanear'}
       </button>
       <button
         class="btn-primary"
@@ -125,7 +125,7 @@
           ? 'Crear un nuevo pool de almacenamiento'
           : 'No hay discos libres para crear un pool'}
       >
-        + Nuevo volumen
+        Nuevo volumen
       </button>
     </div>
   </div>
@@ -165,14 +165,14 @@
                 {pool.devices?.length || 0} disco{pool.devices?.length === 1 ? '' : 's'} ·
                 {fmtBytes(pool.usage?.used_bytes)} usados
                 {#if pool.kernel_devices_missing > 0}
-                  <span class="sm tc-warn mono" title="El kernel ve {pool.kernel_devices_expected} discos en este filesystem y faltan {pool.kernel_devices_missing}. Puede haber discos ausentes que NimOS no tiene registrados (p.ej. añadidos por CLI fuera de la app).">· ⚠ kernel {pool.kernel_devices_online}/{pool.kernel_devices_expected} · faltan {pool.kernel_devices_missing}</span>
+                  <span class="sm tc-warn mono" title="El kernel ve {pool.kernel_devices_expected} discos en este filesystem y faltan {pool.kernel_devices_missing}. Puede haber discos ausentes que NimOS no tiene registrados (p.ej. añadidos por CLI fuera de la app).">· kernel {pool.kernel_devices_online}/{pool.kernel_devices_expected} · faltan {pool.kernel_devices_missing}</span>
                 {/if}
                 {#if canUpgradeToRaid1(pool)}
                   <button
                     class="raid-upgrade-chip"
                     on:click|stopPropagation={() => dispatch('upgrade-raid', { pool })}
                     title="Hay disco disponible: convertir este pool a RAID1 (espejo)"
-                  >⇪ raid1 disponible</button>
+                  >RAID1 disponible</button>
                 {/if}
               </div>
             </div>
@@ -208,7 +208,7 @@
             <div class="repair-bar">
               <div class="repair-bar-head">
                 <span class="repair-bar-label">
-                  ⟳ Reparando pool · reconstruyendo redundancia
+                  Reparando pool · reconstruyendo redundancia
                 </span>
                 <span class="repair-bar-pct">
                   {(pool.health?.resilver_progress ?? 0).toFixed(1)}%
@@ -377,7 +377,7 @@
       </SectionHead>
       <div class="section-actions">
         <button class="btn-secondary" on:click={() => dispatch('refresh-observed')} disabled={refreshing}>
-          {refreshing ? '▸ Actualizando...' : '↻ Refrescar'}
+          {refreshing ? 'Actualizando…' : 'Refrescar'}
         </button>
       </div>
     </div>
@@ -450,7 +450,7 @@
                   ? 'Importar en modo solo-lectura (faltan discos) — podrás recuperar tus datos y reparar el pool'
                   : 'Importar como pool gestionado (preserva datos)'}
             >
-              ⬇ Importar como pool
+              Importar como pool
             </button>
             {#if fs.devices_missing > 0 && (fs.devices_online ?? (fs.devices_expected - fs.devices_missing)) > 0}
               <span class="obs-degraded-hint">
@@ -462,7 +462,7 @@
               on:click={() => dispatch('destroy-orphan', { fs })}
               title="DESTRUIR — borra todos los datos de los discos"
             >
-              ⚠ Destruir
+              Destruir
             </button>
           </div>
         </div>
@@ -520,26 +520,25 @@
     gap: 10px;
   }
   .pool {
-    background: var(--bg-card);
+    background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 10px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     transition: border-color 0.12s, background 0.12s;
     overflow: hidden;
   }
-  .pool.open { border-color: rgba(255, 255, 255, 0.14); }
+  .pool.open { border-color: var(--line-bright); }
   .pool.degraded { border-left: 3px solid var(--warn); }
   .pool.crit { border-left: 3px solid var(--crit); }
   .pool.missing { border-left: 3px solid var(--fg-4, #7a7a82); }
   .pool-missing-tag {
-    font-size: 10px;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--fg-4, #7a7a82);
-    border: 1px solid var(--fg-4, #7a7a82);
-    border-radius: 4px;
-    padding: 1px 6px;
+    font-size: 10.5px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    color: var(--ink-mute);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 1px 8px;
     white-space: nowrap;
   }
 
@@ -572,18 +571,17 @@
     min-width: 0;
   }
   .pool-name {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--ink);
     font-weight: 600;
-    letter-spacing: 0.3px;
     display: flex;
     align-items: center;
     gap: 8px;
   }
   .pool-meta {
-    font-size: 10px;
+    font-size: 12px;
     color: var(--ink-mute);
-    letter-spacing: 0.3px;
+    line-height: 1.5;
   }
 
   /* Chip contextual: el pool puede subir a RAID1 (hay disco libre) */
@@ -592,27 +590,27 @@
     align-items: center;
     gap: 4px;
     margin-left: 8px;
-    padding: 1px 8px 2px;
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    letter-spacing: 0.4px;
+    padding: 1px 9px 2px;
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    font-weight: 600;
     color: var(--signal);
-    background: rgba(0, 255, 159, 0.07);
-    border: 1px solid rgba(0, 255, 159, 0.35);
+    background: var(--signal-soft);
+    border: 1px solid color-mix(in srgb, var(--signal) 35%, transparent);
     border-radius: 999px;
     cursor: pointer;
-    transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+    transition: background 0.12s, border-color 0.12s;
     vertical-align: middle;
   }
   .raid-upgrade-chip:hover {
-    background: rgba(0, 255, 159, 0.14);
+    background: var(--signal-dim);
     border-color: var(--signal);
-    box-shadow: 0 0 8px rgba(0, 255, 159, 0.25);
   }
 
   .pool-bar-wrap { min-width: 0; }
   .pool-size {
-    font-size: 11px;
+    font-size: 12px;
+    font-family: var(--font-mono);
     color: var(--ink);
     text-align: right;
     font-feature-settings: "tnum";
@@ -652,12 +650,12 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     padding: 10px 16px;
-    background: var(--bg-2);
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    font-family: var(--font-mono);
+    background: var(--canvas-soft);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-sans);
     animation: pab-in 0.15s ease-out;
   }
   @keyframes pab-in {
@@ -670,38 +668,37 @@
     align-items: center;
     gap: 7px;
     padding: 6px 12px;
-    background: var(--bg-inner, #101015);
-    border: 1px solid var(--bd-2, #20202a);
-    border-radius: 5px;
-    color: var(--fg-3, #9c9ca4);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.3px;
+    background: var(--panel);
+    border: 1px solid var(--line-bright);
+    border-radius: 7px;
+    color: var(--ink-dim);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.12s;
   }
   .pa-btn:not(:disabled):hover {
-    border-color: rgba(0, 255, 159, 0.35);
-    color: var(--nim-green, #00ff9f);
-    background: rgba(0, 255, 159, 0.05);
+    border-color: color-mix(in srgb, var(--signal) 35%, transparent);
+    color: var(--signal);
+    background: var(--signal-soft);
   }
   .pa-btn.danger:not(:disabled):hover {
-    border-color: rgba(255, 90, 90, 0.35);
-    color: var(--st-crit, #ff5a5a);
-    background: rgba(255, 90, 90, 0.05);
+    border-color: color-mix(in srgb, var(--crit) 35%, transparent);
+    color: var(--crit);
+    background: color-mix(in srgb, var(--crit) 6%, transparent);
   }
   .pa-btn:disabled {
     cursor: not-allowed;
     opacity: 0.45;
   }
   .pa-tag {
-    color: var(--fg-5, #5a5a62);
-    font-size: 8px;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    border: 1px solid var(--bd-3, #2a2a32);
-    border-radius: 3px;
-    padding: 1px 4px;
+    color: var(--ink-faint);
+    font-size: 10px;
+    font-weight: 600;
+    border: 1px solid var(--line-bright);
+    border-radius: 999px;
+    padding: 0 6px;
     margin-left: 2px;
   }
 
@@ -721,8 +718,9 @@
     gap: 8px;
   }
   .pig-col {
-    background: var(--bg-card, #15151a);
-    border-radius: 7px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
@@ -731,26 +729,15 @@
     position: relative;
     overflow: hidden;
   }
-  /* Borde de color a la izquierda (variante v3) */
-  .pig-col.edge-ok::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 2px;
-    height: 100%;
-    background: var(--st-ok, #00ff9f);
-    opacity: 0.6;
-  }
+  /* Regla "menos verde": OK no pinta edge — el color queda para warn/crit */
   .pig-label {
-    font-size: 9px;
-    color: var(--fg-5, #5a5a62);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-faint);
   }
   .pig-value {
     font-size: 14px;
-    color: var(--fg, #f0f0f0);
+    color: var(--ink);
     font-family: var(--font-mono);
     font-feature-settings: "tnum";
   }
@@ -766,7 +753,7 @@
   }
   .pig-value.mono { font-family: var(--font-mono); }
   .pig-value.sm { font-size: 11px; }
-  .pig-value.tc-accent { color: var(--st-ok, #00ff9f); }
+  .pig-value.tc-accent { color: var(--ink); }
   .pig-value.warn { color: var(--warn); }
   .pig-value.crit { color: var(--crit); }
 
@@ -779,28 +766,28 @@
   .cap-track {
     flex: 1;
     height: 6px;
-    background: var(--bd-2, #20202a);
+    background: var(--line-bright);
     border-radius: 3px;
     overflow: hidden;
   }
   .cap-fill {
     height: 100%;
     border-radius: 3px;
-    background: var(--st-ok, #00ff9f);
+    background: var(--ink-dim);
     transition: width 0.3s;
   }
-  .cap-fill.warn { background: var(--st-warn, #ffc857); }
-  .cap-fill.crit { background: var(--st-crit, #ff5a5a); }
+  .cap-fill.warn { background: var(--warn); }
+  .cap-fill.crit { background: var(--crit); }
   .cap-pct {
     font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--fg-3, #9c9ca4);
+    font-size: 12px;
+    color: var(--ink-mute);
     min-width: 34px;
     text-align: right;
   }
   /* Capacidad de disco en blanco (no apagada) */
   .disk-cap {
-    color: var(--fg, #f0f0f0);
+    color: var(--ink);
     font-feature-settings: "tnum";
   }
 
@@ -808,17 +795,17 @@
   .pool-disks :global(.data-table) {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
-    border: 1px solid var(--bd-2, #20202a);
+    border: 1px solid var(--line);
     border-top: none;
   }
   .pd-head {
-    font-size: 10px;
-    color: var(--fg-3, #9c9ca4);
-    letter-spacing: 0.5px;
-    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-dim);
+    font-family: var(--font-sans);
     padding: 9px 14px;
-    background: var(--bg-inner, #101015);
-    border: 1px solid var(--bd-2, #20202a);
+    background: var(--canvas-soft);
+    border: 1px solid var(--line);
     border-bottom: none;
     border-radius: 8px 8px 0 0;
     display: flex;
@@ -826,9 +813,9 @@
     gap: 10px;
   }
   .pd-head .todo {
-    font-size: 9px;
-    color: var(--fg-5, #5a5a62);
-    letter-spacing: 0.3px;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--ink-faint);
   }
 
   /* Snapshots list ───── */
@@ -836,21 +823,23 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
   }
   .snap-row {
-    padding: 6px 12px;
-    background: var(--bg-1);
+    padding: 7px 12px;
+    background: var(--panel);
     display: flex;
     align-items: center;
     gap: 14px;
-    font-size: 10px;
+    font-size: 12px;
   }
   .snap-more {
-    padding: 6px 12px;
-    background: var(--bg-2);
-    font-size: 10px;
+    padding: 7px 12px;
+    background: var(--canvas-soft);
+    font-size: 11px;
     text-align: center;
   }
 
@@ -862,10 +851,10 @@
   }
 
   .observed-card {
-    background: var(--bg-card);
+    background: var(--panel);
     border: 1px solid var(--line);
     border-left: 3px solid var(--warn);
-    border-radius: 10px;
+    border-radius: 0 10px 10px 0;
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -926,10 +915,10 @@
   }
 
   .obs-disk-pill {
-    background: var(--bg-inner);
+    background: var(--canvas-soft);
     padding: 2px 8px;
     border: 1px solid var(--line);
-    border-radius: 3px;
+    border-radius: 6px;
     font-size: 12px;
     color: var(--ink-dim);
   }
@@ -951,8 +940,8 @@
 
   .repair-bar {
     padding: 10px 16px 14px;
-    border-top: 1px solid var(--line, #2a2f37);
-    background: rgba(0, 255, 159, 0.04);
+    border-top: 1px solid var(--line);
+    background: var(--signal-soft);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -964,28 +953,30 @@
   }
   .repair-bar-label {
     font-size: 0.82rem;
-    color: var(--accent, #00ff9f);
+    font-weight: 500;
+    color: var(--signal);
   }
   .repair-bar-pct {
     font-size: 0.82rem;
     font-variant-numeric: tabular-nums;
-    color: var(--accent, #00ff9f);
+    font-family: var(--font-mono);
+    color: var(--signal);
   }
   .repair-track {
     height: 6px;
-    background: var(--surface-2, #1c2026);
+    background: var(--line-bright);
     border-radius: 3px;
     overflow: hidden;
   }
   .repair-fill {
     height: 100%;
-    background: var(--accent, #00ff9f);
+    background: var(--signal);
     border-radius: 3px;
     transition: width 0.6s ease;
   }
   .repair-hint {
     font-size: 0.74rem;
-    color: var(--text-dim, #9aa0a6);
+    color: var(--ink-mute);
   }
 
   .divergences {
@@ -1001,7 +992,8 @@
     gap: 8px;
     padding: 8px 12px;
     border-left: 2px solid var(--warn);
-    background: var(--bg-1);
+    border-radius: 0 8px 8px 0;
+    background: var(--panel);
     font-size: 13px;
   }
 
@@ -1020,10 +1012,11 @@
     align-items: flex-start;
     gap: 12px;
     padding: 10px 14px;
-    background: var(--bg-1);
-    border: 1px solid var(--border);
-    border-left: 2px solid var(--fg-mute);
-    font-family: var(--font-mono);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--ink-faint);
+    border-radius: 0 8px 8px 0;
+    font-family: var(--font-sans);
   }
   .alert-row.warn { border-left-color: var(--warn); background: rgba(255,184,0,0.04); }
   .alert-row.crit { border-left-color: var(--crit); background: rgba(255,90,90,0.04); }
@@ -1035,27 +1028,24 @@
     min-width: 0;
   }
   .alert-msg {
-    font-size: 11px;
-    color: var(--fg);
-    letter-spacing: 0.3px;
+    font-size: 13px;
+    color: var(--ink);
   }
   .alert-meta {
-    font-size: 9px;
-    color: var(--fg-mute);
+    font-size: 11px;
+    color: var(--ink-mute);
   }
 
   /* ─── Botones (Design System Beta 8.1) ─── */
   .btn-secondary {
-    padding: 5px 12px;
-    border-radius: 5px;
-    border: 1px solid var(--line);
-    background: var(--bg-card);
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--line-bright);
+    background: var(--panel);
     color: var(--ink-dim);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 500;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: background 0.12s, color 0.12s, border-color 0.12s;
   }
@@ -1069,22 +1059,20 @@
   }
 
   .btn-primary {
-    padding: 5px 12px;
-    border-radius: 5px;
-    border: 1px solid rgba(0, 255, 159, 0.3);
-    background: rgba(0, 255, 159, 0.06);
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: 1px solid color-mix(in srgb, var(--signal) 35%, transparent);
+    background: var(--signal-soft);
     color: var(--signal);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: background 0.12s, border-color 0.12s;
   }
   .btn-primary:hover:not(:disabled) {
     border-color: var(--signal);
-    background: rgba(0, 255, 159, 0.12);
+    background: var(--signal-dim);
   }
   .btn-primary:disabled {
     opacity: 0.4;

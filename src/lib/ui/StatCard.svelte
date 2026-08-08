@@ -34,7 +34,7 @@
     {#if tag}
       <span class="sc-tag t-{tagVariant}">
         {#if tagDot && tagVariant !== 'default'}<span class="sc-dot"></span>{/if}
-        {tag}
+        <span class="sc-tag-text">{tag}</span>
       </span>
     {/if}
   </div>
@@ -79,7 +79,8 @@
     background: var(--stat-edge, transparent);
     opacity: 0.7;
   }
-  .v-ok   { --stat-edge: var(--signal); }
+  /* Regla "menos verde": el estado OK no pinta edge ni valor — el color
+     queda reservado para warn/crit (y el dot del tag). */
   .v-info { --stat-edge: var(--info); }
   .v-warn { --stat-edge: var(--warn); }
   .v-crit { --stat-edge: var(--crit); }
@@ -92,28 +93,34 @@
     gap: var(--sp-2);            /* 8px */
   }
   .sc-lbl {
-    font-size: var(--fs-10);    /* 10px */
-    color: var(--ink-faint);
+    font-size: var(--fs-11);    /* 11px */
+    color: var(--ink-mute);
     font-weight: 500;
-    letter-spacing: 0.6px;      /* tipográfico · NO escala */
-    text-transform: uppercase;
   }
   .sc-tag {
-    font-size: var(--fs-9);     /* 9px */
+    font-size: var(--fs-10);    /* 10px */
     color: var(--ink-faint);
     display: flex;
     align-items: center;
     gap: var(--sp-1);           /* 4px */
     font-family: var(--font-mono);
     white-space: nowrap;
+    min-width: 0;
   }
+  .sc-tag-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sc-dot { flex-shrink: 0; }
   .sc-dot {
     width: 0.3125rem;           /* 5px · escala con el texto */
     height: 0.3125rem;
     border-radius: 1.5px;       /* esquina nítida · NO escala */
     background: currentColor;
   }
-  .t-ok   { color: var(--signal); }
+  /* OK: texto neutro, solo el dot va en verde */
+  .t-ok   { color: var(--ink-mute); }
+  .t-ok .sc-dot { background: var(--signal); }
   .t-info { color: var(--info); }
   .t-warn { color: var(--warn); }
   .t-crit { color: var(--crit); }
@@ -132,7 +139,7 @@
     margin-left: var(--sp-1);   /* 4px */
     font-weight: 400;
   }
-  .stat-card.v-ok   .sc-val.colored { color: var(--signal); }
+  .stat-card.v-ok   .sc-val.colored { color: var(--ink); }
   .stat-card.v-info .sc-val.colored { color: var(--info); }
   .stat-card.v-warn .sc-val.colored { color: var(--warn); }
   .stat-card.v-crit .sc-val.colored { color: var(--crit); }

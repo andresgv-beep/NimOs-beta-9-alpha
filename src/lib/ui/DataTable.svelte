@@ -59,7 +59,7 @@
 
 <style>
   .data-table {
-    background: var(--bg-card, #15151a);
+    background: var(--panel, #15151a);
     border-radius: 8px;
     overflow: hidden;
   }
@@ -67,15 +67,12 @@
     display: grid;
     grid-template-columns: var(--dt-cols);
     gap: var(--dt-gap);
-    padding: 9px 14px;
-    background: var(--bg-inner, #101015);
-    border-bottom: 1px solid var(--bd-2, #20202a);
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--ink-trace);
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    font-weight: 600;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--line, #20202a);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    color: var(--ink-faint);
+    font-weight: 500;
   }
   .dt-head .right { text-align: right; }
 
@@ -85,12 +82,12 @@
     display: grid;
     grid-template-columns: var(--dt-cols);
     gap: var(--dt-gap);
-    padding: 11px 14px;
+    padding: 10px 14px;
     align-items: center;
-    font-size: 11px;
+    font-size: 12px;
   }
   .dt-rows :global(.dt-row + .dt-row) {
-    border-top: 1px solid #1a1a20;
+    border-top: 1px solid var(--line, #1a1a20);
   }
   .hoverable .dt-rows :global(.dt-row:hover) {
     background: rgba(255, 255, 255, 0.015);
