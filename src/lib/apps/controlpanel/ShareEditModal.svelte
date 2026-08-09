@@ -221,11 +221,11 @@
     background: rgba(255, 90, 90, 0.10);
     border: 1px solid rgba(255, 90, 90, 0.3);
     color: var(--st-crit, #ff5a5a);
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 10px 12px;
     font-size: 12px;
     margin-bottom: 14px;
-    font-family: var(--font-mono, ui-monospace, monospace);
+    font-family: var(--font-sans);
   }
 
   .se-block { margin-bottom: 22px; }
@@ -235,14 +235,13 @@
     color: var(--fg-3, #9c9ca4);
     font-weight: 600;
     margin-bottom: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
+    letter-spacing: 0;
   }
 
   .se-input {
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 10px 12px;
     color: var(--fg, #f0f0f0);
     font-size: 13px;
@@ -258,13 +257,13 @@
     flex: 1; padding: 12px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 8px; cursor: pointer; text-align: center;
+    border-radius: 5px; cursor: pointer; text-align: center;
     transition: border-color 0.15s, background 0.15s;
   }
   .se-quota-opt:hover { border-color: var(--bd-3, #2a2a32); }
-  .se-quota-opt.sel { border-color: rgba(0,255,159,0.4); background: rgba(0,255,159,0.06); }
+  .se-quota-opt.sel { border-color: rgba(91,143,249,0.45); background: rgba(91,143,249,0.08); }
   .se-qo-title { font-size: 13px; font-weight: 600; color: var(--fg, #f0f0f0); }
-  .se-quota-opt.sel .se-qo-title { color: var(--nim-green, #00ff9f); }
+  .se-quota-opt.sel .se-qo-title { color: var(--signal, #5b8ff9); }
   .se-qo-desc { font-size: 11px; color: var(--fg-4, #7a7a82); margin-top: 3px; }
 
   .se-quota-input-wrap { display: flex; gap: 8px; }
@@ -272,18 +271,18 @@
     display: flex; gap: 2px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px; padding: 2px;
+    border-radius: 4px; padding: 2px;
   }
   .se-unit-btn {
     padding: 0 12px; border: none; background: transparent;
-    border-radius: 4px; font-family: var(--font-mono, ui-monospace, monospace);
+    border-radius: 3px; font-family: var(--font-sans);
     font-size: 11px; color: var(--fg-4, #7a7a82); cursor: pointer;
     transition: background 0.12s, color 0.12s;
   }
   .se-unit-btn.sel { background: var(--ui-select-bg, rgba(122,158,177,0.10)); color: var(--ui-select, #7a9eb1); }
   .se-quota-preview {
     margin-top: 10px; font-size: 11px; color: var(--fg-4, #7a7a82);
-    font-family: var(--font-mono, ui-monospace, monospace);
+    font-family: var(--font-sans);
   }
 
   /* Papelera */
@@ -292,13 +291,13 @@
     padding: 13px 14px; width: 100%;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 8px; cursor: pointer; text-align: left;
+    border-radius: 5px; cursor: pointer; text-align: left;
     transition: border-color 0.15s;
   }
   .se-recycle:hover { border-color: var(--bd-3, #2a2a32); }
   .se-rt-text { flex: 1; }
   .se-rt-title { font-size: 13px; font-weight: 500; color: var(--fg-2, #d0d0d4); }
-  .se-recycle.sel .se-rt-title { color: var(--nim-green, #00ff9f); }
+  .se-recycle.sel .se-rt-title { color: var(--signal, #5b8ff9); }
   .se-rt-desc { font-size: 11px; color: var(--fg-4, #7a7a82); margin-top: 3px; line-height: 1.4; }
   .se-rt-switch {
     width: 34px; height: 19px; background: var(--bd-3, #2a2a32);
@@ -310,7 +309,7 @@
     width: 15px; height: 15px; background: var(--fg-4, #7a7a82);
     border-radius: 4px; transition: left 0.15s, background 0.15s;
   }
-  .se-recycle.sel .se-rt-switch { background: var(--nim-green, #00ff9f); }
+  .se-recycle.sel .se-rt-switch { background: var(--signal, #5b8ff9); }
   .se-recycle.sel .se-rt-switch::after { left: 17px; background: var(--bg-window, #16161a); }
 
   /* Permisos */
@@ -318,31 +317,31 @@
   .se-hint { font-size: 11px; color: var(--fg-4, #7a7a82); }
   .se-perm-row {
     display: flex; align-items: center; gap: 11px;
-    padding: 9px 11px; background: var(--bg-inner, #101015); border-radius: 7px;
+    padding: 9px 11px; background: var(--bg-inner, #101015); border-radius: 4px;
   }
   .se-avatar {
-    width: 28px; height: 28px; border-radius: 6px;
+    width: 28px; height: 28px; border-radius: 4px;
     background: var(--bg-card, #15151a); border: 1px solid var(--bd-2, #20202a);
     display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-mono, ui-monospace, monospace);
+    font-family: var(--font-sans);
     font-size: 11px; color: var(--ui-select, #7a9eb1); font-weight: 600; flex-shrink: 0;
   }
   .se-perm-user { flex: 1; min-width: 0; }
   .se-perm-name { font-size: 13px; color: var(--fg-2, #d0d0d4); }
   .se-perm-role { font-size: 10px; color: var(--fg-4, #7a7a82); margin-top: 1px; }
   .se-owner-tag {
-    font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 9px; color: var(--nim-green, #00ff9f);
-    background: rgba(0,255,159,0.10); border: 1px solid rgba(0,255,159,0.25);
-    padding: 3px 8px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.5px;
+    font-family: var(--font-sans);
+    font-size: 9px; color: var(--signal, #5b8ff9);
+    background: rgba(91,143,249,0.12); border: 1px solid rgba(91,143,249,0.28);
+    padding: 3px 8px; border-radius: 3px;
   }
   .se-seg { display: flex; gap: 2px; background: var(--bg-card, #15151a); border-radius: 5px; padding: 2px; }
   .se-seg-btn {
     padding: 4px 9px; border: none; background: transparent; border-radius: 3px;
-    font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px;
+    font-family: var(--font-sans); font-size: 10px;
     color: var(--fg-4, #7a7a82); cursor: pointer; transition: background 0.12s, color 0.12s;
   }
   .se-seg-btn.sel.none { background: var(--bd-3, #2a2a32); color: var(--fg-2, #d0d0d4); }
   .se-seg-btn.sel.ro { background: rgba(77,184,255,0.15); color: var(--st-info, #4db8ff); }
-  .se-seg-btn.sel.rw { background: rgba(0,255,159,0.15); color: var(--nim-green, #00ff9f); }
+  .se-seg-btn.sel.rw { background: rgba(91,143,249,0.15); color: var(--signal, #5b8ff9); }
 </style>
