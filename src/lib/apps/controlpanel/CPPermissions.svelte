@@ -9,6 +9,7 @@
   import { onMount } from 'svelte';
   import { hdrs } from '$lib/stores/auth.js';
   import { StatCard } from '$lib/ui';
+  import WizardFrame from '$lib/ui/WizardFrame.svelte';
 
   let systemApps = [];
   let dockerApps = [];
@@ -16,8 +17,11 @@
   let grants = [];
   let dockerPermissions = {};
   let loading = true;
-  let savingKey = '';
   let error = '';
+  let configuring = null;
+  let draftUsers = [];
+  let savingPermissions = false;
+  let modalError = '';
 
   $: normalUsers = users.filter((entry) => entry.role !== 'admin');
   $: configurableCount = systemApps.filter((app) => !app.adminOnly && !app.public).length + dockerApps.length;
@@ -59,52 +63,74 @@
     return (dockerPermissions[appId] || []).includes(username);
   }
 
-  async function toggleSystemAccess(appId, username) {
-    const key = `system:${appId}:${username}`;
-    if (savingKey) return;
-    const enabled = hasSystemAccess(appId, username);
-    const previous = grants;
-    grants = enabled
-      ? grants.filter((grant) => !(grant.appId === appId && grant.username === username))
-      : [...grants, { appId, username, permission: 'use' }];
-    savingKey = key;
-    error = '';
-    try {
-      await requestJSON('/api/app-access', {
-        method: enabled ? 'DELETE' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, appId, permission: 'use' }),
-      });
-    } catch (err) {
-      grants = previous;
-      error = err.message || 'No se pudo guardar el permiso';
-    } finally {
-      savingKey = '';
-    }
+  function accessCount(kind, appId) {
+    return normalUsers.filter((account) => kind === 'system'
+      ? hasSystemAccess(appId, account.username)
+      : hasDockerAccess(appId, account.username)).length;
   }
 
-  async function toggleDockerAccess(appId, username) {
-    const key = `docker:${appId}:${username}`;
-    if (savingKey) return;
-    const current = dockerPermissions[appId] || [];
-    const next = current.includes(username)
-      ? current.filter((entry) => entry !== username)
-      : [...current, username];
-    const previous = dockerPermissions;
-    dockerPermissions = { ...dockerPermissions, [appId]: next };
-    savingKey = key;
-    error = '';
+  function openPermissions(kind, app) {
+    configuring = { kind, app };
+    draftUsers = normalUsers
+      .filter((account) => kind === 'system'
+        ? hasSystemAccess(app.id, account.username)
+        : hasDockerAccess(app.id, account.username))
+      .map((account) => account.username);
+    modalError = '';
+  }
+
+  function closePermissions() {
+    if (!savingPermissions) configuring = null;
+  }
+
+  function toggleDraft(username) {
+    if (savingPermissions) return;
+    draftUsers = draftUsers.includes(username)
+      ? draftUsers.filter((entry) => entry !== username)
+      : [...draftUsers, username];
+  }
+
+  async function savePermissions() {
+    if (!configuring || savingPermissions) return;
+    const { kind, app } = configuring;
+    savingPermissions = true;
+    modalError = '';
     try {
-      await requestJSON('/api/docker/app-permissions/' + encodeURIComponent(appId), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ users: next }),
-      });
+      if (kind === 'docker') {
+        await requestJSON('/api/docker/app-permissions/' + encodeURIComponent(app.id), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ users: draftUsers }),
+        });
+        dockerPermissions = { ...dockerPermissions, [app.id]: [...draftUsers] };
+      } else {
+        const current = normalUsers
+          .filter((account) => hasSystemAccess(app.id, account.username))
+          .map((account) => account.username);
+        const additions = draftUsers.filter((username) => !current.includes(username));
+        const removals = current.filter((username) => !draftUsers.includes(username));
+        await Promise.all([
+          ...additions.map((username) => requestJSON('/api/app-access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, appId: app.id, permission: 'use' }),
+          })),
+          ...removals.map((username) => requestJSON('/api/app-access', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, appId: app.id }),
+          })),
+        ]);
+        grants = [
+          ...grants.filter((grant) => grant.appId !== app.id),
+          ...draftUsers.map((username) => ({ username, appId: app.id, permission: 'use' })),
+        ];
+      }
+      configuring = null;
     } catch (err) {
-      dockerPermissions = previous;
-      error = err.message || 'No se pudo guardar el permiso';
+      modalError = err.message || 'No se pudieron guardar los permisos';
     } finally {
-      savingKey = '';
+      savingPermissions = false;
     }
   }
 
@@ -171,18 +197,8 @@
               {:else if normalUsers.length === 0}
                 <span class="cpp-no-users">Crea un usuario estándar para asignar acceso</span>
               {:else}
-                {#each normalUsers as account (account.username)}
-                  <button
-                    class="cpp-user"
-                    class:on={hasSystemAccess(app.id, account.username)}
-                    aria-pressed={hasSystemAccess(app.id, account.username)}
-                    disabled={savingKey !== ''}
-                    on:click={() => toggleSystemAccess(app.id, account.username)}
-                  >
-                    <span class="cpp-user-check"></span>
-                    {account.username}
-                  </button>
-                {/each}
+                <span class="cpp-access-summary">{accessCount('system', app.id)} de {normalUsers.length} con acceso</span>
+                <button class="cpp-config-btn" on:click={() => openPermissions('system', app)}>Configurar</button>
               {/if}
             </div>
           </div>
@@ -217,18 +233,8 @@
                 {#if normalUsers.length === 0}
                   <span class="cpp-no-users">Crea un usuario estándar para asignar acceso</span>
                 {:else}
-                  {#each normalUsers as account (account.username)}
-                    <button
-                      class="cpp-user"
-                      class:on={hasDockerAccess(app.id, account.username)}
-                      aria-pressed={hasDockerAccess(app.id, account.username)}
-                      disabled={savingKey !== ''}
-                      on:click={() => toggleDockerAccess(app.id, account.username)}
-                    >
-                      <span class="cpp-user-check"></span>
-                      {account.username}
-                    </button>
-                  {/each}
+                  <span class="cpp-access-summary">{accessCount('docker', app.id)} de {normalUsers.length} con acceso</span>
+                  <button class="cpp-config-btn" on:click={() => openPermissions('docker', app)}>Configurar</button>
                 {/if}
               </div>
             </div>
@@ -238,6 +244,48 @@
     </section>
   {/if}
 </div>
+
+{#if configuring}
+  <WizardFrame
+    open={true}
+    title={`Permisos de ${configuring.app.name}`}
+    currentStep={1}
+    totalSteps={1}
+    canAdvance={!savingPermissions}
+    canGoBack={false}
+    nextLabel={savingPermissions ? 'Guardando…' : 'Guardar cambios'}
+    width={520}
+    on:next={savePermissions}
+    on:cancel={closePermissions}
+  >
+    <div class="cpp-wizard-intro">
+      Elige qué usuarios estándar podrán ver y abrir esta aplicación. Los administradores conservan siempre el acceso.
+    </div>
+
+    <div class="cpp-user-list">
+      {#each normalUsers as account (account.username)}
+        <button
+          class="cpp-user-row"
+          class:on={draftUsers.includes(account.username)}
+          aria-pressed={draftUsers.includes(account.username)}
+          disabled={savingPermissions}
+          on:click={() => toggleDraft(account.username)}
+        >
+          <span class="cpp-user-avatar">{(account.username || '?')[0].toUpperCase()}</span>
+          <span class="cpp-user-meta">
+            <span class="cpp-user-name">{account.username}</span>
+            <span class="cpp-user-state">{draftUsers.includes(account.username) ? 'Puede acceder' : 'Sin acceso'}</span>
+          </span>
+          <span class="cpp-switch"><span></span></span>
+        </button>
+      {/each}
+    </div>
+
+    {#if modalError}
+      <div class="cpp-modal-error">{modalError}</div>
+    {/if}
+  </WizardFrame>
+{/if}
 
 <style>
   .cp-perms { display: flex; flex-direction: column; gap: 18px; }
@@ -305,26 +353,20 @@
   .cpp-app-name { color: var(--ink); font-size: 13px; font-weight: 600; }
   .cpp-app-type { color: var(--ink-mute); font-size: 11px; margin-top: 2px; }
 
-  .cpp-access { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; flex: 1; }
-  .cpp-user {
-    min-width: 94px;
-    padding: 7px 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
+  .cpp-access { display: flex; justify-content: flex-end; align-items: center; gap: 12px; flex: 1; }
+  .cpp-access-summary { color: var(--ink-mute); font-size: 11px; }
+  .cpp-config-btn {
+    padding: 7px 12px;
     background: var(--bg-inner);
     border: 1px solid var(--line);
     border-radius: 5px;
-    color: var(--ink-mute);
+    color: var(--ink-dim);
     font-family: var(--font-sans);
     font-size: 11px;
+    font-weight: 600;
     cursor: pointer;
   }
-  .cpp-user:hover:not(:disabled) { color: var(--ink); border-color: var(--line-bright); }
-  .cpp-user.on { color: var(--signal); border-color: rgba(91, 143, 249, 0.42); background: rgba(91, 143, 249, 0.08); }
-  .cpp-user:disabled { cursor: wait; opacity: 0.58; }
-  .cpp-user-check { width: 7px; height: 7px; border-radius: 2px; background: var(--ink-trace); }
-  .cpp-user.on .cpp-user-check { background: var(--signal); }
+  .cpp-config-btn:hover { color: var(--ink); border-color: var(--line-bright); background: var(--side-hover); }
 
   .cpp-policy { padding: 5px 9px; border-radius: 4px; font-size: 11px; border: 1px solid var(--line); }
   .cpp-policy.restricted { color: var(--ink-mute); }
@@ -332,6 +374,47 @@
   .cpp-no-users { color: var(--ink-trace); font-size: 11px; }
   .cpp-empty { padding: 32px 20px; text-align: center; color: var(--ink-mute); font-size: 12px; border: 1px solid var(--line); border-radius: 8px; }
   .cpp-empty.compact { padding: 22px; background: var(--bg-card); }
+
+  .cpp-wizard-intro { color: var(--ink-dim); font-size: 12px; line-height: 1.55; }
+  .cpp-user-list { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--bg-card); }
+  .cpp-user-row {
+    width: 100%;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--font-sans);
+  }
+  .cpp-user-row + .cpp-user-row { border-top: 1px solid var(--line); }
+  .cpp-user-row:hover:not(:disabled) { background: var(--side-hover); }
+  .cpp-user-row:disabled { cursor: wait; opacity: 0.6; }
+  .cpp-user-avatar {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    background: var(--bg-inner);
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .cpp-user-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .cpp-user-name { color: var(--ink); font-size: 12px; font-weight: 600; }
+  .cpp-user-state { color: var(--ink-mute); font-size: 11px; }
+  .cpp-user-row.on .cpp-user-state { color: var(--signal); }
+  .cpp-switch { width: 32px; height: 18px; padding: 2px; border-radius: 9px; background: var(--line-bright); transition: background 0.15s ease; }
+  .cpp-switch span { display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--ink-mute); transition: transform 0.15s ease, background 0.15s ease; }
+  .cpp-user-row.on .cpp-switch { background: rgba(91, 143, 249, 0.28); }
+  .cpp-user-row.on .cpp-switch span { transform: translateX(14px); background: var(--signal); }
+  .cpp-modal-error { padding: 9px 11px; color: var(--crit); background: rgba(248, 113, 113, 0.06); border-left: 3px solid var(--crit); border-radius: 4px; font-size: 11px; }
 
   @media (max-width: 760px) {
     .cpp-stats { grid-template-columns: 1fr; }
