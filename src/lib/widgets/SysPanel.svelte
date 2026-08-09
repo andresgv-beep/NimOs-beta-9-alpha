@@ -160,17 +160,14 @@
     margin-bottom: 10px;
   }
   .title {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
+    font-size: 12px;
+    font-weight: 650;
+    color: var(--ink-dim);
   }
   .aux {
-    font-family: var(--font-mono);
     font-size: 9.5px;
-    letter-spacing: 0.06em;
-    color: var(--signal);
+    color: var(--ink-mute);
+    font-variant-numeric: tabular-nums;
   }
 
   /* ── Roscos ── */
@@ -209,7 +206,8 @@
     margin-bottom: 3px;
   }
   .num {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
     font-size: 19px;
     font-weight: 600;
     color: var(--ink);
@@ -220,19 +218,16 @@
     margin-left: 1px;
   }
   .lbl {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 8px;
     font-weight: 500;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.04em;
     color: var(--ink-mute);
-    text-transform: uppercase;
     margin-top: 1px;
   }
   .ring-sub {
-    font-family: var(--font-mono);
     font-size: 9.5px;
     color: var(--ink-faint);
-    letter-spacing: 0.03em;
     min-height: 12px;
   }
 
@@ -253,10 +248,7 @@
     border-left: 1px solid rgba(255, 255, 255, 0.07);
   }
   .m-label {
-    font-family: var(--font-mono);
-    font-size: 8px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 9px;
     color: var(--ink-faint);
   }
   .m-row {
@@ -270,14 +262,14 @@
     color: var(--ink-mute);
   }
   .m-val {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
     font-size: 18px;
     font-weight: 600;
     color: var(--ink);
     line-height: 1;
   }
   .m-sub {
-    font-family: var(--font-mono);
     font-size: 9px;
     color: var(--ink-faint);
     min-height: 12px;
@@ -298,10 +290,10 @@
     margin-top: 12px;
   }
   .up-val {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
     font-size: 14px;
     font-weight: 600;
     color: var(--ink);
-    letter-spacing: 0.04em;
   }
 </style>

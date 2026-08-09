@@ -135,7 +135,8 @@
     border-bottom: 1px solid var(--line);
   }
   .count {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
     font-size: 13px;
     font-weight: 600;
     color: var(--ink);
@@ -165,7 +166,6 @@
     min-height: 0;
   }
   .tn {
-    font-family: var(--font-mono);
     font-size: 9.5px;
     color: var(--ink); /* SIEMPRE blanco · el estado lo dice la barra */
     white-space: nowrap;
@@ -187,20 +187,16 @@
     transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
   }
   .bar i.dl {
-    background: linear-gradient(90deg, var(--nim-remote), #2e9fe6);
-    box-shadow: 0 0 8px rgba(77, 184, 255, 0.35);
+    background: var(--nim-remote);
   }
   .bar i.paused {
-    background: linear-gradient(90deg, var(--warn), #f59e0b);
-    box-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+    background: var(--warn);
   }
   .bar i.done {
-    background: linear-gradient(90deg, var(--signal), hsl(155, 100%, 42%));
-    box-shadow: 0 0 8px var(--signal-glow);
+    background: var(--signal);
   }
   .bar i.err {
-    background: linear-gradient(90deg, var(--crit), #ef4444);
-    box-shadow: 0 0 8px var(--crit);
+    background: var(--crit);
   }
 
   .meta {

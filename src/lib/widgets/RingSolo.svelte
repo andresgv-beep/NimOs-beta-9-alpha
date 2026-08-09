@@ -46,10 +46,8 @@
     user-select: none;
   }
   .sub {
-    font-family: var(--font-mono);
     font-size: 9px;
     color: var(--ink-faint);
-    letter-spacing: 0.03em;
     min-height: 11px;
   }
 </style>

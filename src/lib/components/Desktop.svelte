@@ -78,7 +78,7 @@
   <!-- Logo NimOS · marca de sistema · solo visible con wallpaper default -->
   {#if !hasCustomWallpaper}
     <div class="desktop-brand">
-      <NimosLogo size={60} />
+      <NimosLogo size={44} />
     </div>
   {/if}
 
@@ -123,10 +123,10 @@
      ═══════════════════════════════════════════════════════════ */
   .desktop-brand {
     position: absolute;
-    bottom: calc(var(--taskbar-height, 52px) + 26px);
-    right: 50px;
+    bottom: calc(var(--taskbar-height, 52px) + 24px);
+    right: 32px;
     z-index: 1;
     pointer-events: none;
-    opacity: 0.9;
+    opacity: 0.48;
   }
 </style>

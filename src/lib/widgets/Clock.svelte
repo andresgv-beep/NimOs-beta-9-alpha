@@ -31,8 +31,7 @@
   $: mm = String(now.getMinutes()).padStart(2, '0');
   $: dateStr = now
     .toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
-    .replace(/\./g, '')
-    .toUpperCase();
+    .replace(/\./g, '');
   $: dowStr = now.toLocaleDateString(undefined, { weekday: 'long' });
 </script>
 
@@ -71,36 +70,29 @@
   }
 
   .time {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 30px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
     line-height: 1;
     color: var(--ink);
   }
   .time.xl { font-size: 44px; }
 
   .col {
-    color: var(--signal);
-    animation: clock-blink 1.1s steps(1) infinite;
-  }
-  @keyframes clock-blink {
-    50% { opacity: 0.25; }
+    color: var(--ink-mute);
   }
 
   .date {
-    font-family: var(--font-mono);
     font-size: 10px;
     color: var(--ink-mute);
-    letter-spacing: 0.05em;
     margin-top: 9px;
   }
   .dow {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--signal);
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
+    font-size: 10px;
+    color: var(--ink-faint);
+    text-transform: capitalize;
     margin-top: 3px;
   }
 

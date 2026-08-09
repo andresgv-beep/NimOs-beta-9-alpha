@@ -55,7 +55,8 @@
     line-height: 1;
   }
   .num {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
     font-size: 17px;
     font-weight: 600;
     color: var(--ink);
@@ -66,11 +67,10 @@
     margin-left: 1px;
   }
   .lbl {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 7.5px;
     font-weight: 500;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.04em;
     color: var(--ink-mute);
-    text-transform: uppercase;
   }
 </style>

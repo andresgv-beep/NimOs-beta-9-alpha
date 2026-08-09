@@ -54,7 +54,7 @@
     if (!src) return '';
     if (src.startsWith('/') || src.startsWith('http')) return src;
     const folder = themeFolder($currentTheme);
-    return `/icons/${folder}/${src}.svg`;
+    return `/icons/${folder}/${src}.svg?v=9-modern-2`;
   })();
 
   // Cuando cambia el tema, reseteamos el flag de fallo

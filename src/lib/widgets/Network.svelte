@@ -144,14 +144,11 @@
     margin-bottom: 8px;
   }
   .title {
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
+    font-size: 11px;
+    font-weight: 650;
+    color: var(--ink-dim);
   }
   .aux {
-    font-family: var(--font-mono);
     font-size: 9px;
     color: var(--ink-mute);
   }
@@ -174,9 +171,9 @@
     align-items: baseline;
     gap: 4px;
   }
-  .arrow { font-family: var(--font-mono); font-size: 11px; }
-  .num { font-family: var(--font-mono); font-size: 17px; font-weight: 600; }
-  .unit { font-family: var(--font-mono); font-size: 9px; color: var(--ink-faint); }
+  .arrow { font-size: 11px; }
+  .num { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .unit { font-size: 9px; color: var(--ink-faint); }
   .dl .arrow, .dl .num { color: var(--signal); }
   .ul .arrow, .ul .num { color: var(--nim-remote); }
 
@@ -205,10 +202,7 @@
     justify-content: space-between;
   }
   .k {
-    font-family: var(--font-mono);
     font-size: 9px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: var(--ink-faint);
   }
   .v {
@@ -222,7 +216,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-mono);
     font-size: 10px;
     color: var(--ink-faint);
   }

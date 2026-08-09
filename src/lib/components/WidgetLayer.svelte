@@ -601,15 +601,15 @@
        OJO rendimiento Pi: backdrop-filter es caro y los widgets son
        permanentes + se redibujan al arrastrar ventanas encima.
        Si hay tirones, bajar el blur (16px → 8px) o quitarlo. */
-    background: var(--canvas-soft, #161b22);
+    background: color-mix(in srgb, var(--panel, #171c26) 94%, transparent);
     border: 1px solid var(--line, #2a323d);
-    border-radius: 6px;
+    border-radius: 5px;
     overflow: hidden;
     cursor: grab;
     user-select: none;
     touch-action: none;
     pointer-events: auto;
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.20);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .widget:hover {
@@ -618,7 +618,7 @@
   .widget.dragging {
     cursor: grabbing;
     border-color: var(--signal);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.38);
     transition: none;
     z-index: 3;
   }

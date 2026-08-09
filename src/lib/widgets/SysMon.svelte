@@ -82,17 +82,14 @@
     margin-bottom: 6px;
   }
   .title {
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
+    font-size: 11px;
+    font-weight: 650;
+    color: var(--ink-dim);
   }
   .aux {
-    font-family: var(--font-mono);
     font-size: 9px;
-    letter-spacing: 0.06em;
-    color: var(--signal);
+    color: var(--ink-mute);
+    font-variant-numeric: tabular-nums;
   }
   .body {
     flex: 1;
@@ -114,7 +111,6 @@
     gap: 5px;
   }
   .sub {
-    font-family: var(--font-mono);
     font-size: 8.5px;
     color: var(--ink-faint);
     letter-spacing: 0.02em;
@@ -134,10 +130,7 @@
     gap: 4px;
   }
   .t-label {
-    font-family: var(--font-mono);
-    font-size: 8px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 9px;
     color: var(--ink-faint);
   }
   .t-row {
@@ -151,14 +144,14 @@
     color: var(--ink-mute);
   }
   .t-val {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 22px;
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
     color: var(--ink);
     line-height: 1;
   }
   .t-sub {
-    font-family: var(--font-mono);
     font-size: 9px;
     color: var(--ink-faint);
     min-height: 11px;

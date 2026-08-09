@@ -135,16 +135,12 @@
     gap: 8px;
   }
   .title {
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
+    font-size: 11px;
+    font-weight: 650;
+    color: var(--ink-dim);
   }
   .sum {
-    font-family: var(--font-mono);
     font-size: 9px;
-    letter-spacing: 0.04em;
     white-space: nowrap;
   }
   .sum b { font-weight: 600; }
@@ -189,18 +185,16 @@
     height: 9px;
     border-radius: 3px;
     background: var(--signal);
-    box-shadow: 0 0 7px var(--signal-glow);
+    box-shadow: none;
   }
-  .cube.warn { background: var(--warn); box-shadow: 0 0 7px var(--warn); }
+  .cube.warn { background: var(--warn); box-shadow: none; }
   .cube.crit {
     background: var(--crit);
-    box-shadow: 0 0 7px var(--crit);
-    animation: svc-pulse 1.6s ease-in-out infinite;
+    box-shadow: none;
   }
   @keyframes svc-pulse { 50% { opacity: 0.35; } }
 
   .sn {
-    font-family: var(--font-mono);
     font-size: 10px;
     color: var(--ink-dim);
     white-space: nowrap;
@@ -219,21 +213,18 @@
     gap: 6px;
   }
   .all-ok .big {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 22px;
     font-weight: 600;
-    color: var(--signal);
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
   }
   .all-ok .lbl {
-    font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     color: var(--ink-mute);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
   }
 
   .more {
-    font-family: var(--font-mono);
     font-size: 8.5px;
     color: var(--ink-faint);
     text-align: center;
@@ -244,7 +235,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-mono);
     font-size: 10px;
     color: var(--ink-faint);
   }

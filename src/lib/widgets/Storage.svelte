@@ -182,18 +182,13 @@
     margin-bottom: 14px;
   }
   .title {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
+    font-size: 11px;
+    font-weight: 650;
+    color: var(--ink-dim);
   }
   .aux {
-    font-family: var(--font-mono);
     font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--signal);
+    color: var(--ink-mute);
   }
   .aux.bad { color: var(--warn); }
 
@@ -219,7 +214,7 @@
     margin-bottom: 9px;
   }
   .name {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 16px;
     color: var(--ink);
   }
@@ -237,9 +232,9 @@
     margin-bottom: 7px;
   }
   .pool-head.compact .badge {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 8px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0;
     color: var(--signal);
     border: 1px solid var(--signal-dim);
     border-radius: var(--radius-sm);
@@ -263,12 +258,11 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--signal), hsl(155, 100%, 42%));
-    box-shadow: 0 0 12px var(--signal-glow);
+    background: var(--signal);
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .bar i.hot  { background: linear-gradient(90deg, var(--warn), #f59e0b); box-shadow: 0 0 12px var(--warn); }
-  .bar i.crit { background: linear-gradient(90deg, var(--crit), #ef4444); box-shadow: 0 0 12px var(--crit); }
+  .bar i.hot  { background: var(--warn); }
+  .bar i.crit { background: var(--crit); }
 
   .cards {
     display: grid;
@@ -285,21 +279,21 @@
     padding: 7px 5px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: var(--bev-md);
+    border-radius: 4px;
     min-height: 52px;
   }
   .big .c { gap: 5px; padding: 11px 6px; min-height: 78px; }
 
   .c-label {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 7.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    letter-spacing: 0;
     color: var(--ink-faint);
   }
-  .big .c-label { font-size: 8.5px; letter-spacing: 0.12em; }
+  .big .c-label { font-size: 8.5px; }
   .c-num {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
     font-size: 15px;
     font-weight: 600;
     color: var(--ink);
@@ -314,7 +308,6 @@
   }
   .big .c-num small { font-size: 11px; }
   .c-sub {
-    font-family: var(--font-mono);
     font-size: 8.5px;
     color: var(--ink-faint);
   }
@@ -333,7 +326,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-mono);
     font-size: 10px;
     color: var(--ink-faint);
   }
