@@ -20,8 +20,6 @@ package main
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 )
 
 func dockerPermissionsGet(w http.ResponseWriter, r *http.Request) {
@@ -77,26 +75,20 @@ func dockerAppPermissions(w http.ResponseWriter, r *http.Request) {
 	usersRaw2, _ := dbUsersListRaw()
 	sharesRaw, _ := dbSharesListRaw()
 
-	var installedApps []map[string]interface{}
-	containers := getRealContainersGo()
-	for _, c := range containers {
-		installedApps = append(installedApps, map[string]interface{}{"id": c["name"], "name": c["name"], "type": "container", "image": c["image"]})
+	// La tabla docker_apps es la fuente canónica de instalaciones. Consultar
+	// docker ps y escanear carpetas de stacks producía duplicados y dejaba la
+	// pantalla vacía cuando el runtime no estaba disponible temporalmente.
+	installedApps := []map[string]interface{}{}
+	registeredApps, err := appsRepo.ListDockerApps(r.Context())
+	if err != nil {
+		jsonError(w, http.StatusInternalServerError, err.Error())
+		return
 	}
-
-	// Check stacks
-	dockerPath, _ := conf["path"].(string)
-	if dockerPath == "" {
-		if dp, err := getDockerPath(); err == nil {
-			dockerPath = dp
-		}
-	}
-	stacksPath := filepath.Join(dockerPath, "stacks")
-	if entries, err := os.ReadDir(stacksPath); err == nil {
-		for _, e := range entries {
-			if _, err := os.Stat(filepath.Join(stacksPath, e.Name(), "docker-compose.yml")); err == nil {
-				installedApps = append(installedApps, map[string]interface{}{"id": e.Name(), "name": e.Name(), "type": "stack"})
-			}
-		}
+	for _, app := range registeredApps {
+		installedApps = append(installedApps, map[string]interface{}{
+			"id": app.ID, "name": app.Name, "type": app.Type,
+			"image": app.Image, "icon": app.Icon,
+		})
 	}
 
 	var userList []map[string]interface{}

@@ -766,18 +766,41 @@ func handleMyAppsRoute(w http.ResponseWriter, r *http.Request) {
 
 	grants, _ := dbUserListAppAccess(username)
 	appIds := []string{}
+	seen := map[string]bool{}
+	addApp := func(id string) {
+		if id != "" && !seen[id] {
+			seen[id] = true
+			appIds = append(appIds, id)
+		}
+	}
 	// Always include public apps from DB
 	publicRows, _ := db.Query(`SELECT id FROM app_registry WHERE public = 1`)
 	if publicRows != nil {
 		for publicRows.Next() {
 			var id string
 			publicRows.Scan(&id)
-			appIds = append(appIds, id)
+			addApp(id)
 		}
 		publicRows.Close()
 	}
 	for _, g := range grants {
-		appIds = append(appIds, g.AppId)
+		addApp(g.AppId)
+	}
+	// Las apps Docker mantienen sus permisos en docker.json porque también
+	// los consume el proxy. Inclúyelas en esta proyección para que Launcher y
+	// app proxy apliquen exactamente la misma decisión de acceso.
+	conf := getDockerConfigGo()
+	if appPerms, ok := conf["appPermissions"].(map[string]interface{}); ok {
+		for appID, rawUsers := range appPerms {
+			if allowedUsers, ok := rawUsers.([]interface{}); ok {
+				for _, rawUser := range allowedUsers {
+					if allowedUser, _ := rawUser.(string); allowedUser == username {
+						addApp(appID)
+						break
+					}
+				}
+			}
+		}
 	}
 	grantsMap := make([]map[string]interface{}, len(grants))
 	for i, g := range grants {

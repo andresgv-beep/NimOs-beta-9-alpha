@@ -14,6 +14,7 @@
   import { onMount } from 'svelte';
   import { user, hdrs } from '$lib/stores/auth.js';
   import { DataTable, StatCard } from '$lib/ui';
+  import WizardFrame from '$lib/ui/WizardFrame.svelte';
 
   let usersList = [];
   let editingUser = null;
@@ -33,11 +34,13 @@
   function startNewUser() {
     editingUser = { username: '', password: '', role: 'user', isNew: true };
     userMsg = '';
+    userMsgError = false;
   }
 
   function startEditUser(u) {
     editingUser = { ...u, password: '', isNew: false };
     userMsg = '';
+    userMsgError = false;
   }
 
   async function saveUser() {
@@ -94,67 +97,10 @@
     <StatCard label="Administradores" value={adminCount} variant="info" tag="con acceso total" tagVariant="info" />
   </div>
 
-  {#if editingUser}
-    <!-- Formulario crear/editar -->
-    <div class="cpu-form">
-      <div class="cpu-form-title">
-        {editingUser.isNew ? 'Nuevo usuario' : `Editar · ${editingUser.username}`}
-      </div>
-
-      <div class="cpu-field">
-        <label class="cpu-label" for="cpu-user">Usuario</label>
-        <input
-          id="cpu-user"
-          type="text"
-          class="cpu-input"
-          bind:value={editingUser.username}
-          disabled={!editingUser.isNew}
-          placeholder="nombre de usuario"
-        />
-      </div>
-
-      <div class="cpu-field">
-        <label class="cpu-label" for="cpu-pass">
-          Contraseña {editingUser.isNew ? '' : '· (en blanco = no cambiar)'}
-        </label>
-        <input
-          id="cpu-pass"
-          type="password"
-          class="cpu-input"
-          bind:value={editingUser.password}
-          placeholder="••••••••"
-          autocomplete="new-password"
-        />
-      </div>
-
-      <div class="cpu-field">
-        <span class="cpu-label">Rol</span>
-        <div class="cpu-roles">
-          <button class="cpu-role" class:active={editingUser.role === 'user'} on:click={() => editingUser.role = 'user'}>
-            Usuario
-          </button>
-          <button class="cpu-role" class:active={editingUser.role === 'admin'} on:click={() => editingUser.role = 'admin'}>
-            Admin
-          </button>
-        </div>
-      </div>
-
-      {#if userMsg}
-        <div class="cpu-msg" class:error={userMsgError}>{userMsg}</div>
-      {/if}
-
-      <div class="cpu-actions">
-        <button class="cpu-btn primary" on:click={saveUser} disabled={savingUser}>
-          {savingUser ? 'Guardando…' : 'Guardar'}
-        </button>
-        <button class="cpu-btn" on:click={() => editingUser = null}>Cancelar</button>
-      </div>
-    </div>
-  {:else}
-    <!-- Lista de usuarios -->
-    {#if loading}
+  <!-- La lista permanece visible mientras el editor se abre como diálogo. -->
+  {#if loading}
       <div class="cpu-empty">Cargando usuarios…</div>
-    {:else}
+  {:else}
       <DataTable cols="36px 1fr 90px 80px" headers={['', 'Usuario', 'Rol', '>Acciones']}>
         {#each usersList as u (u.username)}
           <div class="dt-row">
@@ -187,9 +133,75 @@
       </DataTable>
 
       <button class="cpu-btn primary cpu-add" on:click={startNewUser}>+ Nuevo usuario</button>
-    {/if}
   {/if}
 </div>
+
+{#if editingUser}
+  <WizardFrame
+    open={true}
+    title={editingUser.isNew ? 'Crear usuario' : `Editar usuario · ${editingUser.username}`}
+    currentStep={1}
+    totalSteps={1}
+    canAdvance={!savingUser}
+    canGoBack={false}
+    nextLabel={savingUser ? 'Guardando…' : editingUser.isNew ? 'Crear usuario' : 'Guardar cambios'}
+    width={520}
+    on:next={saveUser}
+    on:cancel={() => editingUser = null}
+  >
+    <div class="cpu-form">
+      <p class="cpu-form-intro">
+        {editingUser.isNew
+          ? 'Crea una cuenta y decide el nivel de acceso que tendrá en NimOS.'
+          : 'Actualiza el acceso de esta cuenta. Deja la contraseña vacía para conservar la actual.'}
+      </p>
+
+      <div class="cpu-field">
+        <label class="cpu-label" for="cpu-user">Usuario</label>
+        <input
+          id="cpu-user"
+          type="text"
+          class="cpu-input"
+          bind:value={editingUser.username}
+          disabled={!editingUser.isNew}
+          placeholder="Nombre de usuario"
+        />
+      </div>
+
+      <div class="cpu-field">
+        <label class="cpu-label" for="cpu-pass">
+          Contraseña {editingUser.isNew ? '' : '(opcional)'}
+        </label>
+        <input
+          id="cpu-pass"
+          type="password"
+          class="cpu-input"
+          bind:value={editingUser.password}
+          placeholder="••••••••"
+          autocomplete="new-password"
+        />
+      </div>
+
+      <div class="cpu-field">
+        <span class="cpu-label">Rol</span>
+        <div class="cpu-roles">
+          <button class="cpu-role" class:active={editingUser.role === 'user'} on:click={() => editingUser.role = 'user'}>
+            <span class="cpu-role-name">Usuario</span>
+            <span class="cpu-role-desc">Acceso estándar</span>
+          </button>
+          <button class="cpu-role" class:active={editingUser.role === 'admin'} on:click={() => editingUser.role = 'admin'}>
+            <span class="cpu-role-name">Administrador</span>
+            <span class="cpu-role-desc">Acceso completo</span>
+          </button>
+        </div>
+      </div>
+
+      {#if userMsg}
+        <div class="cpu-msg" class:error={userMsgError}>{userMsg}</div>
+      {/if}
+    </div>
+  </WizardFrame>
+{/if}
 
 <style>
   .cp-users { display: flex; flex-direction: column; gap: 16px; }
@@ -253,19 +265,15 @@
 
   /* Formulario */
   .cpu-form {
-    background: var(--bg-card, #15151a);
-    border: 1px solid var(--bd-2, #20202a);
-    border-radius: 5px;
-    padding: 18px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
   }
-  .cpu-form-title {
+  .cpu-form-intro {
+    margin: 0;
+    color: var(--ink-dim);
     font-size: 13px;
-    color: var(--fg, #f0f0f0);
-    font-family: var(--font-sans);
-    font-weight: 600;
+    line-height: 1.55;
   }
   .cpu-field { display: flex; flex-direction: column; gap: 6px; }
   .cpu-label {
@@ -287,23 +295,29 @@
   .cpu-input:focus { border-color: rgba(91, 143, 249, 0.55); }
   .cpu-input:disabled { opacity: 0.5; }
 
-  .cpu-roles { display: flex; gap: 6px; }
+  .cpu-roles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .cpu-role {
-    flex: 1;
-    padding: 8px;
+    padding: 11px 12px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
     border-radius: 4px;
     color: var(--fg-3, #9c9ca4);
-    font-size: 11px;
+    font-size: 12px;
     font-family: var(--font-sans);
     cursor: pointer;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
   }
   .cpu-role.active {
     color: var(--signal, #5b8ff9);
     border-color: rgba(91, 143, 249, 0.4);
     background: rgba(91, 143, 249, 0.09);
   }
+  .cpu-role-name { color: var(--ink); font-weight: 600; }
+  .cpu-role.active .cpu-role-name { color: var(--signal, #5b8ff9); }
+  .cpu-role-desc { color: var(--ink-mute); font-size: 11px; }
 
   .cpu-msg {
     font-size: 11px;
@@ -312,7 +326,6 @@
   }
   .cpu-msg.error { color: var(--st-crit, #ff5a5a); }
 
-  .cpu-actions { display: flex; gap: 8px; }
   .cpu-btn {
     padding: 9px 16px;
     background: var(--bg-inner, #101015);

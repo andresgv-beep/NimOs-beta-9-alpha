@@ -140,7 +140,7 @@
               on:click={handleConfirm}
               disabled={!canConfirm}
             >
-              {processing ? 'Procesando...' : confirmLabel}
+              {processing ? 'Procesando…' : confirmLabel}
             </button>
           {/if}
         </div>
@@ -177,9 +177,9 @@
   .cd {
     width: 460px;
     max-width: calc(100% - 40px);
-    background: var(--panel-elev);
+    background: var(--bg-window, var(--panel-elev));
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: 10px;
     overflow: hidden;
     box-shadow:
       0 20px 60px rgba(0, 0, 0, 0.5),
@@ -201,20 +201,18 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--sp-3, 14px) var(--sp-4, 18px);
+    padding: 16px 20px;
     border-bottom: 1px solid var(--line);
-    background: var(--canvas);
+    background: var(--bg-window, var(--panel-elev));
   }
   .cd-title {
-    font-size: var(--fs-13, 13px);
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 650;
     color: var(--ink);
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-    font-family: var(--font-mono);
+    letter-spacing: 0;
+    text-transform: none;
+    font-family: var(--font-sans);
   }
-  .cd-title.variant-warn   { color: var(--warn); }
-  .cd-title.variant-danger { color: var(--crit); }
 
   .cd-close {
     background: transparent;
@@ -235,23 +233,24 @@
 
   /* ─── Body ─── */
   .cd-body {
-    padding: var(--sp-4, 18px);
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: var(--sp-3, 14px);
+    gap: 14px;
+    background: var(--bg-main, var(--panel-elev));
   }
   .cd-message {
     color: var(--ink-dim);
-    font-size: var(--fs-12, 12px);
-    line-height: 1.55;
+    font-size: 13px;
+    line-height: 1.6;
   }
 
   .cd-confirm-label {
     color: var(--ink-mute);
-    font-size: var(--fs-11, 11px);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-family: var(--font-mono);
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--font-sans);
   }
   .cd-confirm-label b {
     color: var(--crit);
@@ -260,13 +259,13 @@
 
   .cd-confirm-input {
     width: 100%;
-    background: var(--canvas);
+    background: var(--bg-inner, var(--canvas));
     border: 1px solid var(--line);
     color: var(--ink);
     padding: 10px 14px;
     border-radius: var(--radius-sm, 6px);
-    font-size: var(--fs-12, 12px);
-    font-family: var(--font-mono);
+    font-size: 13px;
+    font-family: var(--font-sans);
     outline: none;
     transition: border-color 0.12s, box-shadow 0.12s;
   }
@@ -278,16 +277,16 @@
   }
   .cd-confirm-input.ok {
     border-color: var(--signal);
-    box-shadow: 0 0 0 2px var(--signal-dim, rgba(0, 255, 159, 0.1));
+    box-shadow: 0 0 0 2px rgba(91, 143, 249, 0.14);
   }
 
   /* ─── Footer ─── */
   .cd-foot {
     display: flex;
     align-items: center;
-    padding: var(--sp-3, 14px) var(--sp-4, 18px);
+    padding: 14px 20px;
     border-top: 1px solid var(--line);
-    background: var(--canvas);
+    background: var(--bg-window, var(--panel-elev));
     gap: var(--sp-2, 10px);
   }
   .cd-spacer {
@@ -299,7 +298,7 @@
     background: transparent;
     border: 1px solid var(--line);
     color: var(--ink-dim);
-    font-size: var(--fs-12, 12px);
+    font-size: 13px;
     font-weight: 600;
     font-family: inherit;
     border-radius: var(--radius-sm, 6px);
@@ -319,13 +318,13 @@
   /* Variantes del botón confirmar */
   .cd-btn.btn-default {
     background: var(--signal);
-    color: var(--canvas);
+    color: #fff;
     border-color: var(--signal);
   }
   .cd-btn.btn-default:not(:disabled):hover {
     filter: brightness(1.08);
     background: var(--signal);
-    color: var(--canvas);
+    color: #fff;
   }
 
   .cd-btn.btn-warn {
