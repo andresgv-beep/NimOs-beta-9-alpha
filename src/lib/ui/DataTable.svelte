@@ -60,6 +60,7 @@
 <style>
   .data-table {
     background: var(--panel, #15151a);
+    border: 1px solid var(--line, #20202a);
     border-radius: 8px;
     overflow: hidden;
   }
