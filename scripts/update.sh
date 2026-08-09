@@ -1,140 +1,140 @@
 #!/usr/bin/env bash
-# NimOS Update Script — 100% Go architecture
-set -euo pipefail
+# NimOS staged updater: build first, install only after every required build succeeds.
+set -Eeuo pipefail
 
 DIR="/opt/nimos"
 URL="https://github.com/andresgv-beep/NimOs-beta-9-alpha/archive/refs/heads/main.tar.gz"
 RESULT_FILE="/var/log/nimos/update-result.json"
 LOG_FILE="/var/log/nimos/update.log"
+STAGE="$(mktemp -d /var/tmp/nimos-update.XXXXXX)"
 
 mkdir -p /var/log/nimos
+cleanup() { rm -rf -- "$STAGE"; }
+trap cleanup EXIT
 
 log() { echo "[$(date -Iseconds)] $*" | tee -a "$LOG_FILE"; }
+result_error() {
+  local code="$1"
+  printf '{"type":"error","error":"%s","time":"%s"}\n' "$code" "$(date -Iseconds)" > "$RESULT_FILE"
+}
+version_from() {
+  grep -o '"version": *"[^"]*"' "$1/package.json" 2>/dev/null | cut -d'"' -f4 || echo "unknown"
+}
+tree_hash() {
+  local root="$1"
+  shift
+  (cd "$root" && find . "$@" -type f -exec sha256sum {} \; 2>/dev/null) \
+    | sort | sha256sum | cut -d' ' -f1
+}
 
-# Get current version from package.json (simple grep, no node)
-PREV=$(grep -o '"version": *"[^"]*"' "$DIR/package.json" 2>/dev/null | cut -d'"' -f4 || echo "unknown")
+PREV="$(version_from "$DIR")"
 log "Current version: $PREV"
-
-# Save checksums to detect changes
-DAEMON_HASH=$(find "$DIR/daemon" -name "*.go" -exec md5sum {} \; 2>/dev/null | sort | md5sum | cut -d' ' -f1)
-FRONTEND_HASH=$(find "$DIR/src" -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum | cut -d' ' -f1)
-
-# Download latest
-log "Downloading update..."
-if ! curl -fsSL "$URL" | tar xz --strip-components=1 --overwrite -C "$DIR"; then
-  log "ERROR: Download failed"
-  echo '{"type":"error","error":"download_failed","time":"'$(date -Iseconds)'"}' > "$RESULT_FILE"
+log "Downloading update into staging..."
+if ! curl --connect-timeout 10 --max-time 180 -fsSL "$URL" \
+  | tar xz --strip-components=1 -C "$STAGE"; then
+  log "ERROR: Download failed; installed files were not modified"
+  result_error "download_failed"
   exit 1
 fi
 
-NEW=$(grep -o '"version": *"[^"]*"' "$DIR/package.json" 2>/dev/null | cut -d'"' -f4 || echo "unknown")
+NEW="$(version_from "$STAGE")"
+if [[ "$NEW" == "unknown" ]]; then
+  log "ERROR: Downloaded package has no valid version"
+  result_error "invalid_package"
+  exit 1
+fi
 log "Downloaded version: $NEW"
 
-# Check what changed
-DAEMON_HASH_NEW=$(find "$DIR/daemon" -name "*.go" -exec md5sum {} \; 2>/dev/null | sort | md5sum | cut -d' ' -f1)
-FRONTEND_HASH_NEW=$(find "$DIR/src" -type f -exec md5sum {} \; 2>/dev/null | sort | md5sum | cut -d' ' -f1)
+DAEMON_HASH="$(tree_hash "$DIR/daemon" -name '*.go')"
+DAEMON_HASH_NEW="$(tree_hash "$STAGE/daemon" -name '*.go')"
+FRONTEND_HASH="$(tree_hash "$DIR/src")"
+FRONTEND_HASH_NEW="$(tree_hash "$STAGE/src")"
 
 DAEMON_CHANGED=false
 FRONTEND_CHANGED=false
-[ "$DAEMON_HASH" != "$DAEMON_HASH_NEW" ] && DAEMON_CHANGED=true
-[ "$FRONTEND_HASH" != "$FRONTEND_HASH_NEW" ] && FRONTEND_CHANGED=true
+[[ "$DAEMON_HASH" != "$DAEMON_HASH_NEW" || ! -x "$DIR/daemon/nimos-daemon" ]] && DAEMON_CHANGED=true
+[[ "$FRONTEND_HASH" != "$FRONTEND_HASH_NEW" || ! -f "$DIR/dist/.nimos-build" ]] && FRONTEND_CHANGED=true
 
-# Rebuild Go daemon if source changed
-if [ "$DAEMON_CHANGED" = true ]; then
-  log "Daemon source changed — rebuilding..."
-
-  if ! command -v go &>/dev/null; then
-    log "Installing Go compiler..."
-    apt-get install -y -qq golang-go 2>/dev/null || true
-  fi
-
-  if command -v go &>/dev/null; then
-    cd "$DIR/daemon"
-    systemctl stop nimos-daemon 2>/dev/null || true
-    go mod tidy 2>/dev/null
-
-    if go build -o "$DIR/daemon/nimos-daemon" . 2>&1 | tee -a "$LOG_FILE"; then
-      chmod 755 "$DIR/daemon/nimos-daemon"
-      log "nimos-daemon rebuilt successfully"
-    else
-      log "ERROR: Go build failed"
-      echo '{"type":"error","error":"build_failed","prev":"'"$PREV"'","new":"'"$NEW"'","time":"'$(date -Iseconds)'"}' > "$RESULT_FILE"
-      # Try to restart with old binary
-      systemctl start nimos-daemon 2>/dev/null || true
-      exit 1
-    fi
-    cd "$DIR"
-  else
-    log "WARNING: Go not available — cannot rebuild daemon"
-  fi
-
-  # Update service file if changed
-  if [ -f "$DIR/scripts/nimos-daemon.service" ]; then
-    cp "$DIR/scripts/nimos-daemon.service" /etc/systemd/system/nimos-daemon.service
-    systemctl daemon-reload
-  fi
-
-  # Rebuild NimTorrent if source changed
-  if [ -f "$DIR/torrentd/main.cpp" ] && command -v g++ &>/dev/null; then
-    TORRENT_HASH=$(md5sum "$DIR/torrentd/main.cpp" 2>/dev/null | cut -d' ' -f1)
-    if [ -f /usr/local/bin/nimos-torrentd ]; then
-      log "Checking NimTorrent..."
-      cd "$DIR/torrentd"
-      if make -q 2>/dev/null; then
-        log "NimTorrent up to date"
-      else
-        systemctl stop nimos-torrentd 2>/dev/null || true
-        if make 2>&1 | tee -a "$LOG_FILE"; then
-          cp nimos-torrentd /usr/local/bin/nimos-torrentd
-          log "NimTorrent rebuilt"
-        fi
-      fi
-      cd "$DIR"
-    fi
-  fi
-
-  # Rebuild frontend if source also changed
-  if [ "$FRONTEND_CHANGED" = true ] && command -v npm &>/dev/null; then
-    log "Frontend source also changed — rebuilding..."
-    cd "$DIR"
-    npm install 2>&1 | tail -5 | tee -a "$LOG_FILE"
-    npm run build 2>&1 | tee -a "$LOG_FILE" || log "WARNING: Frontend build failed"
-  fi
-
-  # Restart services
-  log "Restarting services..."
-  systemctl restart nimos-daemon
-  systemctl restart nimos-torrentd 2>/dev/null || true
-  sleep 3
-
-  if systemctl is-active --quiet nimos-daemon; then
-    log "OK: $PREV -> $NEW (daemon rebuilt + restarted)"
-    echo '{"type":"full","prev":"'"$PREV"'","new":"'"$NEW"'","time":"'$(date -Iseconds)'"}' > "$RESULT_FILE"
-  else
-    log "ERROR: nimos-daemon failed to start after update"
-    echo '{"type":"error","error":"start_failed","prev":"'"$PREV"'","new":"'"$NEW"'","time":"'$(date -Iseconds)'"}' > "$RESULT_FILE"
+if [[ "$DAEMON_CHANGED" == true ]]; then
+  log "Daemon source changed — building in staging..."
+  if ! command -v go >/dev/null 2>&1; then
+    log "ERROR: Go compiler is not installed"
+    result_error "go_missing"
     exit 1
   fi
-
-elif [ "$FRONTEND_CHANGED" = true ]; then
-  log "Frontend source changed — rebuilding..."
-  cd "$DIR"
-  if command -v npm &>/dev/null; then
-    npm install 2>&1 | tail -5 | tee -a "$LOG_FILE"
-    if npm run build 2>&1 | tee -a "$LOG_FILE"; then
-      log "Frontend rebuilt successfully"
-    else
-      log "ERROR: Frontend build failed"
-      echo '{"type":"error","error":"frontend_build_failed","prev":"'"$PREV"'","new":"'"$NEW"'","time":"'$(date -Iseconds)'"}' > "$RESULT_FILE"
-      exit 1
-    fi
-  else
-    log "WARNING: npm not available — cannot rebuild frontend"
+  if ! (cd "$STAGE/daemon" && go build -o nimos-daemon .) 2>&1 | tee -a "$LOG_FILE"; then
+    log "ERROR: Daemon build failed; installed files were not modified"
+    result_error "build_failed"
+    exit 1
   fi
-  log "OK: $PREV -> $NEW (reload browser)"
-  echo '{"type":"frontend","prev":"'"$PREV"'","new":"'"$NEW"'","time":"'$(date -Iseconds)'"}' > "$RESULT_FILE"
-
-else
-  log "No changes detected"
-  echo '{"type":"none","prev":"'"$PREV"'","new":"'"$NEW"'","time":"'$(date -Iseconds)'"}' > "$RESULT_FILE"
+  chmod 0755 "$STAGE/daemon/nimos-daemon"
 fi
+
+if [[ "$FRONTEND_CHANGED" == true ]]; then
+  log "Frontend source changed or its build is incomplete — building in staging..."
+  if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    log "ERROR: Node.js/npm are not installed"
+    result_error "node_missing"
+    exit 1
+  fi
+  NODE_MAJOR="$(node -p 'Number(process.versions.node.split(".")[0])' 2>/dev/null || echo 0)"
+  if (( NODE_MAJOR < 18 )); then
+    log "ERROR: Node.js 18 or newer is required (found $(node -v 2>/dev/null || echo unknown))"
+    result_error "node_too_old"
+    exit 1
+  fi
+  if ! (cd "$STAGE" && npm ci --no-audit --no-fund && npm run build) 2>&1 | tee -a "$LOG_FILE"; then
+    log "ERROR: Frontend build failed; installed files were not modified"
+    result_error "frontend_build_failed"
+    exit 1
+  fi
+  if [[ ! -f "$STAGE/dist/index.html" ]]; then
+    log "ERROR: Frontend build did not create dist/index.html"
+    result_error "frontend_dist_missing"
+    exit 1
+  fi
+  printf '%s\n' "$FRONTEND_HASH_NEW" > "$STAGE/dist/.nimos-build"
+fi
+
+log "All builds passed — installing $NEW..."
+systemctl stop nimos-daemon 2>/dev/null || true
+
+tar -C "$STAGE" \
+  --exclude='./dist' --exclude='./node_modules' --exclude='./.svelte-kit' \
+  -cf - . | tar -C "$DIR" -xf -
+
+if [[ "$FRONTEND_CHANGED" == true ]]; then
+  rm -rf -- "$DIR/dist.next"
+  cp -a "$STAGE/dist" "$DIR/dist.next"
+  rm -rf -- "$DIR/dist.previous"
+  [[ ! -d "$DIR/dist" ]] || mv "$DIR/dist" "$DIR/dist.previous"
+  mv "$DIR/dist.next" "$DIR/dist"
+fi
+
+if [[ -f "$DIR/scripts/nimos-daemon.service" ]]; then
+  cp "$DIR/scripts/nimos-daemon.service" /etc/systemd/system/nimos-daemon.service
+  systemctl daemon-reload
+fi
+chown -R nimos:nimos "$DIR" 2>/dev/null || true
+
+log "Restarting services..."
+if ! systemctl restart nimos-daemon; then
+  log "ERROR: nimos-daemon could not be restarted"
+  result_error "start_failed"
+  exit 1
+fi
+systemctl restart nimos-torrentd 2>/dev/null || true
+
+if ! systemctl is-active --quiet nimos-daemon; then
+  log "ERROR: nimos-daemon is not active after the update"
+  result_error "start_failed"
+  exit 1
+fi
+
+rm -rf -- "$DIR/dist.previous"
+UPDATE_TYPE="none"
+[[ "$FRONTEND_CHANGED" == true ]] && UPDATE_TYPE="frontend"
+[[ "$DAEMON_CHANGED" == true ]] && UPDATE_TYPE="full"
+log "OK: $PREV -> $NEW ($UPDATE_TYPE)"
+printf '{"type":"%s","prev":"%s","new":"%s","time":"%s"}\n' \
+  "$UPDATE_TYPE" "$PREV" "$NEW" "$(date -Iseconds)" > "$RESULT_FILE"

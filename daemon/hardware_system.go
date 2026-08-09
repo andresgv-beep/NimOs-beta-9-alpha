@@ -399,10 +399,15 @@ func handleUpdateCheck(w http.ResponseWriter) {
 		jsonError(w, http.StatusInternalServerError, "No se pudieron comparar las versiones")
 		return
 	}
+	// Si falta esta marca, una actualización anterior copió el código pero no
+	// llegó a generar el frontend. Permitimos repararlo aun con igual versión.
+	_, markerErr := os.Stat("/opt/nimos/dist/.nimos-build")
+	repairRequired := markerErr != nil
 	jsonOk(w, map[string]interface{}{
 		"currentVersion":  currentVersion,
 		"latestVersion":   latestVersion,
-		"updateAvailable": comparison < 0,
+		"updateAvailable": comparison < 0 || repairRequired,
+		"repairRequired":  repairRequired,
 		"installDir":      "/opt/nimos",
 	})
 }
@@ -454,9 +459,37 @@ func handleUpdateApply(w http.ResponseWriter) {
 		return
 	}
 
+	// Ejecutar una copia estable: el propio update reemplaza /opt/nimos/scripts
+	// al instalar el archivo descargado. Si Bash mantuviera abierto ese mismo
+	// inode, podría leer un script truncado o mezclado a mitad de ejecución.
+	scriptData, err := os.ReadFile(script)
+	if err != nil {
+		jsonError(w, 500, "Failed to read update script")
+		return
+	}
+	runCopy, err := os.CreateTemp("/var/tmp", "nimos-update-run-*.sh")
+	if err != nil {
+		jsonError(w, 500, "Failed to prepare update script")
+		return
+	}
+	runPath := runCopy.Name()
+	if _, err = runCopy.Write(scriptData); err != nil {
+		runCopy.Close()
+		os.Remove(runPath)
+		jsonError(w, 500, "Failed to prepare update script")
+		return
+	}
+	if err = runCopy.Close(); err != nil || os.Chmod(runPath, 0700) != nil {
+		os.Remove(runPath)
+		jsonError(w, 500, "Failed to prepare update script")
+		return
+	}
+
 	os.Remove("/var/log/nimos/update-result.json")
 
-	cmd := exec.Command("setsid", "bash", script)
+	cmd := exec.Command("setsid", "bash", "-c",
+		`bash "$1"; status=$?; rm -f -- "$1"; exit "$status"`,
+		"nimos-update-runner", runPath)
 	cmd.Dir = "/opt/nimos"
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
@@ -467,6 +500,7 @@ func handleUpdateApply(w http.ResponseWriter) {
 		cmd.Stderr = logFile
 	}
 	if err := cmd.Start(); err != nil {
+		os.Remove(runPath)
 		jsonError(w, 500, fmt.Sprintf("Failed to start update: %v", err))
 		return
 	}

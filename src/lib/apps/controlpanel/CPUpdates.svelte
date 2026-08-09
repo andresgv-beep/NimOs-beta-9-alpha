@@ -24,6 +24,7 @@
   $: current = updateData.currentVersion || updateData.current || updateData.version || '—';
   $: latest = checkError ? 'Sin comprobar' : (updateData.latestVersion || updateData.latest || '—');
   $: available = !!updateData.updateAvailable;
+  $: repairRequired = !!updateData.repairRequired;
 
   async function readUpdateResponse(response) {
     const data = await response.json().catch(() => ({}));
@@ -88,7 +89,7 @@
       label="Última versión"
       value={latest}
       variant={checkError ? 'crit' : (available ? 'warn' : 'ok')}
-      tag={checkError ? 'error' : (available ? 'disponible' : 'al día')}
+      tag={checkError ? 'error' : (repairRequired ? 'reparar' : (available ? 'disponible' : 'al día'))}
       tagVariant={checkError ? 'crit' : (available ? 'warn' : 'ok')}
     />
   </div>
@@ -99,6 +100,8 @@
       Comprobando estado…
     {:else if checkError}
       No se pudo comprobar el estado remoto
+    {:else if repairRequired}
+      La instalación está incompleta y necesita reparación
     {:else if available}
       Hay una actualización disponible
     {:else}
@@ -112,7 +115,7 @@
     </button>
     {#if available}
       <button class="cpu-btn primary" on:click={applyUpdate} disabled={applying}>
-        {applying ? 'Actualizando…' : 'Aplicar actualización'}
+        {applying ? 'Actualizando…' : (repairRequired ? 'Reparar instalación' : 'Aplicar actualización')}
       </button>
     {/if}
   </div>
