@@ -2,8 +2,7 @@
   /**
    * StorageScrub · Vista de scrub manual.
    * ─────────────────────────────────────
-   * Lista los pools con botón "Scrub ahora". El scrub es un chequeo de
-   * integridad que recorre checksums — puede tardar horas.
+   * Lista los volúmenes y permite iniciar su verificación de integridad.
    *
    * Props:
    *   · pools     — array de pools del backend
@@ -34,7 +33,7 @@
 
   function lastScrubLabel(st) {
     if (!st) return '—';
-    if (st.status === 'never') return 'nunca';
+    if (st.status === 'never') return 'Nunca';
     if (!st.lastScrub) return '—';
     let label = fmtDate(st.lastScrub);
     if (st.status === 'canceled') label += ' · cancelado';
@@ -43,29 +42,27 @@
 </script>
 
 <div class="st-section">
-  <SectionHead>Scrub manual</SectionHead>
+  <SectionHead>Verificación de integridad</SectionHead>
 
   {#if pools.length === 0}
-    <EmptyState icon="◇" title="Sin pools" hint="No hay pools para ejecutar scrub" />
+    <EmptyState icon="◇" title="Sin volúmenes" hint="No hay volúmenes que se puedan verificar" />
   {:else}
     <div class="hint-box">
-      <b>¿Qué es scrub?</b> Es un chequeo de integridad que recorre todos los datos del pool
-      y verifica checksums. Útil mensualmente para detectar errores silenciosos.
-      Puede tardar horas y el sistema irá más lento mientras corre.
+      <b>Comprobación de datos.</b> Recorre el volumen y valida la integridad de la
+      información almacenada. Puede tardar varias horas y reducir temporalmente el rendimiento.
     </div>
 
-    <DataTable cols="1fr 80px 100px 180px 170px" headers={['Pool', 'Tipo', 'Tamaño', 'Último scrub', 'Acción']}>
+    <DataTable cols="minmax(150px, 1fr) 110px 190px 190px" headers={['Volumen', 'Tamaño', 'Última verificación', '>Acción']}>
       {#each pools as pool}
         {@const st = scrubStatus[pool.name]}
         {@const running = st?.status === 'scrubbing'}
         <div class="dt-row">
-          <span class="mono">{pool.name}</span>
-          <span>BTRFS</span>
+          <span class="volume-name">{pool.name}</span>
           <span>{fmtBytes(pool.usage?.total_bytes)}</span>
           <span class="tc-mute">
             {lastScrubLabel(st)}
             {#if !running && st?.errors > 0}
-              <span class="scrub-errors">⚠ {st.errors} err</span>
+              <span class="scrub-errors">{st.errors} errores</span>
             {/if}
           </span>
           <span>
@@ -82,7 +79,7 @@
                 onClick={() => onScrub(pool.name)}
                 disabled={scrubbing[pool.name]}
               >
-                {scrubbing[pool.name] ? '▸ Iniciando...' : '▸ Scrub ahora'}
+                {scrubbing[pool.name] ? 'Iniciando…' : 'Iniciar verificación'}
               </BevelButton>
             {/if}
           </span>
@@ -97,6 +94,10 @@
 </div>
 
 <style>
+  .volume-name {
+    color: var(--ink);
+    font-weight: 600;
+  }
   /* AUDIT F8: progreso del scrub en curso */
   .scrub-progress {
     display: flex;
@@ -118,14 +119,14 @@
     transition: width 0.8s ease;
   }
   .scrub-pct {
-    font-family: var(--font-mono);
-    font-size: 9.5px;
+    font-family: var(--font-sans);
+    font-size: 10.5px;
     color: var(--ink-mute);
   }
   .scrub-errors {
     margin-left: 6px;
-    font-family: var(--font-mono);
-    font-size: 10px;
+    font-family: var(--font-sans);
+    font-size: 10.5px;
     color: var(--warn);
   }
 </style>

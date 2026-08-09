@@ -19,16 +19,24 @@
 
   export let pools = [];
   export let disks = {};
+
+  function smartLabel(status) {
+    return ({
+      ok: 'Correcto',
+      warning: 'Atención',
+      critical: 'Crítico',
+      missing: 'No detectado',
+      unknown: 'Sin datos',
+    })[status] || 'Sin datos';
+  }
 </script>
 
 <div class="st-section">
-  <SectionHead>SMART de discos</SectionHead>
+  <SectionHead>Estado de los discos</SectionHead>
 
   <div class="hint-box">
-    <b>SMART</b> (Self-Monitoring, Analysis and Reporting Technology) es una tecnología
-    que permite a los discos auto-diagnosticarse. Un SMART status <span class="tc-accent">ok</span>
-    significa que el disco no reporta errores. <span class="tc-warn">warning</span> y
-    <span class="tc-crit">critical</span> requieren atención.
+    <b>Diagnóstico SMART.</b> Supervisa indicadores internos del disco para detectar
+    señales de desgaste o posibles fallos antes de que afecten a los datos.
   </div>
 
   {#if pools.length === 0 && (!disks.eligible || disks.eligible.length === 0)}
@@ -38,17 +46,17 @@
       {#each pools as pool}
         {#each (pool.devices || []) as disk}
           <div class="dt-row">
-            <span class="mono dt-trunc">{disk.current_path || '—'}</span>
-            <span class="mono dt-trunc">{disk.model || '—'}</span>
+            <span class="dt-trunc">{disk.current_path || '—'}</span>
+            <span class="dt-trunc">{disk.model || '—'}</span>
             <span>{fmtBytes(disk.size_bytes) || '—'}</span>
             <span><Badge size="sm" variant="accent">{pool.name}</Badge></span>
             <span class="dt-smart">
               <LED size={7} variant={smartVariant(disk.smart_status)} />
-              <span class="sm">{disk.smart_status || 'unknown'}</span>
+              <span class="sm">{smartLabel(disk.smart_status)}</span>
             </span>
             <span class="tc-mute sm dt-trunc">
-              {#if disk.smart_status === 'critical'}Reemplazar cuanto antes
-              {:else if disk.smart_status === 'warning'}Monitorizar
+              {#if disk.smart_status === 'critical'}Sustituir cuanto antes
+              {:else if disk.smart_status === 'warning'}Revisar periódicamente
               {:else if disk.smart_status === 'missing'}Disco desconectado
               {:else if disk.smart_status === 'ok'}Sin incidencias
               {:else}—{/if}
@@ -58,9 +66,6 @@
       {/each}
     </DataTable>
 
-    <div class="todo-note">
-      <b>TODO</b> · temperatura, horas de operación y errores detallados pendientes de añadir al backend.
-    </div>
   {/if}
 </div>
 

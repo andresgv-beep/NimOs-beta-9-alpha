@@ -110,7 +110,7 @@
 <!-- ══ Sección: Volúmenes (pools) ══ -->
 <div class="st-section">
   <div class="section-row">
-    <SectionHead count={pools.length > 0 ? `· ${pools.length} activos` : ''}>
+    <SectionHead count={pools.length > 0 ? `${pools.length} activos` : ''}>
       Volúmenes
     </SectionHead>
     <div class="section-actions">
@@ -236,10 +236,6 @@
               aria-label="Acciones del pool {pool.name}"
               tabindex="-1"
             >
-              <button class="pa-btn" disabled title="Disponible en Fase B">
-                <span>Snapshot</span>
-                <span class="pa-tag">Fase B</span>
-              </button>
               <button
                 class="pa-btn"
                 on:click={() => { dispatch('scrub', { poolName: pool.name }); kebabOpenFor = null; }}
@@ -288,14 +284,14 @@
                   </div>
                 </div>
                 <div class="pig-col">
-                  <div class="pig-label">Health</div>
+                  <div class="pig-label">Estado</div>
                   <div class="pig-value pig-flex">
                     <LED size={7} variant={ledVariantForHealth(pool.health?.status)} />
                     <span>{healthStatusLabel(pool.health?.status)}</span>
                   </div>
                 </div>
                 <div class="pig-col">
-                  <div class="pig-label">Mount</div>
+                  <div class="pig-label">Ubicación</div>
                   <div class="pig-value mono sm pig-trunc">{pool.mount_point || '—'}</div>
                 </div>
               </div>
@@ -304,16 +300,13 @@
               <div class="pool-disks">
                 <div class="pd-head">
                   Discos del volumen · {pool.devices?.length || 0}
-                  <span class="tc-mute todo">
-                    (temp y horas pendiente backend)
-                  </span>
                 </div>
                 <DataTable cols="40px 1fr 110px 80px 80px 140px" headers={['', 'Modelo', 'Dispositivo', 'Capacidad', 'Rol', 'SMART']}>
                   {#each (pool.devices || []) as disk, i}
                     <div class="dt-row">
                       <span class="disk-idx">D{i + 1}</span>
-                      <span class="mono dt-trunc">{disk.model || '—'}</span>
-                      <span class="mono dt-trunc">{disk.current_path || '—'}</span>
+                      <span class="dt-trunc">{disk.model || '—'}</span>
+                      <span class="dt-trunc">{disk.current_path || '—'}</span>
                       <span class="disk-cap">{fmtBytes(disk.size_bytes) || '—'}</span>
                       <span>
                         <Badge size="sm" variant={inferDiskRole(pool.devices, i, pool.profile) === 'parity' ? 'warn' : 'default'}>
@@ -372,12 +365,12 @@
 {#if orphanFilesystems.length > 0}
   <div class="st-section">
     <div class="section-row">
-      <SectionHead count="· {orphanFilesystems.length}">
-        Observados · no gestionados
+      <SectionHead count="{orphanFilesystems.length}">
+        Volúmenes detectados
       </SectionHead>
       <div class="section-actions">
         <button class="btn-secondary" on:click={() => dispatch('refresh-observed')} disabled={refreshing}>
-          {refreshing ? 'Actualizando…' : 'Refrescar'}
+          {refreshing ? 'Actualizando…' : 'Actualizar'}
         </button>
       </div>
     </div>
@@ -490,7 +483,7 @@
 <!-- ══ Sección: Alertas del sistema ══ -->
 {#if alerts.length > 0}
   <div class="st-section">
-    <SectionHead count="· {alerts.length}">Alertas del sistema</SectionHead>
+    <SectionHead count="{alerts.length}">Alertas del sistema</SectionHead>
     <div class="alerts-list">
       {#each alerts as alert}
         <div class="alert-row" class:crit={alert.level === 'critical'} class:warn={alert.level === 'warning'}>
@@ -610,7 +603,7 @@
   .pool-bar-wrap { min-width: 0; }
   .pool-size {
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     color: var(--ink);
     text-align: right;
     font-feature-settings: "tnum";
@@ -636,7 +629,7 @@
     color: var(--ink-mute);
     cursor: pointer;
     font-size: 14px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     transition: color 0.12s;
   }
   .pool-kebab:hover { color: var(--signal); }
@@ -692,16 +685,6 @@
     cursor: not-allowed;
     opacity: 0.45;
   }
-  .pa-tag {
-    color: var(--ink-faint);
-    font-size: 10px;
-    font-weight: 600;
-    border: 1px solid var(--line-bright);
-    border-radius: 999px;
-    padding: 0 6px;
-    margin-left: 2px;
-  }
-
   /* Pool body ───── */
   .pool-body {
     border-top: 1px solid var(--border);
@@ -738,7 +721,7 @@
   .pig-value {
     font-size: 14px;
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-feature-settings: "tnum";
   }
   .pig-value.pig-flex {
@@ -779,7 +762,7 @@
   .cap-fill.warn { background: var(--warn); }
   .cap-fill.crit { background: var(--crit); }
   .cap-pct {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 12px;
     color: var(--ink-mute);
     min-width: 34px;
@@ -959,7 +942,7 @@
   .repair-bar-pct {
     font-size: 0.82rem;
     font-variant-numeric: tabular-nums;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     color: var(--signal);
   }
   .repair-track {
