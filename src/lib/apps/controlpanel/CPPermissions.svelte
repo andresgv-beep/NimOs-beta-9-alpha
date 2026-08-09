@@ -142,20 +142,21 @@
     gap: 8px;
   }
 
-  .cpp-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
+  .cpp-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .cpp-msg.error { color: var(--st-crit, #ff5a5a); }
 
   .cpp-note {
     font-size: 11px;
     color: var(--fg-4, #7a7a82);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     line-height: 1.5;
   }
 
   .cpp-list { display: flex; flex-direction: column; gap: 8px; }
   .cpp-app {
     background: var(--bg-card, #15151a);
-    border-radius: 8px;
+    border: 1px solid var(--bd-2, #20202a);
+    border-radius: 5px;
     padding: 14px 16px;
     display: flex;
     align-items: center;
@@ -169,29 +170,27 @@
   .cpp-app-icon {
     width: 32px;
     height: 32px;
-    border-radius: 7px;
-    background: rgba(0, 255, 159, 0.08);
-    border: 1px solid rgba(0, 255, 159, 0.2);
-    color: var(--nim-green, #00ff9f);
+    border-radius: 4px;
+    background: rgba(91,143,249,0.1);
+    border: 1px solid rgba(91,143,249,0.25);
+    color: var(--signal, #5b8ff9);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 11px;
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .cpp-app-name {
     font-size: 13px;
     color: var(--fg, #f0f0f0);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 600;
   }
   .cpp-app-type {
     font-size: 10px;
     color: var(--fg-5, #5a5a62);
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-family: var(--font-sans);
     margin-top: 2px;
   }
 
@@ -209,15 +208,15 @@
     border-radius: 5px;
     color: var(--fg-4, #7a7a82);
     font-size: 11px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: all 0.12s;
   }
   .cpp-chip:hover:not(:disabled) { border-color: var(--bd-3, #2a2a32); color: var(--fg-3, #9c9ca4); }
   .cpp-chip.on {
-    color: var(--nim-green, #00ff9f);
-    border-color: rgba(0, 255, 159, 0.35);
-    background: rgba(0, 255, 159, 0.06);
+    color: var(--signal, #5b8ff9);
+    border-color: rgba(91,143,249,0.4);
+    background: rgba(91,143,249,0.09);
   }
   .cpp-chip:disabled { cursor: not-allowed; }
 
@@ -226,7 +225,7 @@
     text-align: center;
     color: var(--fg-5, #5a5a62);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     line-height: 1.5;
   }
 </style>

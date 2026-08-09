@@ -262,7 +262,7 @@
     gap: 8px;
   }
 
-  .cps-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
+  .cps-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .cps-msg.error { color: var(--st-crit, #ff5a5a); }
 
   /* Banner de carpetas huérfanas · acento ámbar de atención (ni acción ni error) */
@@ -282,12 +282,12 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--st-warn, #f5a623);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .cps-orphans-names {
     font-size: 12px;
     color: var(--fg, #f0f0f0);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -295,7 +295,7 @@
   .cps-orphans-note {
     font-size: 11px;
     color: var(--fg-4, #7a7a82);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     line-height: 1.4;
   }
   .cps-btn.warn {
@@ -315,9 +315,8 @@
   .cps-head-lbl {
     font-size: 11px;
     color: var(--fg-4, #7a7a82);
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
+    font-family: var(--font-sans);
+    font-weight: 600;
   }
 
   /* Lista de carpetas */
@@ -330,15 +329,15 @@
     border-radius: 6px;
     color: var(--fg-3, #9c9ca4);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: all 0.12s;
   }
   .cps-btn:hover:not(:disabled) { color: var(--fg, #f0f0f0); border-color: var(--bd-3, #2a2a32); }
   .cps-btn.primary {
-    background: var(--nim-green, #00ff9f);
-    border-color: var(--nim-green, #00ff9f);
-    color: var(--bg-window, #16161a);
+    background: var(--signal, #5b8ff9);
+    border-color: var(--signal, #5b8ff9);
+    color: white;
     font-weight: 600;
   }
   .cps-btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
@@ -349,6 +348,6 @@
     text-align: center;
     color: var(--fg-5, #5a5a62);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
 </style>

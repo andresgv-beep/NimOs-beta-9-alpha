@@ -83,7 +83,7 @@
     gap: 4px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 8px;
+    border-radius: 5px;
     padding: 4px;
   }
   .svc-tab {
@@ -93,10 +93,10 @@
     padding: 8px 16px;
     background: transparent;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--fg-4, #7a7a82);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
   }
@@ -111,7 +111,7 @@
     border-radius: 2px;
     background: var(--fg-5, #5a5a62);
   }
-  .svc-tab-led.on { background: var(--st-ok, #00ff9f); }
+  .svc-tab-led.on { background: var(--signal, #5b8ff9); }
   .svc-tab-led.unknown { background: var(--bd-3, #2a2a32); }
 
   .svc-content { min-height: 200px; }

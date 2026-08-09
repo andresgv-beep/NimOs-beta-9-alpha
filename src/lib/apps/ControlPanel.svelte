@@ -116,7 +116,7 @@
   .cp-ph-icon {
     width: 28px;
     height: 28px;
-    border-radius: 7px;
+    border-radius: 4px;
     border: 1px solid var(--bd-3, #2a2a32);
     background: var(--bg-card, #15151a);
     margin-bottom: 6px;
@@ -124,12 +124,12 @@
   .cp-ph-title {
     font-size: 14px;
     color: var(--fg-2, #d0d0d4);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .cp-ph-hint {
     font-size: 11px;
     color: var(--fg-5, #5a5a62);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     max-width: 320px;
     line-height: 1.5;
   }

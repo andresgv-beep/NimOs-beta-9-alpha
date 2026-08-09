@@ -228,23 +228,24 @@
     text-align: center;
     color: var(--fg-5, #5a5a62);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
 
   /* Estado (activado/desactivado) */
   .tf-status {
     background: var(--bg-card, #15151a);
-    border-radius: 8px;
+    border: 1px solid var(--bd-2, #20202a);
+    border-radius: 5px;
     padding: 16px;
     display: flex;
     align-items: center;
     gap: 14px;
   }
-  .tf-status.enabled { border-left: 2px solid var(--st-ok, #00ff9f); }
+  .tf-status.enabled { border-left: 2px solid var(--signal, #5b8ff9); }
   .tf-status-icon {
     width: 38px;
     height: 38px;
-    border-radius: 8px;
+    border-radius: 4px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
     display: flex;
@@ -254,16 +255,16 @@
     flex-shrink: 0;
   }
   .tf-status-icon.enabled {
-    color: var(--nim-green, #00ff9f);
-    border-color: rgba(0, 255, 159, 0.3);
-    background: rgba(0, 255, 159, 0.06);
+    color: var(--signal, #5b8ff9);
+    border-color: rgba(91,143,249,0.35);
+    background: rgba(91,143,249,0.08);
   }
   .tf-status-icon svg { width: 18px; height: 18px; }
   .tf-status-info { flex: 1; min-width: 0; }
   .tf-status-title {
     font-size: 13px;
     color: var(--fg, #f0f0f0);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 600;
   }
   .tf-status-desc {
@@ -274,9 +275,8 @@
   }
   .tf-badge {
     font-size: 9px;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
+    font-family: var(--font-sans);
+    font-weight: 600;
     padding: 3px 9px;
     border-radius: 3px;
     border: 1px solid var(--bd-2, #20202a);
@@ -284,15 +284,16 @@
     flex-shrink: 0;
   }
   .tf-badge.enabled {
-    color: var(--nim-green, #00ff9f);
-    border-color: rgba(0, 255, 159, 0.3);
-    background: rgba(0, 255, 159, 0.06);
+    color: var(--signal, #5b8ff9);
+    border-color: rgba(91,143,249,0.35);
+    background: rgba(91,143,249,0.08);
   }
 
   /* Formulario (setup / disable) */
   .tf-form {
     background: var(--bg-card, #15151a);
-    border-radius: 8px;
+    border: 1px solid var(--bd-2, #20202a);
+    border-radius: 5px;
     padding: 18px;
     display: flex;
     flex-direction: column;
@@ -301,19 +302,19 @@
   .tf-form-title {
     font-size: 13px;
     color: var(--fg, #f0f0f0);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 600;
   }
   .tf-step {
     font-size: 11px;
     color: var(--fg-4, #7a7a82);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .tf-qr {
     align-self: flex-start;
     background: #fff;
     padding: 10px;
-    border-radius: 8px;
+    border-radius: 4px;
     line-height: 0;
   }
   .tf-qr :global(svg) { width: 160px; height: 160px; display: block; }
@@ -321,16 +322,15 @@
   .tf-label {
     font-size: 10px;
     color: var(--fg-4, #7a7a82);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
+    font-weight: 600;
   }
   .tf-secret {
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
     border-radius: 6px;
     padding: 9px 12px;
-    color: var(--nim-green, #00ff9f);
+    color: var(--signal, #5b8ff9);
     font-family: var(--font-mono);
     font-size: 12px;
     letter-spacing: 1px;
@@ -343,27 +343,27 @@
     padding: 0 14px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--fg-3, #9c9ca4);
     font-size: 11px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: all 0.12s;
   }
-  .tf-copy:hover { color: var(--nim-green, #00ff9f); border-color: rgba(0, 255, 159, 0.35); }
+  .tf-copy:hover { color: var(--signal, #5b8ff9); border-color: rgba(91,143,249,0.4); }
   .tf-hint {
     font-size: 10px;
     color: var(--fg-5, #5a5a62);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .tf-noqr {
     background: rgba(255, 200, 87, 0.06);
     border: 1px solid rgba(255, 200, 87, 0.2);
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 12px 14px;
     font-size: 11px;
     color: var(--fg-3, #9c9ca4);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     line-height: 1.5;
     display: flex;
     flex-direction: column;
@@ -371,8 +371,6 @@
   }
   .tf-noqr-tag {
     font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
     color: var(--st-warn, #ffc857);
     align-self: flex-start;
   }
@@ -382,14 +380,14 @@
     min-width: 140px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 9px 12px;
     color: var(--fg, #f0f0f0);
     font-size: 13px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     outline: none;
   }
-  .tf-input:focus { border-color: rgba(0, 255, 159, 0.35); }
+  .tf-input:focus { border-color: rgba(91,143,249,0.5); }
   .tf-code {
     flex: 0 0 130px;
     letter-spacing: 6px;
@@ -397,13 +395,14 @@
     font-size: 16px;
   }
 
-  .tf-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
+  .tf-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .tf-msg.error { color: var(--st-crit, #ff5a5a); }
 
   /* Éxito · backup codes */
   .tf-success {
     background: var(--bg-card, #15151a);
-    border-radius: 8px;
+    border: 1px solid var(--bd-2, #20202a);
+    border-radius: 5px;
     padding: 22px;
     display: flex;
     flex-direction: column;
@@ -414,10 +413,10 @@
   .tf-success-icon {
     width: 44px;
     height: 44px;
-    border-radius: 50%;
-    background: rgba(0, 255, 159, 0.1);
-    border: 1px solid rgba(0, 255, 159, 0.3);
-    color: var(--nim-green, #00ff9f);
+    border-radius: 4px;
+    background: rgba(91,143,249,0.1);
+    border: 1px solid rgba(91,143,249,0.35);
+    color: var(--signal, #5b8ff9);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -426,7 +425,7 @@
   .tf-success-title {
     font-size: 14px;
     color: var(--fg, #f0f0f0);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 600;
   }
   .tf-success-desc {
@@ -460,18 +459,18 @@
     padding: 9px 16px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--fg-3, #9c9ca4);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: all 0.12s;
   }
   .tf-btn:hover:not(:disabled) { color: var(--fg, #f0f0f0); border-color: var(--bd-3, #2a2a32); }
   .tf-btn.primary {
-    background: var(--nim-green, #00ff9f);
-    border-color: var(--nim-green, #00ff9f);
-    color: var(--bg-window, #16161a);
+    background: var(--signal, #5b8ff9);
+    border-color: var(--signal, #5b8ff9);
+    color: white;
     font-weight: 600;
   }
   .tf-btn.primary:hover:not(:disabled) { filter: brightness(1.08); }

@@ -105,14 +105,14 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     color: var(--fg-3, #9c9ca4);
   }
   .cpu-state-dot {
     width: 7px;
     height: 7px;
     border-radius: 2px;
-    background: var(--st-ok, #00ff9f);
+    background: var(--signal, #5b8ff9);
   }
   .cpu-state.available .cpu-state-dot {
     background: var(--st-warn, #ffc857);
@@ -124,23 +124,23 @@
     padding: 9px 16px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--fg-3, #9c9ca4);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: all 0.12s;
   }
   .cpu-btn:hover:not(:disabled) { color: var(--fg, #f0f0f0); border-color: var(--bd-3, #2a2a32); }
   .cpu-btn.primary {
-    background: var(--nim-green, #00ff9f);
-    border-color: var(--nim-green, #00ff9f);
-    color: var(--bg-window, #16161a);
+    background: var(--signal, #5b8ff9);
+    border-color: var(--signal, #5b8ff9);
+    color: white;
     font-weight: 600;
   }
   .cpu-btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
   .cpu-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .cpu-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
+  .cpu-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .cpu-msg.error { color: var(--st-crit, #ff5a5a); }
 </style>
