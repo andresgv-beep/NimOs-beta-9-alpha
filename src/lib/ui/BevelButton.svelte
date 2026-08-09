@@ -68,98 +68,37 @@
 
 <style>
   .btn-wrap {
-    display: inline-block;
-    background: var(--border-bright);
-    padding: 1px;
-    transition: background 0.12s, box-shadow 0.12s;
+    display: inline-flex;
     cursor: pointer;
-    line-height: 0;
-    clip-path: polygon(
-      0 0,
-      calc(100% - var(--bev-md)) 0,
-      100% var(--bev-md),
-      100% 100%,
-      var(--bev-md) 100%,
-      0 calc(100% - var(--bev-md))
-    );
   }
-  .btn-wrap.sm {
-    clip-path: polygon(
-      0 0,
-      calc(100% - var(--bev-sm)) 0,
-      100% var(--bev-sm),
-      100% 100%,
-      var(--bev-sm) 100%,
-      0 calc(100% - var(--bev-sm))
-    );
-  }
-  .btn-wrap.lg {
-    clip-path: polygon(
-      0 0,
-      calc(100% - var(--bev-lg)) 0,
-      100% var(--bev-lg),
-      100% 100%,
-      var(--bev-lg) 100%,
-      0 calc(100% - var(--bev-lg))
-    );
-  }
-
-  .btn-wrap:hover { background: var(--accent); }
-  .btn-wrap:active { filter: brightness(0.85); }
 
   .btn {
-    font-family: var(--font-mono);
-    font-size: 10px;
+    font-family: var(--font-sans);
+    font-size: 12.5px;
     font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 7px 14px;
-    background: var(--bg);
-    color: var(--fg-dim);
+    letter-spacing: 0;
+    padding: 8px 14px;
+    background: var(--panel-elev);
+    color: var(--ink-dim);
     cursor: pointer;
-    border: none;
-    transition: color 0.12s, background 0.12s;
+    border: 1px solid var(--line-bright);
+    border-radius: 4px;
+    transition: color 0.12s, background 0.12s, border-color 0.12s;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     line-height: 1.2;
-    clip-path: polygon(
-      0 0,
-      calc(100% - var(--bev-md)) 0,
-      100% var(--bev-md),
-      100% 100%,
-      var(--bev-md) 100%,
-      0 calc(100% - var(--bev-md))
-    );
   }
   .btn.sm {
-    font-size: 9px;
-    padding: 5px 11px;
-    letter-spacing: 0.8px;
-    clip-path: polygon(
-      0 0,
-      calc(100% - var(--bev-sm)) 0,
-      100% var(--bev-sm),
-      100% 100%,
-      var(--bev-sm) 100%,
-      0 calc(100% - var(--bev-sm))
-    );
+    font-size: 11.5px;
+    padding: 6px 10px;
   }
   .btn.lg {
-    font-size: 11px;
-    padding: 10px 20px;
-    letter-spacing: 1.5px;
-    clip-path: polygon(
-      0 0,
-      calc(100% - var(--bev-lg)) 0,
-      100% var(--bev-lg),
-      100% 100%,
-      var(--bev-lg) 100%,
-      0 calc(100% - var(--bev-lg))
-    );
+    font-size: 14px;
+    padding: 10px 18px;
   }
-
-  .btn-wrap:hover .btn { color: var(--accent); background: var(--bg); }
+  .btn-wrap:hover .btn { color: var(--ink); background: #2a3440; border-color: var(--line-strong); }
+  .btn-wrap:active .btn { background: #202832; }
 
   .pref {
     font-size: 10px;
@@ -167,34 +106,29 @@
   }
 
   /* ─── PRIMARY ─── */
-  .btn-wrap.primary { background: var(--accent); }
-  .btn-wrap.primary:hover { background: var(--ink); box-shadow: 0 0 14px var(--accent-glow); }
-  .btn-wrap.primary .btn { background: var(--accent); color: var(--bg); font-weight: 700; }
-  .btn-wrap.primary:hover .btn { background: var(--ink); color: var(--bg); }
+  .btn-wrap.primary .btn { background: var(--signal); border-color: var(--signal); color: #fff; }
+  .btn-wrap.primary:hover .btn { background: var(--signal-hover); border-color: var(--signal-hover); color: #fff; }
 
   /* ─── DANGER ─── */
-  .btn-wrap.danger { background: var(--crit); }
-  .btn-wrap.danger .btn { background: var(--bg); color: var(--crit); }
-  .btn-wrap.danger:hover .btn { background: var(--crit); color: var(--bg); }
+  .btn-wrap.danger .btn { border-color: var(--crit-border); color: var(--crit); }
+  .btn-wrap.danger:hover .btn { background: var(--crit-dim); border-color: var(--crit); color: #fff; }
 
   /* ─── INFO ─── */
-  .btn-wrap.info { background: var(--info); }
-  .btn-wrap.info .btn { background: var(--bg); color: var(--info); }
-  .btn-wrap.info:hover .btn { background: var(--info); color: var(--bg); }
+  .btn-wrap.info .btn { border-color: var(--info-border); color: var(--info); }
+  .btn-wrap.info:hover .btn { background: var(--info-dim); border-color: var(--info); color: var(--ink); }
 
   /* ─── WARN ─── */
-  .btn-wrap.warn { background: var(--warn); }
-  .btn-wrap.warn .btn { background: var(--bg); color: var(--warn); }
-  .btn-wrap.warn:hover .btn { background: var(--warn); color: var(--bg); }
+  .btn-wrap.warn .btn { border-color: var(--warn-border); color: var(--warn); }
+  .btn-wrap.warn:hover .btn { background: var(--warn-dim); border-color: var(--warn); color: var(--ink); }
 
   /* ─── DISABLED ─── */
-  .btn-wrap.disabled { background: var(--border); cursor: not-allowed; }
-  .btn-wrap.disabled:hover { background: var(--border); box-shadow: none; }
+  .btn-wrap.disabled { cursor: not-allowed; }
   .btn-wrap.disabled .btn {
-    background: var(--bg-1);
-    color: var(--fg-faint);
+    background: var(--canvas-soft);
+    color: var(--ink-faint);
+    border-color: var(--line);
     cursor: not-allowed;
     opacity: 0.6;
   }
-  .btn-wrap.disabled:hover .btn { color: var(--fg-faint); background: var(--bg-1); }
+  .btn-wrap.disabled:hover .btn { color: var(--ink-faint); background: var(--canvas-soft); }
 </style>

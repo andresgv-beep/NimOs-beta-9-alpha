@@ -36,15 +36,14 @@
 
 <style>
   .tab {
-    font-family: var(--font-mono);
-    font-size: 10px;
+    font-family: var(--font-sans);
+    font-size: 12.5px;
     font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    padding: 11px 18px 9px;
+    letter-spacing: 0;
+    padding: 10px 14px 9px;
     background: transparent;
     border: none;
-    color: var(--fg-dim);
+    color: var(--ink-mute);
     cursor: pointer;
     transition: all 0.12s;
     display: flex;
@@ -52,12 +51,12 @@
     gap: 8px;
     border-bottom: 2px solid transparent;
   }
-  .tab:hover { color: var(--ink); background: var(--bg-1); }
+  .tab:hover { color: var(--ink); background: rgba(255, 255, 255, 0.035); }
   .tab.active {
-    color: var(--accent);
-    background: var(--bg-1);
-    border-bottom-color: var(--accent);
-    padding-bottom: 7px;
+    color: var(--ink);
+    background: transparent;
+    border-bottom-color: var(--signal);
+    padding-bottom: 8px;
   }
   .tab.has-error:not(.active) { color: var(--crit); }
   .tab.has-warn:not(.active)  { color: var(--warn); }

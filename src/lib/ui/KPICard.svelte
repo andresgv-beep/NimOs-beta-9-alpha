@@ -90,33 +90,20 @@
 
 <style>
   .kpi {
-    padding: 14px 18px 12px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     position: relative;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
+    background: var(--bg-card, #202731);
+    border: 1px solid var(--line);
+    border-radius: 6px;
   }
 
-  /* ── Corner brackets HUD ── */
   .kpi::before, .kpi::after {
-    content: '';
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border-color: var(--accent);
-    opacity: 0.4;
-    transition: opacity 0.2s;
+    content: none;
   }
-  .kpi::before {
-    top: 6px; left: 6px;
-    border-top: 1px solid; border-left: 1px solid;
-  }
-  .kpi::after {
-    bottom: 6px; right: 6px;
-    border-bottom: 1px solid; border-right: 1px solid;
-  }
-  .kpi:hover::before, .kpi:hover::after { opacity: 1; }
 
   .kpi.kpi-warn::before, .kpi.kpi-warn::after {
     border-color: var(--warn); opacity: 0.6;
@@ -135,16 +122,16 @@
   }
 
   .kpi-label {
-    font-size: 9px;
-    color: var(--fg-mute);
-    text-transform: uppercase;
-    letter-spacing: 1.8px;
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0;
+    font-weight: 600;
   }
 
   .kpi-state {
-    font-size: 9px;
-    letter-spacing: 1px;
-    color: var(--fg-dim);
+    font-size: 10.5px;
+    letter-spacing: 0;
+    color: var(--ink-mute);
     display: flex;
     align-items: center;
     gap: 5px;
@@ -157,28 +144,29 @@
   }
 
   .kpi-value {
-    font-size: 22px;
+    font-family: var(--font-sans);
+    font-size: 24px;
     color: var(--ink);
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: -0.4px;
     font-feature-settings: "tnum";
   }
-  .kpi-value.accent { color: var(--accent); }
+  .kpi-value.accent { color: var(--signal); }
   .kpi-value.warn   { color: var(--warn); }
   .kpi-value.crit   { color: var(--crit); }
   .kpi-value.info   { color: var(--info); }
 
   .kpi-unit {
     font-size: 10px;
-    color: var(--fg-mute);
+    color: var(--ink-mute);
   }
 
   .kpi-delta {
     font-size: 9px;
-    color: var(--fg-dim);
+    color: var(--ink-mute);
     margin-left: auto;
-    letter-spacing: 0.5px;
+    letter-spacing: 0;
   }
   .kpi-delta.up   { color: var(--crit); }
-  .kpi-delta.down { color: var(--accent); }
+  .kpi-delta.down { color: var(--signal); }
 </style>

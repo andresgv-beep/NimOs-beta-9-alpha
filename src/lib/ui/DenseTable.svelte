@@ -69,14 +69,16 @@
 
 <style>
   .dt {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    background: var(--bg);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    background: var(--panel);
     display: flex;
     flex-direction: column;
   }
   .dt.bordered {
-    border: 1px solid var(--border);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
   }
 
   .dt-head {
@@ -84,12 +86,12 @@
     grid-template-columns: var(--dt-cols);
     gap: var(--dt-gap);
     padding: 7px 12px;
-    color: var(--fg-mute);
-    text-transform: uppercase;
-    letter-spacing: 1.3px;
-    font-size: 9px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-1);
+    color: var(--ink-mute);
+    letter-spacing: 0;
+    font-size: 11px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--line);
+    background: var(--canvas-soft);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -104,7 +106,7 @@
     transition: color 0.1s;
   }
   .dt-th.sortable:hover { color: var(--ink); }
-  .dt-th.active { color: var(--accent); }
+  .dt-th.active { color: var(--signal); }
   .sort-ic { font-size: 8px; opacity: 0.7; }
 
   .dt-body {
@@ -119,21 +121,21 @@
     gap: var(--dt-gap);
     padding: var(--dt-pad);
     align-items: center;
-    color: var(--fg-dim);
+    color: var(--ink-dim);
     cursor: pointer;
     transition: background 0.06s, color 0.06s;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--line);
     user-select: none;
   }
   :global(.dt.bordered .dt-body .tr-row:last-child) {
     border-bottom: none;
   }
   :global(.dt-body .tr-row:hover) {
-    background: var(--bg-1);
+    background: rgba(255, 255, 255, 0.035);
     color: var(--ink);
   }
   :global(.dt-body .tr-row.selected) {
-    background: var(--accent-dim);
+    background: var(--signal-dim);
     color: var(--ink);
   }
   :global(.dt-body .tr-row.warn-row)  { background: rgba(255, 184, 0, 0.03); }
@@ -142,7 +144,7 @@
   :global(.dt-body .tr-row.muted:hover) { opacity: 1; }
 
   :global(.dt-body .tr-ln) {
-    color: var(--fg-faint);
+    color: var(--ink-faint);
     text-align: right;
     font-size: 9px;
     font-feature-settings: "tnum";

@@ -61,9 +61,10 @@
      Todo lo rem cuelga del font-size raíz (= 16px · --ui-scale).
      ═══════════════════════════════════════════════════════════════ */
   .stat-card {
-    background: var(--bg-card, #15151a);
-    border-radius: var(--radius-md);        /* 8px */
-    padding: var(--sp-3) var(--sp-3) 0.6875rem; /* 12 12 11 (11 sin token) */
+    background: var(--bg-card, #202731);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
     position: relative;
@@ -74,7 +75,7 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 2px;                 /* barra decorativa · hairline, NO escala */
+    width: 3px;
     height: 100%;
     background: var(--stat-edge, transparent);
     opacity: 0.7;
@@ -103,7 +104,7 @@
     display: flex;
     align-items: center;
     gap: var(--sp-1);           /* 4px */
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     white-space: nowrap;
     min-width: 0;
   }
@@ -131,7 +132,7 @@
     color: var(--ink);
     line-height: 1;
     letter-spacing: -0.4px;     /* tipográfico · NO escala */
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .sc-val .sc-unit {
     font-size: var(--fs-11);    /* 11px */

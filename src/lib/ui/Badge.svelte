@@ -36,12 +36,12 @@
     align-items: center;
     justify-content: center;
     font-family: var(--font-sans);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
-    padding: 1px 8px;
+    padding: 2px 7px;
     border: 1px solid color-mix(in srgb, var(--badge-c) 40%, transparent);
     background: color-mix(in srgb, var(--badge-c) 9%, transparent);
-    border-radius: 999px;
+    border-radius: 4px;
     color: var(--badge-c);
     line-height: 1.5;
     min-width: 18px;
@@ -53,7 +53,7 @@
     padding: 0 6px;
     min-width: 15px;
   }
-  .badge.accent  { --badge-c: var(--accent);  }
+  .badge.accent  { --badge-c: var(--signal);  }
   .badge.warn    { --badge-c: var(--warn);    }
   .badge.crit    { --badge-c: var(--crit);    }
   .badge.info    { --badge-c: var(--info);    }

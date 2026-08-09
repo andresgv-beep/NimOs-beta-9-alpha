@@ -99,13 +99,12 @@
   .fb-tab {
     padding: 5px 11px;
     background: transparent;
-    border: 1px solid var(--bd-2, #20202a);
-    border-radius: 5px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
     color: var(--ink-mute);
-    font-size: 10px;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 12px;
+    font-family: var(--font-sans);
+    letter-spacing: 0;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -118,8 +117,8 @@
   }
   .fb-tab.active {
     color: var(--signal);
-    border-color: rgba(0, 255, 159, 0.35);
-    background: rgba(0, 255, 159, 0.06);
+    border-color: var(--ui-select-border);
+    background: var(--signal-soft);
   }
   .fb-tab.active.crit {
     color: var(--crit);
@@ -137,7 +136,7 @@
     text-align: center;
   }
   .fb-tab.active .fb-count {
-    background: rgba(0, 255, 159, 0.15);
+    background: var(--signal-dim);
     color: var(--signal);
   }
   .fb-tab.active.crit .fb-count {
@@ -150,14 +149,14 @@
     align-items: center;
     gap: 6px;
     padding: 5px 10px;
-    border: 1px solid var(--bd-2, #20202a);
-    border-radius: 5px;
+    border: 1px solid var(--line-bright);
+    border-radius: 4px;
     background: var(--bg-inner, #101015);
     margin-left: auto;
     width: 220px;
   }
   .fb-search:focus-within {
-    border-color: rgba(0, 255, 159, 0.35);
+    border-color: var(--signal);
   }
   .fb-search svg {
     width: 11px;
@@ -172,8 +171,8 @@
     border: none;
     color: var(--ink);
     outline: none;
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-family: var(--font-sans);
+    font-size: 12px;
   }
   .fb-search input::placeholder {
     color: var(--ink-trace);
