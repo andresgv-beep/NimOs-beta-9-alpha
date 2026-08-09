@@ -85,11 +85,9 @@
   </div>
 
   <!-- Barra fija crit (no hay pasos pero el patrón visual lo conserva) -->
-  <div class="modal-strip"></div>
-
   <!-- BODY -->
   <div class="modal-body">
-    <div class="step-label">Confirmación destructiva</div>
+    <div class="step-label">Eliminar volumen detectado</div>
     <p class="step-desc">
       Vas a <b>destruir permanentemente</b> el filesystem BTRFS y todos sus datos.
       Los discos quedarán vacíos. Esta operación <b>no se puede deshacer</b>.
@@ -202,7 +200,7 @@
     letter-spacing: -0.1px;
   }
   .modal-tag {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
     color: var(--crit);
     margin-left: 4px;
@@ -227,14 +225,6 @@
   .modal-close:hover {
     background: var(--side-hover);
     color: var(--ink);
-  }
-
-  /* Strip fija (mismo look que el progress bar pero sin animación) */
-  .modal-strip {
-    height: 2px;
-    background: var(--crit);
-    box-shadow: 0 0 6px rgba(248, 113, 113, 0.45);
-    flex-shrink: 0;
   }
 
   /* BODY */
@@ -262,11 +252,11 @@
 
   /* ─── Contenido (mismo lenguaje semántico que el Design System Beta 8.1) ─── */
   .step-label {
-    font-size: 10px;
-    color: var(--ink-trace);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 650;
     margin-bottom: 2px;
     font-family: var(--font-sans);
   }
@@ -280,7 +270,7 @@
   .step-desc :global(b) {
     color: var(--ink);
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
 
   .impact-card {
@@ -301,14 +291,14 @@
   }
   .impact-row .k {
     color: var(--ink-mute);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: 0;
   }
   .impact-row .v {
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
     font-weight: 500;
     text-align: right;
@@ -340,7 +330,7 @@
   }
   .confirm-label :global(b) {
     color: var(--crit);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 700;
     letter-spacing: 1px;
   }
@@ -351,7 +341,7 @@
     border: 1px solid var(--line);
     color: var(--ink);
     font-size: 13px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 600;
     letter-spacing: 1.5px;
     outline: none;

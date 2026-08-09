@@ -149,29 +149,27 @@
     </button>
   </div>
 
-  <div class="modal-strip"></div>
-
   <!-- BODY -->
   <div class="modal-body">
     {#if phase === 'select'}
-      <div class="step-label">single → raid1 · espejo en caliente</div>
+      <div class="step-label">Protección mediante RAID1</div>
       <p class="step-desc">
-        Los datos quedan <b>replicados en dos discos</b>: si uno falla, el pool
+        Los datos quedan <b>replicados en dos discos</b>: si uno falla, el volumen
         sigue funcionando. La conversión ocurre en caliente, sin desmontar y
         <b>sin perder datos</b>. Puede tardar según la cantidad de datos.
       </p>
 
       <div class="impact-card">
         <div class="impact-row">
-          <span class="k">pool</span>
+          <span class="k">Volumen</span>
           <span class="v">{pool?.name} · {fmtSize(pool?.devices?.[0]?.size_bytes)} usados {pool?.used_human || ''}</span>
         </div>
         <div class="impact-row">
-          <span class="k">profile actual</span>
+          <span class="k">Configuración actual</span>
           <span class="v">single · sin redundancia</span>
         </div>
         <div class="impact-row">
-          <span class="k">profile destino</span>
+          <span class="k">Configuración nueva</span>
           <span class="v ok">raid1 · espejo (aguanta el fallo de 1 disco)</span>
         </div>
       </div>
@@ -196,7 +194,7 @@
               {/each}
             </div>
             <p class="disk-warning">
-              ⚠ El disco seleccionado se <b>formateará</b> al entrar al pool.
+              El disco seleccionado se <b>limpiará</b> al incorporarlo al volumen.
             </p>
           {/if}
         </div>
@@ -205,14 +203,14 @@
 
     {#if phase === 'adding'}
       <div class="progress-block">
-        <div class="step-label">Añadiendo disco al pool…</div>
+        <div class="step-label">Añadiendo el disco al volumen…</div>
         <div class="bar indeterminate"><div class="fill"></div></div>
       </div>
     {/if}
 
     {#if phase === 'converting'}
       <div class="progress-block">
-        <div class="step-label">Replicando datos (balance raid1)…</div>
+        <div class="step-label">Replicando los datos…</div>
         <div class="bar"><div class="fill" style="width: {percent}%"></div></div>
         <div class="progress-meta">
           <span class="pct">{percent.toFixed(0)}%</span>
@@ -220,7 +218,7 @@
         </div>
         <p class="step-desc dim">
           Puedes cerrar la pestaña: la conversión sigue en el servidor.
-          El pool permanece usable mientras tanto.
+          El volumen permanece disponible mientras tanto.
         </p>
       </div>
     {/if}
@@ -255,7 +253,7 @@
     {:else if phase === 'error'}
       <button class="btn ghost" on:click={close}>Cerrar</button>
     {:else}
-      <span class="foot-note">Conversión en curso — no apagues el equipo.</span>
+      <span class="foot-note">Conversión en curso. No apagues el equipo.</span>
     {/if}
   </div>
 </div>
@@ -305,7 +303,7 @@
     letter-spacing: -0.1px;
   }
   .modal-tag {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
     color: var(--signal);
     margin-left: 4px;
@@ -333,13 +331,6 @@
   }
   .modal-close:disabled { opacity: 0.3; cursor: not-allowed; }
 
-  .modal-strip {
-    height: 2px;
-    background: var(--signal);
-    box-shadow: 0 0 6px rgba(91, 143, 249, 0.35);
-    flex-shrink: 0;
-  }
-
   .modal-body {
     padding: 20px 22px;
     flex: 1;
@@ -351,11 +342,12 @@
   }
 
   .step-label {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: var(--signal);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ink);
+    font-weight: 650;
   }
   .step-desc {
     font-size: 12px;
@@ -382,10 +374,10 @@
   }
   .impact-row + .impact-row { border-top: 1px solid var(--line); }
   .impact-row .k {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0;
+    text-transform: none;
     color: var(--ink-mute);
     flex-shrink: 0;
   }
@@ -433,7 +425,7 @@
   .disk-model { font-size: 12px; font-weight: 600; }
   .disk-meta {
     margin-left: auto;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 10.5px;
     color: var(--ink-mute);
   }
@@ -480,13 +472,13 @@
     gap: 12px;
   }
   .pct {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 18px;
     font-weight: 700;
     color: var(--signal);
   }
   .detail {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 10px;
     color: var(--ink-mute);
   }
@@ -521,7 +513,7 @@
     flex-shrink: 0;
   }
   .foot-note {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 10px;
     color: var(--ink-mute);
     letter-spacing: 0.4px;
@@ -543,7 +535,7 @@
   .btn.primary {
     background: var(--signal);
     border-color: var(--signal);
-    color: #06140d;
+    color: #fff;
   }
   .btn.primary:hover:not(:disabled) { opacity: 0.88; }
   .btn.primary:disabled { opacity: 0.35; cursor: not-allowed; }

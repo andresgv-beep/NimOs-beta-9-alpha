@@ -87,7 +87,7 @@
   <!-- HEAD -->
   <div class="modal-head">
     <div class="modal-title" id="import-orphan-title">
-      Importar pool BTRFS
+      Importar volumen BTRFS
       <span class="modal-tag">"{fs?.label || fs?.uuid?.slice(0, 8) || 'orphan'}"</span>
     </div>
     <button class="modal-close" on:click={close} title="Cerrar" aria-label="Cerrar">
@@ -99,13 +99,11 @@
   </div>
 
   <!-- Strip verde (no destructivo) -->
-  <div class="modal-strip"></div>
-
   <!-- BODY -->
   <div class="modal-body">
-    <div class="step-label">Adoptar filesystem existente</div>
+    <div class="step-label">Importar datos existentes</div>
     <p class="step-desc">
-      Este filesystem se registrará en NimOS como un pool gestionado.
+      Este sistema de archivos se registrará como un volumen gestionado por NimOS.
       <b>Los datos existentes se preservan</b> al 100% — solo se le asigna
       un nombre y se registra en el sistema.
     </p>
@@ -120,7 +118,7 @@
         <span class="v">{fs?.label || '(sin label)'}</span>
       </div>
       <div class="impact-row">
-        <span class="k">profile</span>
+        <span class="k">Configuración</span>
         <span class="v">BTRFS · {fs?.profile || 'single'}</span>
       </div>
       <div class="impact-row">
@@ -130,7 +128,7 @@
     </div>
 
     <div class="field-block">
-      <div class="field-label">Nombre del pool en NimOS:</div>
+      <div class="field-label">Nombre del volumen:</div>
       <input
         class="name-input"
         class:err={nameError !== ''}
@@ -153,7 +151,7 @@
         {:else if name.length === 0}
           2-32 caracteres · empezar por letra · minúsculas, dígitos, - y _
         {:else}
-          ✓ Nombre válido
+          Nombre válido
         {/if}
       </div>
     </div>
@@ -170,7 +168,7 @@
       Cancelar
     </button>
     <button class="btn-primary" on:click={submit} disabled={!canSubmit}>
-      {processing ? 'Importando...' : 'Importar pool'}
+      {processing ? 'Importando…' : 'Importar volumen'}
     </button>
   </div>
 </div>
@@ -221,7 +219,7 @@
     letter-spacing: -0.1px;
   }
   .modal-tag {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
     color: var(--signal);
     margin-left: 4px;
@@ -246,14 +244,6 @@
   .modal-close:hover {
     background: var(--side-hover);
     color: var(--ink);
-  }
-
-  /* Strip verde (acción no destructiva) */
-  .modal-strip {
-    height: 2px;
-    background: var(--signal);
-    box-shadow: 0 0 6px rgba(91, 143, 249, 0.35);
-    flex-shrink: 0;
   }
 
   /* BODY */
@@ -281,11 +271,11 @@
 
   /* ─── Contenido (mismo lenguaje que el resto de wizards/modals Beta 8.1) ─── */
   .step-label {
-    font-size: 10px;
-    color: var(--ink-trace);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 650;
     margin-bottom: 2px;
     font-family: var(--font-sans);
   }
@@ -298,7 +288,7 @@
   .step-desc :global(b) {
     color: var(--signal);
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
 
   /* Card de info */
@@ -320,14 +310,14 @@
   }
   .impact-row .k {
     color: var(--ink-mute);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: 0;
   }
   .impact-row .v {
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
     font-weight: 500;
     text-align: right;
@@ -353,7 +343,7 @@
     border: 1px solid var(--line);
     color: var(--ink);
     font-size: 14px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 500;
     letter-spacing: 0.5px;
     outline: none;
@@ -377,7 +367,7 @@
   .field-hint {
     font-size: 10px;
     color: var(--ink-mute);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     letter-spacing: 0.3px;
   }
   .field-hint.err { color: var(--crit); }

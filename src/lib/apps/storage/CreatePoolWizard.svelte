@@ -129,7 +129,7 @@
                 : step === 4 ? true
                 : false;
 
-  $: nextLabel = step === 4 ? (processing ? 'Creando...' : 'Crear pool') : 'Continuar →';
+  $: nextLabel = step === 4 ? (processing ? 'Creando…' : 'Crear volumen') : 'Continuar';
   $: nextVariant = step === 4 ? 'primary' : 'primary';
 
   // computeLayoutOptions devuelve la lista de layouts ofrecidos para N discos.
@@ -271,7 +271,7 @@
         processing = false;
         return;
       }
-      errorMsg = err.message || 'Error al crear el pool';
+      errorMsg = err.message || 'Error al crear el volumen';
       processing = false;
     }
   }
@@ -307,7 +307,7 @@
       collisionAck = '';
       await submitCreate();
     } catch (err) {
-      errorMsg = err.message || 'Error al wipear discos';
+      errorMsg = err.message || 'Error al limpiar los discos';
       processing = false;
     }
   }
@@ -341,7 +341,7 @@
 
 <WizardFrame
   open={true}
-  title="Crear pool"
+  title="Crear volumen"
   tag={fsType ? fsType.toUpperCase() : ''}
   tagColor="accent"
   currentStep={step - 1}
@@ -359,15 +359,14 @@
   {#if step === 2}
     <div class="step-label">Discos</div>
     <p class="step-desc">
-      Selecciona los discos del pool. Los datos existentes en estos discos
-      se <b>borrarán</b> al crear el pool. BTRFS puede mezclar capacidades
+      Selecciona los discos del volumen. Los datos existentes en estos discos
+      se <b>borrarán</b> al crear el volumen. BTRFS puede mezclar capacidades
       sin desperdiciar espacio.
     </p>
 
     {#if eligibleDisks.length === 0}
       <div class="alert-warn">
-        No hay discos libres elegibles. Ve a la vista Discos y formatea
-        algún disco primero.
+        No hay discos disponibles. Ve a Discos y limpia un disco primero.
       </div>
     {:else}
       <div class="disk-list">
@@ -413,8 +412,8 @@
         <div class="alert-warn">
           <b>Atención:</b> Al menos uno de los discos seleccionados tiene
           un filesystem BTRFS no gestionado. Si continúas, esos datos se
-          <b>borrarán</b> al crear el nuevo pool. Si quieres preservarlos,
-          cancela y usa "Importar como pool" desde "Observados".
+          <b>borrarán</b> al crear el nuevo volumen. Si quieres preservarlos,
+          cancela e impórtalos desde Volúmenes detectados.
         </div>
       {/if}
     {/if}
@@ -450,7 +449,7 @@
         <!-- Una sola opción sensata: preview informativo de siempre -->
         <div class="layout-preview">
           <div class="lp-head">
-            <span class="lp-label">Layout recomendado</span>
+            <span class="lp-label">Configuración recomendada</span>
             <span class="lp-name">{layout.label}</span>
           </div>
           <div class="lp-desc">{layout.desc}</div>
@@ -467,8 +466,8 @@
   {#if step === 3}
     <div class="step-label">Nombre</div>
     <p class="step-desc">
-      Dale un nombre al pool. Se usará en la ruta de montaje
-      (<b>/nimos/pools/{poolName || 'nombre'}</b>) y en los shares.
+      Dale un nombre al volumen. Se usará para identificarlo y para crear
+      sus carpetas compartidas.
       Elige algo corto y descriptivo.
     </p>
 
@@ -503,7 +502,7 @@
         <span class="v">{fsType.toUpperCase()}</span>
       </div>
       <div class="impact-row">
-        <span class="k">layout</span>
+        <span class="k">Configuración</span>
         <span class="v">{layout.label}</span>
       </div>
       <div class="impact-row">
@@ -521,7 +520,7 @@
   {#if step === 4}
     <div class="step-label">Confirmación</div>
     <p class="step-desc">
-      Vas a crear el pool <b>{poolName}</b> con
+      Vas a crear el volumen <b>{poolName}</b> con
       <b>{diskCount}</b> disco{diskCount === 1 ? '' : 's'} en configuración
       <b>{fsType.toUpperCase()} {layout.label}</b>.
     </p>
@@ -532,11 +531,11 @@
         <span class="v">{poolName}</span>
       </div>
       <div class="impact-row">
-        <span class="k">profile</span>
+        <span class="k">Configuración</span>
         <span class="v">{fsType.toUpperCase()} {layout.label}</span>
       </div>
       <div class="impact-row">
-        <span class="k">capacidad usable</span>
+        <span class="k">Capacidad útil</span>
         <span class="v accent">{fmtBytes(usableCapacity)}</span>
       </div>
       <div class="impact-row">
@@ -555,12 +554,12 @@
 
     <ul class="bullets">
       <li>Los datos existentes en los discos se <b>borrarán</b></li>
-      <li>El pool se montará en <b>/nimos/pools/{poolName}</b></li>
+      <li>El volumen quedará disponible al terminar la creación</li>
       <li>Podrás gestionar shares, snapshots y apps desde NimOS</li>
     </ul>
 
     <div class="alert-warn">
-      Los datos existentes en estos discos se <b>borrarán</b> al crear el pool.
+      Los datos existentes en estos discos se <b>borrarán</b> al crear el volumen.
       Esta acción no se puede deshacer.
     </div>
 
@@ -641,22 +640,22 @@
         <div class="coll-option coll-option-import">
           <div class="co-head">
             <span class="co-icon">⬇</span>
-            <span class="co-title">Importar este pool</span>
+            <span class="co-title">Importar este volumen</span>
             <span class="co-tag co-tag-accent">recomendado</span>
           </div>
           <p class="co-desc">
-            Registrar el filesystem existente como pool gestionado por NimOS.
+            Registrar el sistema de archivos existente como volumen de NimOS.
             <b>Los datos se preservan al 100%</b>.
           </p>
           <button class="btn-primary" on:click={chooseImport} disabled={processing}>
-            Importar como pool
+            Importar volumen
           </button>
         </div>
       {:else}
         <div class="coll-option coll-option-managed">
           <p class="co-desc">
-            Este disco ya pertenece a un pool gestionado. No puedes crear otro
-            pool encima sin destruir el actual primero.
+            Este disco ya pertenece a un volumen gestionado. No puedes crear
+            otro volumen encima sin destruir primero el actual.
           </p>
         </div>
       {/if}
@@ -692,7 +691,7 @@
           on:click={chooseDestroyAndContinue}
           disabled={processing || collisionAck !== 'DESTRUIR'}
         >
-          {processing ? 'Procesando...' : 'Destruir y crear pool nuevo'}
+          {processing ? 'Procesando…' : 'Destruir y crear volumen'}
         </button>
       </div>
 
@@ -721,11 +720,11 @@
 
   /* ─── Labels y descripciones de paso (mismo lenguaje que otros wizards) ─── */
   .step-label {
-    font-size: 10px;
-    color: var(--ink-trace);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 650;
     margin-bottom: 2px;
     font-family: var(--font-sans);
   }
@@ -738,7 +737,7 @@
   .step-desc :global(b) {
     color: var(--ink);
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
 
   /* ─── Cards de impacto (resumen k/v) ─── */
@@ -760,14 +759,14 @@
   }
   .impact-row .k {
     color: var(--ink-mute);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: 0;
   }
   .impact-row .v {
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
     font-weight: 500;
     text-align: right;
@@ -790,7 +789,7 @@
     border: 1px solid var(--line);
     border-radius: 5px;
     padding: 4px 8px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 10px;
     color: var(--ink-dim);
     display: inline-flex;
@@ -800,7 +799,7 @@
   .disk-chip .cube {
     width: 6px;
     height: 6px;
-    background: var(--nim-folder, #ff9c5a);
+    background: var(--signal);
     border-radius: 1px;
   }
 
@@ -846,11 +845,11 @@
     font-family: var(--font-sans);
   }
   .bullets li::before {
-    content: '✓';
+    content: '·';
     position: absolute;
-    left: 4px;
+    left: 6px;
     color: var(--signal);
-    font-weight: 700;
+    font-weight: 600;
   }
   .bullets li :global(b) { color: var(--ink); font-weight: 600; }
 
@@ -907,24 +906,24 @@
   .dr-path {
     font-size: 12px;
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 500;
   }
   .dr-model {
     font-size: 10px;
     color: var(--ink-mute);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .dr-orphan-hint {
     font-size: 10px;
     color: var(--warn);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     margin-top: 2px;
   }
   .dr-size {
     font-size: 12px;
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 500;
   }
   .dr-tags {
@@ -935,13 +934,13 @@
 
   /* Chip propio (sustituye a Badge para consistencia con tokens nuevos) */
   .chip {
-    font-size: 9px;
+    font-size: 10.5px;
     padding: 2px 6px;
     border-radius: 3px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
     border: 1px solid var(--line);
   }
   .chip-default { color: var(--ink-mute); background: var(--bg-inner); }
@@ -965,18 +964,18 @@
     gap: 8px;
   }
   .lp-label {
-    font-size: 9px;
-    color: var(--ink-trace);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0;
+    text-transform: none;
+    font-family: var(--font-sans);
     font-weight: 600;
   }
   .lp-name {
     font-size: 14px;
     color: var(--signal);
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     letter-spacing: 0.5px;
   }
   .lp-desc {
@@ -997,14 +996,14 @@
     font-size: 10px;
     color: var(--ink-mute);
     letter-spacing: 0.5px;
-    text-transform: uppercase;
-    font-family: var(--font-mono);
+    text-transform: none;
+    font-family: var(--font-sans);
   }
   .lp-cap-val {
     font-size: 14px;
     color: var(--ink);
     font-weight: 700;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     margin-left: auto;
   }
 
@@ -1015,11 +1014,11 @@
     gap: 8px;
   }
   .lc-title {
-    font-size: 9px;
-    color: var(--ink-trace);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0;
+    text-transform: none;
+    font-family: var(--font-sans);
     font-weight: 600;
     margin-bottom: 2px;
   }
@@ -1074,24 +1073,24 @@
     font-size: 14px;
     color: var(--signal);
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     letter-spacing: 0.5px;
   }
   .lc-tol {
     font-size: 10px;
     color: var(--ink-dim);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     letter-spacing: 0.3px;
   }
   .lc-rec {
-    font-size: 8px;
+    font-size: 10px;
     color: var(--signal);
     border: 1px solid var(--signal);
     border-radius: 3px;
     padding: 1px 5px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    font-family: var(--font-mono);
+    letter-spacing: 0;
+    text-transform: none;
+    font-family: var(--font-sans);
   }
   .lc-desc {
     font-size: 11px;
@@ -1102,7 +1101,7 @@
   .lc-cap {
     font-size: 11px;
     color: var(--ink-mute);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     margin-top: 2px;
   }
   .lc-cap b {
@@ -1119,7 +1118,7 @@
     border: 1px solid var(--line);
     color: var(--ink);
     font-size: 14px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 500;
     letter-spacing: 0.5px;
     outline: none;
@@ -1140,7 +1139,7 @@
   .name-hint {
     font-size: 10px;
     color: var(--ink-mute);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     letter-spacing: 0.3px;
     margin-top: -8px;
   }
@@ -1159,7 +1158,7 @@
   }
   .confirm-label :global(b) {
     color: var(--signal);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 700;
     letter-spacing: 1px;
   }
@@ -1170,7 +1169,7 @@
     border: 1px solid var(--line);
     color: var(--ink);
     font-size: 13px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 600;
     letter-spacing: 1.5px;
     outline: none;
@@ -1235,7 +1234,7 @@
     letter-spacing: -0.1px;
   }
   .coll-tag {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
     color: var(--warn);
     margin-left: 4px;
@@ -1325,8 +1324,8 @@
     font-size: 9px;
     padding: 2px 6px;
     border-radius: 3px;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
+    font-family: var(--font-sans);
+    text-transform: none;
     letter-spacing: 0.5px;
     font-weight: 600;
   }

@@ -208,14 +208,14 @@
 
 <WizardFrame
   open={true}
-  title="Desmontar pool"
+  title="Desmontar volumen"
   tag={poolName}
   tagColor="warn"
   currentStep={step === 1 ? 1 : step === 2 ? 2 : 3}
   totalSteps={3}
   {canAdvance}
   canGoBack={step === 3 && deps.length > 0 && !processing}
-  nextLabel={step === 3 ? 'Desmontar pool' : 'Continuar →'}
+  nextLabel={step === 3 ? 'Desmontar volumen' : 'Continuar'}
   nextVariant={step === 3 ? 'warn' : 'warn'}
   cancelLabel={processing ? 'Procesando...' : 'Cancelar'}
   on:next={handleNext}
@@ -227,7 +227,7 @@
   {#if step === 1}
     <div class="step-label">Detección</div>
     <p class="step-desc">
-      Verificando qué servicios están usando el pool. Esto suele tardar
+      Verificando qué servicios están usando el volumen. Esto suele tardar
       menos de un segundo.
     </p>
 
@@ -246,10 +246,10 @@
     <div class="step-label">Servicios en uso</div>
     <p class="step-desc">
       {#if allStopped}
-        Ningún servicio está usando el pool en este momento. Puedes continuar
+        Ningún servicio está usando el volumen en este momento. Puedes continuar
         con el desmontaje.
       {:else}
-        Detén los servicios que están usando este pool antes de desmontarlo.
+        Detén los servicios que están usando este volumen antes de desmontarlo.
         Si hay procesos activos, el desmontaje fallará.
       {/if}
     </p>
@@ -270,7 +270,7 @@
           </span>
           {#if dep.status === 'running' || dep.status === 'starting'}
             <button class="svc-action" on:click={openNimHealth} type="button">
-              → NimHealth
+              Abrir NimHealth
             </button>
           {:else}
             <span class="svc-action-empty">—</span>
@@ -281,7 +281,7 @@
 
     {#if allStopped}
       <div class="notice notice-ok">
-        <b>✓ Todos los servicios detenidos.</b> Continúa cuando estés listo.
+        <b>Todos los servicios están detenidos.</b> Puedes continuar.
       </div>
     {:else}
       <div class="notice">
@@ -310,7 +310,7 @@
 
     <ul class="bullets">
       <li>Los datos <b>siguen intactos</b> en los discos físicos</li>
-      <li>El pool aparecerá como <b>filesystem huérfano</b> en Observados</li>
+      <li>El volumen aparecerá en <b>Volúmenes detectados</b></li>
       <li>Podrás <b>reimportarlo</b> después con un solo click</li>
       <li>El acceso a <b>/nimos/pools/{poolName}</b> se cortará inmediatamente</li>
     </ul>
@@ -346,11 +346,11 @@
 
   /* ─── Labels y descripciones ─── */
   .step-label {
-    font-size: 10px;
-    color: var(--ink-trace);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 650;
     margin-bottom: 2px;
     font-family: var(--font-sans);
   }
@@ -363,7 +363,7 @@
   .step-desc :global(b) {
     color: var(--ink);
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
 
   /* ─── Step 1 · Loading box ─── */
@@ -377,7 +377,7 @@
     border-radius: 8px;
     font-size: 12px;
     color: var(--ink-dim);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .spinner {
     width: 14px;
@@ -429,7 +429,7 @@
 
   .svc-name {
     color: var(--ink);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 11px;
   }
   .svc-pool {
@@ -439,9 +439,9 @@
   }
 
   .svc-state {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 10px;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.5px;
     font-weight: 500;
   }
@@ -456,7 +456,7 @@
     background: var(--bg-inner);
     color: var(--ink-dim);
     font-size: 10px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: background 0.12s, color 0.12s, border-color 0.12s;
   }
@@ -467,7 +467,7 @@
   }
   .svc-action-empty {
     color: var(--ink-trace);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 10px;
     padding: 4px 8px;
   }
@@ -497,7 +497,7 @@
     gap: 8px;
     font-size: 10px;
     color: var(--ink-mute);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     padding: 2px 4px;
   }
   .recheck-spin {
@@ -550,7 +550,7 @@
   }
   .confirm-label :global(b) {
     color: var(--warn);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 700;
     letter-spacing: 1px;
   }
@@ -561,7 +561,7 @@
     border: 1px solid var(--line);
     color: var(--ink);
     font-size: 13px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 600;
     letter-spacing: 1.5px;
     outline: none;
