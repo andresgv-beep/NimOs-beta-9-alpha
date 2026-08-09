@@ -106,7 +106,7 @@
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(5,8,13,0.72);
     z-index: 1000;
   }
   .modal {
@@ -117,7 +117,7 @@
     z-index: 1001;
     width: 380px;
     max-width: calc(100vw - 40px);
-    background: var(--panel, #15151a);
+    background: var(--panel-elev, #1d2430);
     border: 1px solid var(--line-bright, #2a2a32);
     border-radius: 6px;
     overflow: hidden;
@@ -146,20 +146,20 @@
   }
   .form-field { display: flex; flex-direction: column; gap: 6px; }
   .form-label {
-    font-family: var(--font-mono, monospace);
-    font-size: 10px; letter-spacing: 0.8px; text-transform: uppercase;
+    font-family: var(--font-sans);
+    font-size: 12px;
     color: var(--ink-mute, #9a9aa3);
   }
   .form-input {
     background: var(--bg-inner, #101015);
     border: 1px solid var(--line-bright, #2a2a32);
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 9px 12px;
     color: var(--ink, #f2f2f5);
     font-size: 13px;
     outline: none;
   }
-  .form-input:focus { border-color: var(--signal, #00ff9f); }
+  .form-input:focus { border-color: var(--signal, #5b8ff9); }
   .info-icon { font-size: 40px; text-align: center; margin-bottom: 14px; }
   .info-rows { display: flex; flex-direction: column; gap: 8px; }
   .info-row {
@@ -168,8 +168,8 @@
   }
   .info-row span:first-child {
     color: var(--ink-mute, #9a9aa3);
-    font-family: var(--font-mono, monospace);
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+    font-family: var(--font-sans);
+    font-size: 11px;
   }
   .info-row span:last-child {
     color: var(--ink, #f2f2f5);
@@ -180,7 +180,7 @@
     padding: 8px 14px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--line-bright, #2a2a32);
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--ink-dim, #c8c8cf);
     font-size: 12px;
     cursor: pointer;
@@ -188,9 +188,9 @@
   .btn-secondary:hover { color: var(--ink, #f2f2f5); }
   .btn-accent {
     padding: 8px 14px;
-    background: var(--signal, #00ff9f);
-    border: 1px solid var(--signal, #00ff9f);
-    border-radius: 6px;
+    background: var(--signal, #5b8ff9);
+    border: 1px solid var(--signal, #5b8ff9);
+    border-radius: 4px;
     color: var(--bg-window, #16161a);
     font-size: 12px;
     font-weight: 600;

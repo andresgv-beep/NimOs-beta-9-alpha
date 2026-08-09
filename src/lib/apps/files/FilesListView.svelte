@@ -65,6 +65,12 @@
         <span class="fl-name">{share.displayName || share.name}</span>
       </div>
     {/each}
+    {#if localShares.length === 0 && remoteShares.length === 0}
+      <div class="f-empty f-empty-root">
+        <b>No hay carpetas compartidas</b>
+        <span>Créala desde el Panel de Control para empezar.</span>
+      </div>
+    {/if}
 
   {:else if loading}
     <div class="f-loading"><div class="spinner"></div></div>
@@ -114,10 +120,10 @@
     display: grid;
     grid-template-columns: 24px 1fr 90px 110px 150px;
     gap: 10px;
-    padding: 8px 14px;
+    padding: 9px 18px;
     position: sticky;
     top: 0;
-    background: var(--bg-window, #16161a);
+    background: var(--panel-elev, #1d2430);
     border-bottom: 1px solid var(--bd-2, #20202a);
     z-index: 1;
   }
@@ -127,16 +133,15 @@
     border: none;
     padding: 0;
     text-align: left;
-    font-family: var(--font-mono, monospace);
-    font-size: 9px;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
     color: var(--ink-dim, #6a6a72);
     cursor: pointer;
     transition: color 0.12s;
   }
   .fl-h:hover { color: var(--ink-mute, #9a9aa3); }
-  .fl-h.active { color: var(--nim-green, #00ff9f); }
+  .fl-h.active { color: var(--signal, #5b8ff9); }
   .fl-h.r { text-align: right; }
 
   /* Filas densas en grid alineado */
@@ -145,7 +150,7 @@
     grid-template-columns: 24px 1fr 90px 110px 150px;
     gap: 10px;
     align-items: center;
-    padding: 6px 14px;
+    padding: 8px 18px;
     cursor: pointer;
     border: 1px solid transparent;
     border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.06));
@@ -206,14 +211,16 @@
     padding: 40px;
     text-align: center;
     color: var(--ink-dim, #6a6a72);
-    font-family: var(--font-mono, monospace);
     font-size: 12px;
   }
+  .f-empty-root { display: flex; flex-direction: column; gap: 7px; align-items: center; }
+  .f-empty-root b { color: var(--ink-dim); font-weight: 600; }
+  .f-empty-root span { color: var(--ink-mute); font-size: 11px; }
   .f-loading { display: flex; align-items: center; justify-content: center; padding: 60px; }
   .spinner {
     width: 24px; height: 24px;
     border: 2px solid var(--bd-2, #20202a);
-    border-top-color: var(--nim-green, #00ff9f);
+    border-top-color: var(--signal, #5b8ff9);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
   }

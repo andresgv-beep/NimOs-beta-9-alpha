@@ -41,6 +41,15 @@
         <div class="f-name">{share.displayName || share.name}</div>
       </div>
     {/each}
+    {#if localShares.length === 0 && remoteShares.length === 0}
+      <div class="f-empty f-empty-root">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        </svg>
+        <b>No hay carpetas compartidas</b>
+        <span>Créala desde el Panel de Control para empezar.</span>
+      </div>
+    {/if}
   {:else if loading}
     <div class="f-loading"><div class="spinner"></div></div>
   {:else}
@@ -67,10 +76,10 @@
     width: 100%;
     height: 100%;
     overflow-y: auto;
-    padding: 14px 12px;
+    padding: 18px 20px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-    gap: 4px;
+    gap: 8px;
     align-content: start;
   }
   .f-item {
@@ -83,7 +92,6 @@
     cursor: pointer;
     border: 1px solid transparent;
     transition: background 0.12s, border-color 0.12s;
-    animation: fadeUp 0.35s ease both;
   }
   .f-item:hover { background: rgba(255,255,255,0.04); }
   .f-item.sel {
@@ -91,10 +99,6 @@
     border-color: var(--ui-select-border, rgba(122,158,177,0.35));
   }
   .f-item.cut { opacity: 0.45; }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(7px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
   .f-icon {
     font-size: 48px;
     line-height: 1;
@@ -120,7 +124,6 @@
   .f-date {
     font-size: 11px;
     color: var(--ink-mute, #9a9aa3);
-    font-family: var(--font-mono, monospace);
   }
   .f-empty {
     grid-column: 1 / -1;
@@ -129,6 +132,17 @@
     color: var(--ink-mute, #9a9aa3);
     font-size: 12px;
   }
+  .f-empty-root {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+  .f-empty-root svg { width: 34px; height: 34px; color: var(--ink-faint); margin-bottom: 4px; }
+  .f-empty-root b { color: var(--ink-dim); font-size: 13px; font-weight: 600; }
+  .f-empty-root span { color: var(--ink-mute); font-size: 11px; }
   .f-loading {
     grid-column: 1 / -1;
     display: flex;
@@ -139,7 +153,7 @@
     width: 20px; height: 20px;
     border-radius: 50%;
     border: 2px solid rgba(255,255,255,0.08);
-    border-top-color: var(--signal, #00ff9f);
+    border-top-color: var(--signal, #5b8ff9);
     animation: spin 0.7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }

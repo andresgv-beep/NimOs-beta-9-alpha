@@ -283,13 +283,13 @@
     max-height: 90vh; display: flex; flex-direction: column;
     font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
   }
-  .stm-band { height: 3px; background: var(--signal, #00ff9f); opacity: 0.85; flex-shrink: 0; }
+  .stm-band { height: 2px; background: var(--signal, #5b8ff9); flex-shrink: 0; }
   .stm-body { padding: 18px 20px; overflow-y: auto; }
 
   .stm-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
   .stm-head-ico {
-    width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
-    background: rgba(0, 255, 159, 0.12); color: var(--signal, #00ff9f);
+    width: 34px; height: 34px; border-radius: 4px; flex-shrink: 0;
+    background: rgba(91, 143, 249, 0.12); color: var(--signal, #5b8ff9);
     display: flex; align-items: center; justify-content: center;
   }
   .stm-head-ico svg { width: 17px; height: 17px; }
@@ -317,7 +317,7 @@
   .stm-file-size { font-size: 11px; color: var(--ink-trace, #6a6a72); font-family: var(--font-mono, monospace); }
 
   .stm-label {
-    font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase;
+    font-size: 11px;
     color: var(--ink-trace, #6a6a72); margin-bottom: 7px;
   }
 
@@ -332,8 +332,8 @@
   .stm-seg button svg { width: 13px; height: 13px; }
   .stm-seg button:hover { border-color: var(--line-bright, rgba(255,255,255,0.2)); }
   .stm-seg button.sel {
-    color: var(--bg-window, #0f0f14); background: var(--signal, #00ff9f);
-    border-color: var(--signal, #00ff9f); font-weight: 500;
+    color: white; background: var(--signal, #5b8ff9);
+    border-color: var(--signal, #5b8ff9); font-weight: 600;
   }
 
   .stm-chips { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
@@ -345,8 +345,8 @@
   }
   .stm-chips button:hover { border-color: var(--line-bright, rgba(255,255,255,0.2)); }
   .stm-chips button.sel {
-    color: var(--bg-window, #0f0f14); background: var(--signal, #00ff9f);
-    border-color: var(--signal, #00ff9f); font-weight: 500;
+    color: white; background: var(--signal, #5b8ff9);
+    border-color: var(--signal, #5b8ff9); font-weight: 600;
   }
 
   .stm-pw {
@@ -355,7 +355,7 @@
     border: 1px solid var(--line, rgba(255,255,255,0.12));
     font-size: 12px; font-family: inherit; outline: none;
   }
-  .stm-pw:focus { border-color: rgba(0, 255, 159, 0.4); }
+  .stm-pw:focus { border-color: rgba(91, 143, 249, 0.55); }
 
   .stm-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
   .stm-row-lbl { font-size: 11px; color: var(--ink-dim, #c8c8cf); }
@@ -391,7 +391,7 @@
   .stm-primary {
     width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px;
     padding: 10px; border-radius: 6px; font-size: 12px; font-weight: 500;
-    color: var(--bg-window, #0f0f14); background: var(--signal, #00ff9f);
+    color: white; background: var(--signal, #5b8ff9);
     border: none; cursor: pointer; font-family: inherit; transition: filter 0.12s;
   }
   .stm-primary svg { width: 14px; height: 14px; }
@@ -404,15 +404,15 @@
     font-size: 10px; color: var(--ink-dim, #c8c8cf);
     background: rgba(255,255,255,0.06); padding: 4px 9px; border-radius: 4px;
   }
-  .stm-tag.green { color: var(--signal, #00ff9f); background: rgba(0,255,159,0.1); }
+  .stm-tag.green { color: #9ab9ff; background: rgba(91,143,249,0.12); }
 
   .stm-link {
     display: flex; align-items: center; gap: 8px;
     padding: 10px 11px; background: var(--bg-inner, #101015);
-    border: 1px solid rgba(0, 255, 159, 0.3); border-radius: 6px; margin-bottom: 14px;
+    border: 1px solid rgba(91, 143, 249, 0.3); border-radius: 4px; margin-bottom: 14px;
   }
   .stm-link-url {
-    flex: 1; font-size: 11px; color: var(--signal, #00ff9f);
+    flex: 1; font-size: 11px; color: var(--signal, #5b8ff9);
     font-family: var(--font-mono, monospace);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }

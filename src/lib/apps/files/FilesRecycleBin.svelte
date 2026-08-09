@@ -228,7 +228,7 @@
     font-size: 15px; font-weight: 600; color: var(--fg, #f0f0f0);
   }
   .rb-title svg { width: 17px; height: 17px; color: var(--fg-3, #9c9ca4); }
-  .rb-meta { font-size: 11px; color: var(--fg-4, #7a7a82); font-family: var(--font-mono, ui-monospace, monospace); margin-left: auto; }
+  .rb-meta { font-size: 11px; color: var(--fg-4, #7a7a82); margin-left: auto; }
 
   .rb-error {
     background: rgba(255,90,90,0.10); border: 1px solid rgba(255,90,90,0.3);
@@ -239,13 +239,13 @@
   .rb-actions {
     display: flex; align-items: center; gap: 8px;
     padding: 10px 12px; margin-bottom: 8px;
-    background: var(--bg-card, #15151a); border-radius: 8px;
+    background: var(--bg-card, #15151a); border: 1px solid var(--line); border-radius: 5px;
   }
   .rb-selall { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg-3, #9c9ca4); cursor: pointer; }
   .rb-spacer { flex: 1; }
   .rb-btn {
     display: flex; align-items: center; gap: 6px;
-    padding: 7px 13px; border-radius: 6px;
+    padding: 7px 13px; border-radius: 4px;
     border: 1px solid var(--bd-2, #20202a); background: var(--bg-inner, #101015);
     color: var(--fg-2, #d0d0d4); font-size: 12px; font-family: inherit; cursor: pointer;
     transition: border-color 0.12s, color 0.12s;
@@ -260,7 +260,7 @@
   .rb-list { display: flex; flex-direction: column; gap: 3px; overflow-y: auto; }
   .rb-row {
     display: flex; align-items: center; gap: 11px;
-    padding: 9px 12px; border-radius: 7px;
+    padding: 9px 12px; border-radius: 4px;
     background: var(--bg-card, #15151a);
     transition: background 0.12s;
   }
@@ -285,7 +285,7 @@
   }
   .rb-confirm {
     background: var(--bg-window, #16161a); border: 1px solid var(--bd-3, #2a2a32);
-    border-radius: 12px; padding: 20px; width: 380px; max-width: 90vw;
+    border-radius: 6px; padding: 20px; width: 380px; max-width: 90vw;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   }
   .rb-confirm-title { font-size: 15px; font-weight: 600; color: var(--fg, #f0f0f0); margin-bottom: 8px; }

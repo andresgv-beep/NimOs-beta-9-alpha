@@ -503,7 +503,7 @@
     </button>
     {#if currentShare}
       <b>{shareInfo?.displayName || currentShare}</b>
-      <span class="ph-desc">· {sorted.length} item{sorted.length !== 1 ? 's' : ''}</span>
+      <span class="ph-desc">{sorted.length} {sorted.length === 1 ? 'elemento' : 'elementos'}</span>
       {#if pathParts.length > 0}
         <span class="fm-crumb">
           <span class="fm-crumb-sep">/</span>
@@ -523,8 +523,8 @@
         </span>
       {/if}
     {:else}
-      <b>Shared Folders</b>
-      <span class="ph-desc">· {shares.length} share{shares.length !== 1 ? 's' : ''}</span>
+      <b>Carpetas compartidas</b>
+      <span class="ph-desc">{shares.length} {shares.length === 1 ? 'recurso' : 'recursos'}</span>
     {/if}
   </svelte:fragment>
 
@@ -664,17 +664,15 @@
      ═══════════════════════════════════════════════════════════ */
   .fm-sb-group {
     padding: 14px 6px 6px;
-    font-size: 10px;
-    color: var(--ink-trace, #44444a);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 600;
+    font-size: 11px;
+    color: var(--ink-mute, #9a9aa3);
+    letter-spacing: 0;
+    font-weight: 650;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
   .fm-sb-group .count {
-    font-family: var(--font-mono, monospace);
     color: var(--ink-mute, #9a9aa3);
     letter-spacing: 0;
     font-weight: 500;
@@ -752,7 +750,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    padding: 8px 22px;
+    padding: 8px 24px;
     border-bottom: 1px solid var(--line, rgba(255,255,255,0.04));
     flex-wrap: wrap;
   }
@@ -821,15 +819,13 @@
   .btn-import {
     display: flex; align-items: center; gap: 5px;
     padding: 4px 10px;
-    background: var(--signal, #00ff9f);
+    background: var(--signal, #5b8ff9);
     border: none;
     border-radius: 4px;
     color: var(--bg-window, #16161a);
-    font-family: var(--font-mono, monospace);
-    font-size: 10px;
+    font-family: var(--font-sans);
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
     cursor: pointer;
     transition: filter 0.12s;
   }
@@ -847,9 +843,8 @@
     text-overflow: ellipsis;
   }
   .fm-sel {
-    color: var(--signal, #00ff9f);
+    color: var(--signal, #5b8ff9);
     font-weight: 500;
-    font-family: var(--font-mono, monospace);
   }
 
 </style>

@@ -113,12 +113,12 @@
   .ctx-menu {
     position: absolute;
     z-index: 500;
-    background: var(--bg-inner, #101015);
+    background: var(--panel-elev, #1d2430);
     border: 1px solid var(--line, rgba(255,255,255,0.08));
-    border-radius: 8px;
+    border-radius: 5px;
     padding: 4px;
     min-width: 180px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.42);
     animation: ctxIn 0.12s ease both;
   }
   @keyframes ctxIn {
