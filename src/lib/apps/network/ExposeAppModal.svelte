@@ -267,7 +267,7 @@
 
 <style>
   .ex-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    position: fixed; inset: 0; background: rgba(5,8,13,0.72);
     display: flex; align-items: center; justify-content: center;
     z-index: 1000; padding: 20px;
   }
@@ -277,7 +277,7 @@
     box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
     position: relative;
   }
-  .ex-band { height: 3px; background: var(--nim-green, #00ff9f); opacity: 0.8; }
+  .ex-band { height: 2px; background: var(--signal, #5b8ff9); }
 
   .ex-head { padding: 18px 20px 14px; display: flex; flex-direction: column; gap: 3px; }
   .ex-title { font-size: 16px; font-weight: 500; color: var(--fg, #f0f0f0); margin: 0; }
@@ -300,23 +300,23 @@
     color: var(--fg-3, #9c9ca4); font-size: 12px; transition: all 0.12s;
   }
   .ex-seg.on {
-    color: var(--nim-green, #00ff9f); border-color: rgba(0,255,159,0.4);
-    background: rgba(0,255,159,0.07);
+    color: var(--signal, #5b8ff9); border-color: rgba(91,143,249,0.45);
+    background: rgba(91,143,249,0.09);
   }
   .ex-seg:disabled { opacity: 0.5; cursor: default; }
 
   .ex-err-inline { font-size: 11px; color: var(--st-crit, #ff5a5a); margin-top: -8px; }
 
   .ex-preview {
-    background: var(--bg-inner, #101015); border-radius: 8px; padding: 10px 12px;
+    background: var(--bg-inner, #101015); border-radius: 4px; padding: 10px 12px;
     display: flex; flex-direction: column; gap: 3px;
   }
-  .ex-preview-lbl { font-size: 9px; color: var(--fg-4, #7a7a82); font-weight: 500; letter-spacing: 0.6px; text-transform: uppercase; }
-  .ex-preview-url { font-size: 12px; color: var(--nim-green, #00ff9f); word-break: break-all; }
+  .ex-preview-lbl { font-size: 10px; color: var(--fg-4, #7a7a82); font-weight: 500; }
+  .ex-preview-url { font-size: 12px; color: var(--signal, #5b8ff9); word-break: break-all; }
 
   .ex-error {
     background: rgba(255,90,90,0.08); border: 1px solid rgba(255,90,90,0.25);
-    border-radius: 8px; padding: 9px 12px; font-size: 12px; color: var(--st-crit, #ff5a5a);
+    border-radius: 4px; padding: 9px 12px; font-size: 12px; color: var(--st-crit, #ff5a5a);
   }
 
   .ex-foot {
@@ -330,7 +330,7 @@
     color: var(--fg, #f0f0f0); font-size: 12.5px;
     appearance: auto;
   }
-  .ex-select:focus { border-color: rgba(0,255,159,0.4); outline: none; }
+  .ex-select:focus { border-color: rgba(91,143,249,0.5); outline: none; }
   .ex-select:disabled { opacity: 0.5; cursor: default; }
 
   .ex-upstream {

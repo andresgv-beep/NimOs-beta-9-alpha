@@ -255,7 +255,7 @@
 >
   <svelte:fragment slot="page-header">
     <b>{viewMeta.title}</b>
-    <span class="ph-desc">· {viewMeta.desc}</span>
+    <span class="ph-desc">{viewMeta.desc}</span>
   </svelte:fragment>
 
   {#if active === 'exposure'}
@@ -326,8 +326,8 @@
   .nx-loading { display: flex; justify-content: center; padding: 60px 0; }
   /* Mismo respiro que el resto de apps (patrón .st-scroll de Storage):
      padding lateral estándar para no pegarse a los marcos de la ventana. */
-  .nx-kpis-wrap { padding: 18px 28px 0; }
-  .nx-scroll { flex: 1; overflow-y: auto; padding: 14px 28px 24px; }
+  .nx-kpis-wrap { padding: 18px 24px 0; }
+  .nx-scroll { flex: 1; overflow-y: auto; padding: 16px 24px 24px; }
 
   .nx-placeholder {
     display: flex; flex-direction: column; align-items: center; justify-content: center;

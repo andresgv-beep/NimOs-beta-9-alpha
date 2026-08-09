@@ -108,10 +108,10 @@
   // cuando todo lo demás está verde, la tira recuerda esa regla exacta.
   $: validCerts = (certs && certs.certs ? certs.certs.length : 0);
   $: strip = [
-    { k: 'dominio', ok: !!config.base_domain },
-    { k: 'exposición', ok: !!config.enabled },
-    { k: 'caddy', ok: caddyReachable === true },
-    { k: 'certs', ok: validCerts > 0 },
+    { k: 'Dominio', ok: !!config.base_domain },
+    { k: 'Exposición', ok: !!config.enabled },
+    { k: 'Caddy', ok: caddyReachable === true },
+    { k: 'Certificados', ok: validCerts > 0 },
   ];
   $: stripMissing = strip.find((i) => !i.ok);
   $: extPort = config.https_port && config.https_port !== 443 ? `:${config.https_port}` : '';
@@ -152,13 +152,18 @@
 <div class="nx-section">
   <!-- ── Tira de estado del acceso externo ── -->
   <div class="nx-strip">
-    {#each strip as it (it.k)}
-      <span class="nx-pill mono" class:ok={it.ok}>{it.k}</span>
-    {/each}
+    <div class="nx-status-steps">
+      {#each strip as it (it.k)}
+        <span class="nx-status-step" class:ok={it.ok}>
+          <span class="nx-status-dot">{it.ok ? '✓' : ''}</span>
+          {it.k}
+        </span>
+      {/each}
+    </div>
     {#if stripMissing}
-      <span class="nx-strip-hint mono warn">falta: {stripMissing.k}</span>
+      <span class="nx-strip-hint warn">Siguiente paso: {stripMissing.k}</span>
     {:else}
-      <span class="nx-strip-hint mono">router: abre {config.https_port || 443}/tcp → esta máquina · https://{config.base_domain}{extPort}</span>
+      <span class="nx-strip-hint">Abre {config.https_port || 443}/tcp en el router · https://{config.base_domain}{extPort}</span>
     {/if}
   </div>
 
@@ -226,7 +231,7 @@
           type="button"
         >
           <span class="nx-toggle-knob"></span>
-          <span class="nx-toggle-text">{enabledInput ? 'ACTIVADA' : 'DESACTIVADA'}</span>
+          <span class="nx-toggle-text">{enabledInput ? 'Activada' : 'Desactivada'}</span>
         </button>
         <span class="nx-hint">
           Interruptor maestro. Si está desactivado, ninguna app se expone aunque esté marcada.
@@ -270,7 +275,7 @@
     {#if dirty}
       <div class="nx-config-save">
         <BevelButton size="sm" variant="primary" onClick={saveConfig} disabled={busy || !portsValid}>
-          {busy ? '▸ Guardando…' : '▸ Guardar configuración'}
+          {busy ? 'Guardando…' : 'Guardar configuración'}
         </BevelButton>
       </div>
     {/if}
@@ -371,26 +376,31 @@
   .nx-section { display: flex; flex-direction: column; }
 
   .nx-strip {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    padding: 10px 14px; margin-bottom: 16px;
-    border: 1px solid var(--bd, rgba(255,255,255,0.06)); border-radius: 6px;
-    background: var(--bg-inner, #101015);
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 10px 12px; margin-bottom: 18px;
+    border: 1px solid var(--line); border-radius: 4px;
+    background: var(--panel, #171c26);
   }
-  .nx-pill {
-    font-size: 11px; padding: 2px 9px; border-radius: 99px;
-    border: 1px solid var(--bd-3, #2a2a32); color: var(--fg-4, #7a7a82);
+  .nx-status-steps { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .nx-status-step {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--ink-mute);
   }
-  .nx-pill.ok {
-    border-color: rgba(0,255,159,0.4); color: var(--nim-green, #00ff9f);
-    background: rgba(0,255,159,0.06);
+  .nx-status-dot {
+    width: 14px; height: 14px; display: grid; place-items: center;
+    border: 1px solid var(--line-bright); border-radius: 3px;
+    font-size: 9px; color: white;
   }
+  .nx-status-step.ok { color: var(--ink-dim); }
+  .nx-status-step.ok .nx-status-dot { background: var(--signal); border-color: var(--signal); }
   .nx-strip-hint { margin-left: auto; font-size: 11px; color: var(--fg-4, #7a7a82); }
   .nx-strip-hint.warn { color: var(--st-warn, #ffc857); }
 
   /* ── Config ── */
   .nx-config {
     background: var(--bg-card, #15151a);
-    border-radius: 10px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -400,7 +410,7 @@
   .nx-config-row { display: flex; gap: 16px; align-items: flex-start; }
   .nx-label {
     font-size: 11px; color: var(--fg-3, #9c9ca4); font-weight: 500;
-    letter-spacing: 0.4px; min-width: 110px; padding-top: 8px;
+    min-width: 110px; padding-top: 8px;
   }
   .nx-field { flex: 1; display: flex; flex-direction: column; gap: 5px; }
   .nx-hint { font-size: 11px; color: var(--fg-4, #7a7a82); }
@@ -410,7 +420,7 @@
     width: 100%;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 7px;
+    border-radius: 4px;
     padding: 9px 12px;
     color: var(--fg, #f0f0f0);
     font-family: ui-monospace, monospace;
@@ -419,7 +429,7 @@
     cursor: pointer;
     transition: border-color 0.12s;
   }
-  .nx-domain-select:focus { border-color: rgba(0,255,159,0.35); }
+  .nx-domain-select:focus { border-color: rgba(91,143,249,0.5); }
   .nx-domain-select:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .nx-domain-loading {
@@ -430,7 +440,7 @@
   /* Aviso "sin dominios DDNS" */
   .nx-domain-warn {
     display: flex; gap: 10px; align-items: flex-start;
-    padding: 11px 13px; border-radius: 8px;
+    padding: 11px 13px; border-radius: 4px;
     background: rgba(255,200,87,0.06); border: 1px solid rgba(255,200,87,0.22);
   }
   .nx-warn-icon {
@@ -443,24 +453,24 @@
 
   .nx-link {
     background: none; border: none; padding: 0; cursor: pointer;
-    color: var(--nim-green, #00ff9f); font-size: inherit; font-family: inherit;
+    color: var(--signal, #5b8ff9); font-size: inherit; font-family: inherit;
     text-decoration: underline; text-underline-offset: 2px;
   }
   .nx-link:hover { filter: brightness(1.15); }
 
   .nx-toggle {
     display: inline-flex; align-items: center; gap: 9px; align-self: flex-start;
-    padding: 6px 12px 6px 7px; border-radius: 20px; cursor: pointer;
+    padding: 6px 12px 6px 7px; border-radius: 4px; cursor: pointer;
     background: rgba(255,255,255,0.04); border: 1px solid var(--bd-3, #2a2a32);
-    font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.5px;
+    font-family: var(--font-sans); font-size: 11px;
     color: var(--fg-3, #9c9ca4); transition: all 0.15s;
   }
   .nx-toggle-knob {
-    width: 14px; height: 14px; border-radius: 50%;
+    width: 14px; height: 14px; border-radius: 3px;
     background: var(--fg-4, #7a7a82); transition: all 0.15s;
   }
-  .nx-toggle.on { color: var(--nim-green, #00ff9f); border-color: rgba(0,255,159,0.4); background: rgba(0,255,159,0.08); }
-  .nx-toggle.on .nx-toggle-knob { background: var(--nim-green, #00ff9f); transform: translateX(2px); }
+  .nx-toggle.on { color: var(--signal, #5b8ff9); border-color: rgba(91,143,249,0.4); background: rgba(91,143,249,0.09); }
+  .nx-toggle.on .nx-toggle-knob { background: var(--signal, #5b8ff9); transform: translateX(2px); }
   .nx-toggle:disabled { opacity: 0.5; cursor: default; }
 
   .nx-config-save { display: flex; justify-content: flex-end; }
@@ -478,7 +488,7 @@
   /* ── Banners ── */
   .nx-banner {
     display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; border-radius: 8px; font-size: 12px;
+    padding: 10px 14px; border-radius: 4px; font-size: 12px;
     margin: 10px 0; color: var(--fg-2, #d0d0d4);
   }
   .nx-banner.warn { background: rgba(255,200,87,0.08); border: 1px solid rgba(255,200,87,0.25); }
@@ -490,13 +500,13 @@
 
   .nx-app {
     display: grid; grid-template-columns: 4px 1fr auto; gap: 14px;
-    background: var(--bg-card, #15151a); border-radius: 10px;
+    background: var(--bg-card, #15151a); border: 1px solid var(--line); border-radius: 5px;
     padding: 14px 16px; align-items: center;
   }
   .nx-app.paused { opacity: 0.6; }
   .nx-app-mark {
     width: 4px; align-self: stretch; border-radius: 2px;
-    background: var(--nim-green, #00ff9f);
+    background: var(--signal, #5b8ff9);
   }
   .nx-app.paused .nx-app-mark { background: var(--fg-5, #5a5a62); }
 
@@ -518,15 +528,15 @@
 
   .nx-app-actions { display: flex; gap: 6px; flex-shrink: 0; }
   .nx-locked {
-    border-color: var(--nim-green, #00ff9f) !important;
-    color: var(--nim-green, #00ff9f) !important;
-    background: rgba(0, 255, 159, 0.06);
+    border-color: var(--signal, #5b8ff9) !important;
+    color: var(--signal, #5b8ff9) !important;
+    background: rgba(91, 143, 249, 0.08);
   }
   .nx-act {
-    font-family: ui-monospace, monospace; font-size: 10px; padding: 5px 10px;
+    font-family: var(--font-sans); font-size: 11px; padding: 5px 10px;
     background: transparent; color: var(--fg-3, #9c9ca4);
     border: 1px solid var(--bd-3, #2a2a32); border-radius: 5px; cursor: pointer;
-    letter-spacing: 0.3px; transition: all 0.12s;
+    transition: all 0.12s;
   }
   .nx-act:hover:not(:disabled) { border-color: #4a4a52; color: var(--fg-2, #d0d0d4); }
   .nx-act.danger:hover:not(:disabled) { border-color: var(--st-crit, #ff5a5a); color: var(--st-crit, #ff5a5a); }
@@ -534,6 +544,5 @@
 
   .nx-msg {
     margin-top: 12px; font-size: 12px; color: var(--fg-3, #9c9ca4);
-    font-family: ui-monospace, monospace;
   }
 </style>
