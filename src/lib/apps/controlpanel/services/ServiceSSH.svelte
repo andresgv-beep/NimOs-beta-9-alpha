@@ -66,18 +66,18 @@
 <style>
   .svc-pane { display: flex; flex-direction: column; gap: 16px; }
   .sp-bar { display: flex; align-items: center; justify-content: space-between; }
-  .sp-status { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
+  .sp-status { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .sp-led { width: 9px; height: 9px; border-radius: 2.5px; background: var(--fg-5, #5a5a62); }
-  .sp-led.on { background: var(--st-ok, #00ff9f); }
+  .sp-led.on { background: var(--signal, #5b8ff9); }
   .sp-toggle { width: 40px; height: 20px; background: var(--bg-inner, #101015); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; position: relative; cursor: pointer; padding: 0; flex-shrink: 0; }
   .sp-toggle-thumb { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--fg-5, #5a5a62); border-radius: 3px; transition: left 0.15s, background 0.15s; }
-  .sp-toggle.on { background: rgba(0,255,159,0.12); border-color: rgba(0,255,159,0.4); }
-  .sp-toggle.on .sp-toggle-thumb { left: 22px; background: var(--nim-green, #00ff9f); }
+  .sp-toggle.on { background: rgba(91,143,249,0.14); border-color: rgba(91,143,249,0.45); }
+  .sp-toggle.on .sp-toggle-thumb { left: 22px; background: var(--signal, #5b8ff9); }
   .sp-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
-  .sp-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
+  .sp-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .sp-msg.error { color: var(--st-crit, #ff5a5a); }
-  .sp-lan { background: var(--bg-inner, #101015); border: 1px solid var(--bd-2, #20202a); border-radius: 8px; padding: 12px 14px; font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
+  .sp-lan { background: var(--bg-inner, #101015); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; padding: 12px 14px; font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .sp-lan b { color: var(--st-info, #4db8ff); }
-  .sp-note { font-size: 10px; color: var(--st-warn, #ffc857); font-family: var(--font-mono); line-height: 1.5; background: rgba(255,200,87,0.06); border: 1px solid rgba(255,200,87,0.2); border-radius: 6px; padding: 10px 12px; }
-  .sp-info { font-size: 11px; color: var(--fg-4, #7a7a82); font-family: var(--font-mono); line-height: 1.6; }
+  .sp-note { font-size: 10px; color: var(--st-warn, #ffc857); font-family: var(--font-sans); line-height: 1.5; background: rgba(255,200,87,0.06); border: 1px solid rgba(255,200,87,0.2); border-radius: 4px; padding: 10px 12px; }
+  .sp-info { font-size: 11px; color: var(--fg-4, #7a7a82); font-family: var(--font-sans); line-height: 1.6; }
 </style>

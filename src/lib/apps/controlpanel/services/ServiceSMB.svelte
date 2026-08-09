@@ -214,9 +214,9 @@
 
   /* Barra de estado */
   .sp-bar { display: flex; align-items: center; justify-content: space-between; }
-  .sp-status { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
+  .sp-status { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .sp-led { width: 9px; height: 9px; border-radius: 2.5px; background: var(--fg-5, #5a5a62); }
-  .sp-led.on { background: var(--st-ok, #00ff9f); }
+  .sp-led.on { background: var(--signal, #5b8ff9); }
   .sp-toggle {
     width: 40px; height: 20px;
     background: var(--bg-inner, #101015);
@@ -234,21 +234,21 @@
     border-radius: 3px;
     transition: left 0.15s, background 0.15s;
   }
-  .sp-toggle.on { background: rgba(0,255,159,0.12); border-color: rgba(0,255,159,0.4); }
-  .sp-toggle.on .sp-toggle-thumb { left: 22px; background: var(--nim-green, #00ff9f); }
+  .sp-toggle.on { background: rgba(91,143,249,0.14); border-color: rgba(91,143,249,0.45); }
+  .sp-toggle.on .sp-toggle-thumb { left: 22px; background: var(--signal, #5b8ff9); }
   .sp-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .sp-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-mono); }
+  .sp-msg { font-size: 11px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .sp-msg.error { color: var(--st-crit, #ff5a5a); }
 
   .sp-lan {
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 8px;
+    border-radius: 5px;
     padding: 12px 14px;
     font-size: 11px;
     color: var(--fg-3, #9c9ca4);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .sp-lan b { color: var(--st-info, #4db8ff); }
 
@@ -256,48 +256,47 @@
   .sp-st {
     font-size: 11px;
     color: var(--fg-3, #9c9ca4);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
-  .sp-hint { font-size: 10px; color: var(--fg-5, #5a5a62); font-family: var(--font-mono); line-height: 1.5; }
+  .sp-hint { font-size: 10px; color: var(--fg-5, #5a5a62); font-family: var(--font-sans); line-height: 1.5; }
   .sp-note {
     font-size: 10px;
     color: var(--st-warn, #ffc857);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     line-height: 1.5;
     background: rgba(255,200,87,0.06);
     border: 1px solid rgba(255,200,87,0.2);
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 8px 12px;
   }
-  .sp-empty { font-size: 11px; color: var(--fg-5, #5a5a62); font-family: var(--font-mono); padding: 8px 0; }
+  .sp-empty { font-size: 11px; color: var(--fg-5, #5a5a62); font-family: var(--font-sans); padding: 8px 0; }
 
   /* Carpetas */
   .sp-folders { display: flex; flex-direction: column; gap: 6px; }
   .sp-folder {
     display: flex; align-items: center; gap: 12px;
     background: var(--bg-card, #15151a);
-    border-radius: 8px;
+    border: 1px solid var(--bd-2, #20202a);
+    border-radius: 5px;
     padding: 12px 14px;
   }
   .sp-fic {
     width: 30px; height: 30px;
-    border-radius: 7px;
-    background: rgba(0,255,159,0.08);
-    border: 1px solid rgba(0,255,159,0.2);
+    border-radius: 4px;
+    background: rgba(91,143,249,0.10);
+    border: 1px solid rgba(91,143,249,0.24);
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--nim-green, #00ff9f);
+    color: var(--signal, #5b8ff9);
   }
   .sp-fic svg { width: 15px; height: 15px; }
   .sp-fid { flex: 1; min-width: 0; }
-  .sp-fnm { font-size: 13px; color: var(--fg, #f0f0f0); font-family: var(--font-mono); font-weight: 600; }
-  .sp-fpath { font-size: 11px; color: var(--fg-5, #5a5a62); font-family: var(--font-mono); margin-top: 2px; }
+  .sp-fnm { font-size: 13px; color: var(--fg, #f0f0f0); font-family: var(--font-sans); font-weight: 600; }
+  .sp-fpath { font-size: 11px; color: var(--fg-5, #5a5a62); font-family: var(--font-sans); margin-top: 2px; }
   .sp-ftag {
-    font-size: 9px; font-family: var(--font-mono);
+    font-size: 9px; font-family: var(--font-sans);
     padding: 2px 7px; border-radius: 3px;
     border: 1px solid var(--bd-2, #20202a);
     color: var(--fg-5, #5a5a62);
@@ -321,28 +320,27 @@
     border-radius: 2px;
     transition: left 0.15s, background 0.15s;
   }
-  .sp-mini.on { background: rgba(0,255,159,0.12); border-color: rgba(0,255,159,0.4); }
-  .sp-mini.on .sp-mini-thumb { left: 20px; background: var(--nim-green, #00ff9f); }
+  .sp-mini.on { background: rgba(91,143,249,0.14); border-color: rgba(91,143,249,0.45); }
+  .sp-mini.on .sp-mini-thumb { left: 20px; background: var(--signal, #5b8ff9); }
 
   /* Form */
   .sp-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .sp-field { display: flex; flex-direction: column; gap: 5px; }
   .sp-lbl {
     font-size: 10px; color: var(--fg-4, #7a7a82);
-    text-transform: uppercase; letter-spacing: 0.6px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .sp-input {
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 8px 11px;
     color: var(--fg, #f0f0f0);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     outline: none;
   }
-  .sp-input:focus { border-color: rgba(0,255,159,0.35); }
+  .sp-input:focus { border-color: rgba(91,143,249,0.5); }
   .sp-input.grow { flex: 1; min-width: 120px; }
 
   .sp-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -350,18 +348,18 @@
     padding: 8px 14px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--fg-3, #9c9ca4);
     font-size: 11px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: all 0.12s;
   }
   .sp-btn:hover:not(:disabled) { color: var(--fg, #f0f0f0); border-color: var(--bd-3, #2a2a32); }
   .sp-btn.primary {
-    background: var(--nim-green, #00ff9f);
-    border-color: var(--nim-green, #00ff9f);
-    color: var(--bg-window, #16161a);
+    background: var(--signal, #5b8ff9);
+    border-color: var(--signal, #5b8ff9);
+    color: #fff;
     font-weight: 600;
   }
   .sp-btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
