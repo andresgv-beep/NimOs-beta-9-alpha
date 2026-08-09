@@ -641,7 +641,7 @@
   <!-- Page header: cambia según vista activa (Resumen, Discos, etc.) -->
   <svelte:fragment slot="page-header">
     <b>{viewMeta.title}</b>
-    <span class="ph-desc">· {viewMeta.desc}</span>
+    <span class="ph-desc">{viewMeta.desc}</span>
   </svelte:fragment>
 
   {#if loading}
@@ -886,11 +886,11 @@
     flex-shrink: 0;
     padding: 8px 12px;
     margin-bottom: 8px;
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--warn);
-    border: 1px solid var(--warn);
-    border-radius: var(--radius-sm, 4px);
+    border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line));
+    border-left: 3px solid var(--warn);
+    border-radius: 4px;
     background: color-mix(in srgb, var(--warn) 8%, transparent);
   }
 
@@ -904,11 +904,11 @@
     gap: 8px;
     padding: 8px 12px;
     margin-bottom: 8px;
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--danger, #f87171);
-    border: 1px solid var(--danger, #f87171);
-    border-radius: var(--radius-sm, 4px);
+    border: 1px solid color-mix(in srgb, var(--danger, #f87171) 35%, var(--line));
+    border-left: 3px solid var(--danger, #f87171);
+    border-radius: 4px;
     background: color-mix(in srgb, var(--danger, #f87171) 10%, transparent);
   }
   .repair-failed-dismiss {
@@ -932,17 +932,17 @@
 
   /* Scroll container que envuelve las vistas (overview, disks, etc.) */
   .st-kpis-wrap {
-    padding: 14px 22px 0;
+    padding: 18px 24px 0;
     flex-shrink: 0;
   }
 
   .st-scroll {
     flex: 1;
     overflow-y: auto;
-    padding: 18px 22px 24px;
+    padding: 20px 24px 24px;
     display: flex;
     flex-direction: column;
-    gap: 26px;
+    gap: 20px;
   }
 
   /* Footer (k=label, v=value, sep=separador) */
@@ -954,24 +954,25 @@
   .replace-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(5, 8, 13, 0.72);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
   }
   .replace-dialog {
-    background: var(--surface, #14171c);
+    background: var(--panel-elev, #171c26);
     border: 1px solid var(--line, #2a2f37);
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: 6px;
+    padding: 22px;
     width: min(520px, 92vw);
     max-height: 90vh;
     overflow: auto;
   }
   .replace-title {
     margin: 0 0 12px;
-    font-size: 1.1rem;
+    font-size: 16px;
+    font-weight: 650;
     color: var(--text, #e8eaed);
   }
   .replace-info {
@@ -984,7 +985,7 @@
   .replace-warn {
     background: rgba(224, 179, 65, 0.12);
     border: 1px solid rgba(224, 179, 65, 0.4);
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 12px;
     font-size: 0.84rem;
     color: var(--warn, #e0b341);
@@ -1002,7 +1003,7 @@
     padding: 10px;
     background: var(--surface-2, #1c2026);
     border: 1px solid var(--line, #2a2f37);
-    border-radius: 8px;
+    border-radius: 4px;
     color: var(--text, #e8eaed);
     font-size: 0.9rem;
     margin-bottom: 16px;
@@ -1022,10 +1023,8 @@
     padding: 10px 12px;
     background: rgba(255, 90, 90, 0.08);
     border-left: 3px solid var(--crit);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--crit);
-    font-family: var(--font-mono);
-    letter-spacing: 0.3px;
     margin-top: 4px;
   }
 </style>

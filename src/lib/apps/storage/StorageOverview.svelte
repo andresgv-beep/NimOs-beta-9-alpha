@@ -557,7 +557,7 @@
     width: 14px;
     height: 14px;
     border-radius: 4px;
-    background: var(--signal, #00ff9f);
+    background: var(--signal, #5b8ff9);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .pool.open .pool-head-icon {

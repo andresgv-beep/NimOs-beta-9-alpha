@@ -252,7 +252,7 @@
   .modal-strip {
     height: 2px;
     background: var(--signal);
-    box-shadow: 0 0 6px rgba(0, 255, 159, 0.45);
+    box-shadow: 0 0 6px rgba(91, 143, 249, 0.35);
     flex-shrink: 0;
   }
 
@@ -361,7 +361,7 @@
   }
   .name-input:focus {
     border-color: var(--signal);
-    background: rgba(0, 255, 159, 0.03);
+    background: rgba(91, 143, 249, 0.05);
   }
   .name-input.err {
     border-color: var(--crit);

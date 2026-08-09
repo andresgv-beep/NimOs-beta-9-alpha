@@ -95,7 +95,7 @@
 
     <!-- PROGRESS -->
     <div class="wiz-progress">
-      <div class="wiz-progress-bar" style="width: {progressPercent}%; background: {progressColor}; box-shadow: 0 0 6px {progressColor};"></div>
+      <div class="wiz-progress-bar" style="width: {progressPercent}%; background: {progressColor};"></div>
     </div>
 
     <!-- BODY · contenido inyectado vía slot -->
@@ -123,7 +123,7 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(5, 8, 13, 0.72);
     z-index: 100;
   }
 
@@ -133,7 +133,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 101;
-    background: var(--bg-window);
+    background: var(--panel-elev, var(--bg-window));
     border: 1px solid var(--line);
     border-radius: 6px;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
@@ -158,8 +158,8 @@
     flex-shrink: 0;
   }
   .wiz-title {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 650;
     color: var(--ink);
     letter-spacing: -0.1px;
   }
@@ -175,8 +175,7 @@
 
   .wiz-step {
     margin-left: auto;
-    font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 11px;
     color: var(--ink-mute);
     letter-spacing: 0.5px;
   }
@@ -224,7 +223,7 @@
     padding: 20px 22px;
     flex: 1;
     overflow-y: auto;
-    background: var(--bg-main);
+    background: var(--canvas-soft, var(--bg-main));
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -245,11 +244,11 @@
   /* Botones — usan tokens semánticos del design system */
   .btn-secondary {
     padding: 7px 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     border: 1px solid var(--line);
     background: var(--bg-card);
     color: var(--ink-dim);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
     font-family: var(--font-sans);
     cursor: pointer;
@@ -266,11 +265,11 @@
 
   .btn-primary {
     padding: 7px 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     border: none;
     background: var(--signal);
     color: var(--bg-window);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     font-family: var(--font-sans);
     cursor: pointer;
@@ -288,11 +287,11 @@
 
   .btn-warn {
     padding: 7px 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     border: none;
     background: var(--warn);
     color: var(--bg-window);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     font-family: var(--font-sans);
     cursor: pointer;
@@ -310,11 +309,11 @@
 
   .btn-danger {
     padding: 7px 14px;
-    border-radius: 6px;
+    border-radius: 4px;
     border: none;
     background: var(--crit);
     color: var(--bg-window);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     font-family: var(--font-sans);
     cursor: pointer;

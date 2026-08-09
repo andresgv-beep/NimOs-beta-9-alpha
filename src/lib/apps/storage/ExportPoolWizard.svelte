@@ -417,7 +417,7 @@
   }
   .svc-led-running {
     background: var(--signal);
-    box-shadow: 0 0 6px rgba(0, 255, 159, 0.45);
+    box-shadow: 0 0 6px rgba(91, 143, 249, 0.35);
   }
   .svc-led-transition {
     background: var(--warn);
@@ -485,7 +485,7 @@
   }
   .notice :global(b) { color: var(--warn); font-weight: 600; }
   .notice-ok {
-    background: rgba(0, 255, 159, 0.06);
+    background: rgba(91, 143, 249, 0.06);
     border-left-color: var(--signal);
   }
   .notice-ok :global(b) { color: var(--signal); }

@@ -879,7 +879,7 @@
   }
   .disk-row:last-child { border-bottom: none; }
   .disk-row:hover { background: var(--side-hover); }
-  .disk-row.selected { background: rgba(0, 255, 159, 0.04); }
+  .disk-row.selected { background: rgba(91, 143, 249, 0.06); }
   .disk-row.has-orphan { border-left: 3px solid var(--warn); padding-left: 11px; }
 
   .dr-check {
@@ -895,7 +895,7 @@
   .dr-check svg { width: 12px; height: 12px; }
   .disk-row.selected .dr-check {
     border-color: var(--signal);
-    background: rgba(0, 255, 159, 0.08);
+    background: rgba(91, 143, 249, 0.1);
   }
 
   .dr-info {
@@ -1127,7 +1127,7 @@
   }
   .name-input:focus {
     border-color: var(--signal);
-    background: rgba(0, 255, 159, 0.03);
+    background: rgba(91, 143, 249, 0.05);
   }
   .name-input.err {
     border-color: var(--crit);
@@ -1178,7 +1178,7 @@
   }
   .confirm-input:focus {
     border-color: var(--signal);
-    background: rgba(0, 255, 159, 0.03);
+    background: rgba(91, 143, 249, 0.05);
   }
   .confirm-input.ok {
     border-color: var(--signal);
@@ -1331,9 +1331,9 @@
     font-weight: 600;
   }
   .co-tag-accent {
-    background: rgba(0, 255, 159, 0.1);
+    background: rgba(91, 143, 249, 0.1);
     color: var(--signal);
-    border: 1px solid rgba(0, 255, 159, 0.2);
+    border: 1px solid rgba(91, 143, 249, 0.22);
   }
   .co-tag-crit {
     background: rgba(248, 113, 113, 0.1);

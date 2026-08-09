@@ -72,7 +72,7 @@ export const prefs = writable({ ...DEFAULTS });
 
 // Derivados
 export const accentColor = derived(prefs, $p =>
-  ACCENT_COLORS[$p.accentColor] || $p.customAccentColor || ACCENT_COLORS.green
+  ACCENT_COLORS[$p.accentColor] || $p.customAccentColor || ACCENT_COLORS.blue
 );
 export const pinnedApps = derived(prefs, $p => $p.pinnedApps);
 export const currentTheme = derived(prefs, $p => $p.theme || 'dark');
@@ -87,6 +87,32 @@ let saveTimeout = null;
  * todas las claves acumuladas en un solo PUT.
  */
 let pendingSaves = {};
+
+/**
+ * Limpia preferencias visuales de las betas anteriores. Es importante
+ * hacerlo al cargar: una instalación actualizada puede conservar en el
+ * backend el verde fósforo aunque los nuevos valores por defecto sean azules.
+ */
+function normalizeLegacyAppearance(raw = {}) {
+  const value = { ...DEFAULTS, ...raw };
+  const migrations = {};
+  const legacyGreen = ['#00ff9f', '#3fb984'].includes(
+    String(value.customAccentColor || '').toLowerCase()
+  );
+
+  if (value.theme !== 'dark') {
+    value.theme = 'dark';
+    migrations.theme = 'dark';
+  }
+  if (value.accentColor === 'green' || legacyGreen) {
+    value.accentColor = 'blue';
+    value.customAccentColor = ACCENT_COLORS.blue;
+    migrations.accentColor = 'blue';
+    migrations.customAccentColor = ACCENT_COLORS.blue;
+  }
+
+  return { value, migrations };
+}
 
 function scheduleSave(updates) {
   Object.assign(pendingSaves, updates);
@@ -245,7 +271,7 @@ export async function loadPrefs() {
     if (el) {
       try {
         const serverPrefs = JSON.parse(atob(el.getAttribute('content')));
-        const p = { ...DEFAULTS, ...serverPrefs };
+        const { value: p } = normalizeLegacyAppearance(serverPrefs);
         prefs.set(p);
         applyToDOM(p);
         el.remove();
@@ -258,7 +284,7 @@ export async function loadPrefs() {
   try {
     const cached = localStorage.getItem('nimos-prefs');
     if (cached) {
-      const p = { ...DEFAULTS, ...JSON.parse(cached) };
+      const { value: p } = normalizeLegacyAppearance(JSON.parse(cached));
       prefs.set(p);
       applyToDOM(p);
     }
@@ -274,10 +300,11 @@ export async function loadPrefs() {
     });
     const data = await res.json();
     if (data.preferences) {
-      const p = { ...DEFAULTS, ...data.preferences };
+      const { value: p, migrations } = normalizeLegacyAppearance(data.preferences);
       prefs.set(p);
       applyToDOM(p);
       localStorage.setItem('nimos-prefs', JSON.stringify(p));
+      if (Object.keys(migrations).length) saveToServer(null, null, migrations);
     }
   } catch (err) {
     console.error('[Prefs] Load failed:', err.message);

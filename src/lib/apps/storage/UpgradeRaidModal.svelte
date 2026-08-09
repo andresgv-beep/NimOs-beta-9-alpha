@@ -336,7 +336,7 @@
   .modal-strip {
     height: 2px;
     background: var(--signal);
-    box-shadow: 0 0 6px rgba(0, 255, 159, 0.45);
+    box-shadow: 0 0 6px rgba(91, 143, 249, 0.35);
     flex-shrink: 0;
   }
 
@@ -416,7 +416,7 @@
   .disk-option:hover { border-color: var(--ink-mute); }
   .disk-option.selected {
     border-color: var(--signal);
-    background: rgba(0, 255, 159, 0.05);
+    background: rgba(91, 143, 249, 0.06);
   }
   .disk-radio {
     width: 12px;
@@ -463,7 +463,7 @@
     height: 100%;
     background: var(--signal);
     border-radius: 3px;
-    box-shadow: 0 0 8px rgba(0, 255, 159, 0.5);
+    box-shadow: 0 0 8px rgba(91, 143, 249, 0.35);
     transition: width 0.6s ease;
   }
   .bar.indeterminate .fill {
@@ -500,7 +500,7 @@
     border-radius: 8px;
     border: 1px solid var(--line);
   }
-  .ok-result { border-color: rgba(0, 255, 159, 0.3); background: rgba(0, 255, 159, 0.04); }
+  .ok-result { border-color: rgba(91, 143, 249, 0.3); background: rgba(91, 143, 249, 0.05); }
   .err-result { border-color: rgba(255, 90, 90, 0.35); background: rgba(255, 90, 90, 0.05); }
   .result-icon {
     font-size: 18px;

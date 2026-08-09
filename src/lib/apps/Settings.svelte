@@ -1,16 +1,9 @@
 <script>
   /**
-   * NimSettings · Preferencias de NimOS Beta 8.1
-   * ──────────────────────────────────────────────────
+   * NimSettings · Preferencias visuales de NimOS
+   * ─────────────────────────────────────────────
    * Personalización del sistema. La administración (usuarios, compartidas,
    * servicios, permisos, 2FA, actualizaciones) vive en el Panel de Control.
-   *
-   * Estética NimOS Beta 8.1:
-   *  · Bisel firma · Cubo 45° · Path nimos:// · LEDs C2
-   *  · Theme cards con preview REAL del sistema
-   *  · Accent picker con 6 predefinidos + hex custom
-   *  · Wallpapers sistema + uploads del user
-   *  · 2 secciones: Appearance / About
    *
    * Endpoints:
    *  GET/PUT /api/user/preferences
@@ -64,7 +57,7 @@
   function applyCustomHex() {
     const v = (customHexInput || '').trim();
     if (!/^#?[0-9a-fA-F]{6}$/.test(v.replace('#',''))) {
-      customHexErr = 'Formato hex inválido. Ej: #00ff9f';
+      customHexErr = 'Formato hex inválido. Ej: #5b8ff9';
       return;
     }
     const hex = v.startsWith('#') ? v : '#' + v;
@@ -205,13 +198,13 @@
     .flatMap(g => g.items)
     .find(it => it.id === activeView)?.label || 'Settings';
 
-  // Subtítulo por vista (estilo mockup: "Tema · apariencia del sistema")
+  // Subtítulo por vista
   const VIEW_SUBTITLES = {
-    tema:    '· apariencia del sistema',
-    fondo:   '· escritorio',
-    taskbar: '· barra de tareas',
-    escala:  '· tamaño de la interfaz',
-    about:   '· información del sistema',
+    tema:    'Apariencia del sistema',
+    fondo:   'Escritorio',
+    taskbar: 'Barra de tareas',
+    escala:  'Tamaño de la interfaz',
+    about:   'Información del sistema',
   };
   $: activeSubtitle = VIEW_SUBTITLES[activeView] || '';
 
@@ -243,50 +236,41 @@
 
     {#if activeView === 'tema'}
       <!-- ────── TEMA DEL SISTEMA ────── -->
-      <div class="section-label">Tema del sistema</div>
+      <div class="section-label">Apariencia</div>
       <div class="theme-row">
-        {#each ['dark', 'cream'] as t}
-          <div class="theme-card" class:active={currentTheme === t} on:click={() => selectTheme(t)} on:keydown={(e) => e.key === 'Enter' && selectTheme(t)} role="button" tabindex="0">
-            <div class="tp-frame {t}">
+          <div class="theme-card active" on:click={() => selectTheme('dark')} on:keydown={(e) => e.key === 'Enter' && selectTheme('dark')} role="button" tabindex="0">
+            <div class="tp-frame dark">
               <div class="tp-window">
                 <div class="tp-tb">
-                  <span class="tp-cube"></span>
-                  <span class="tp-path">nimos://<b>storage</b></span>
-                  <span class="tp-leds">
-                    <span class="l min"></span><span class="l max"></span><span class="l close"></span>
+                  <span class="tp-app-mark"></span>
+                  <span class="tp-title">Storage</span>
+                  <span class="tp-controls">
+                    <span>−</span><span>□</span><span class="close">×</span>
                   </span>
                 </div>
                 <div class="tp-body">
-                  <div class="tp-card">
-                    <span class="tp-tab-pz">POOLS</span>
-                    <div class="tp-card-body">2<div class="sub">▸ ONLINE</div></div>
+                  <div class="tp-sidebar">
+                    <span class="active"></span><span></span><span></span><span></span>
                   </div>
-                  <div class="tp-card">
-                    <span class="tp-tab-pz">USO</span>
-                    <div class="tp-card-body">58%<div class="sub">▸ 5.2 TB</div></div>
+                  <div class="tp-main">
+                    <div class="tp-card-row">
+                      <div class="tp-card"><span>Capacidad</span><b>58%</b></div>
+                      <div class="tp-card"><span>Estado</span><b class="status">Correcto</b></div>
+                    </div>
+                    <div class="tp-table"><span></span><span></span><span></span></div>
                   </div>
                 </div>
               </div>
-              <div class="tp-clock-led">
-                <span class="d"></span><span class="d"></span>
-                <span class="d" style="width:2px"></span>
-                <span class="d"></span><span class="d"></span>
-              </div>
               <div class="tp-taskbar">
-                <svg class="logo" viewBox="-15 0 200 185" fill="none">
-                  <rect x="5" y="45" width="80" height="80" rx="16" transform="rotate(-30 45 85)" fill={t === 'cream' ? '#1a1a1a' : '#fff'}/>
-                  <rect x="108" y="12" width="60" height="60" rx="10" fill={t === 'cream' ? '#1a1a1a' : '#fff'}/>
-                  <rect x="108" y="98" width="60" height="60" rx="10" fill={t === 'cream' ? '#1a1a1a' : '#fff'}/>
-                </svg>
+                <span class="tp-start"></span><span class="tp-running"></span>
                 <span class="clock">13:06</span>
               </div>
             </div>
             <div class="theme-card-label">
-              <span>{t === 'dark' ? 'Dark' : 'Cream'}</span>
-              <span class="check"></span>
+              <span><b>NimOS Dark</b><small>Predeterminado</small></span>
+              <span class="check">✓</span>
             </div>
           </div>
-        {/each}
       </div>
 
       <!-- ────── COLOR DE ACENTO ────── -->
@@ -310,11 +294,11 @@
       <div class="custom-hex">
         <span class="custom-hex-label">Hex personalizado</span>
         <div class="custom-hex-row">
-          <div class="hex-preview" style="background: {customAccent || '#00ff9f'}"></div>
+          <div class="hex-preview" style="background: {customAccent || '#5b8ff9'}"></div>
           <input
             type="text"
             class="form-input hex-input"
-            placeholder="#00ff9f"
+            placeholder="#5b8ff9"
             bind:value={customHexInput}
             maxlength="7"
           />
@@ -461,28 +445,23 @@
     color: var(--ink-mute);
     font-weight: 400;
     margin-left: 8px;
-    font-family: var(--font-mono);
   }
 
   .section-label {
-    font-size: 11px;
-    color: var(--ink-mute);
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    font-weight: 650;
     margin-bottom: 14px;
   }
 
   /* ═══ THEME CARDS · preview del sistema ═══ */
   .theme-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    max-width: 720px;
+    max-width: 520px;
   }
   .theme-card {
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 6px;
     cursor: pointer;
     transition: border-color 0.15s, box-shadow 0.15s;
     overflow: hidden;
@@ -491,7 +470,7 @@
   .theme-card:hover { border-color: var(--line-bright); }
   .theme-card.active {
     border-color: var(--signal);
-    box-shadow: 0 0 0 1px var(--signal);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--signal) 35%, transparent);
   }
   .tp-frame {
     height: 168px;
@@ -499,32 +478,14 @@
     overflow: hidden;
   }
   .tp-frame.dark {
-    --tp-canvas: #0a0a0c;
-    --tp-panel: #161616;
-    --tp-panel-elev: #1c1c1c;
-    --tp-ink: #f2f2f5;
-    --tp-ink-mute: #9a9aa3;
+    --tp-canvas: #10141c;
+    --tp-panel: #171c26;
+    --tp-panel-elev: #1d2430;
+    --tp-ink: #edf2fa;
+    --tp-ink-mute: #8490a3;
     --tp-line: rgba(255,255,255,0.08);
     --tp-line-bright: rgba(255,255,255,0.14);
-    background:
-      linear-gradient(rgba(0, 255, 159, 0.04) 1px, transparent 1px) 0 0 / 26px 26px,
-      linear-gradient(90deg, rgba(0, 255, 159, 0.04) 1px, transparent 1px) 0 0 / 26px 26px,
-      radial-gradient(ellipse 55% 50% at 20% 25%, rgba(0, 255, 159, 0.07) 0%, transparent 60%),
-      var(--tp-canvas);
-  }
-  .tp-frame.cream {
-    --tp-canvas: #ebebe4;
-    --tp-panel: #fdfdf7;
-    --tp-panel-elev: #ffffff;
-    --tp-ink: #1a1a1a;
-    --tp-ink-mute: #6a6a72;
-    --tp-line: rgba(0,0,0,0.10);
-    --tp-line-bright: rgba(0,0,0,0.18);
-    background:
-      linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px) 0 0 / 26px 26px,
-      linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px) 0 0 / 26px 26px,
-      radial-gradient(ellipse 55% 50% at 20% 25%, rgba(0, 200, 130, 0.06) 0%, transparent 60%),
-      var(--tp-canvas);
+    background: var(--tp-canvas);
   }
 
   /* Mini-ventana dentro del preview */
@@ -535,84 +496,94 @@
     right: 18px;
     background: var(--tp-panel);
     border: 1px solid var(--tp-line);
-    border-radius: 7px;
+    border-radius: 4px;
     overflow: hidden;
     box-shadow: 0 6px 18px rgba(0,0,0,0.25);
   }
   .tp-tb {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 8px;
+    gap: 7px;
+    height: 24px;
+    padding: 0 7px 0 9px;
     border-bottom: 1px solid var(--tp-line);
     background: var(--tp-panel-elev);
   }
-  .tp-cube {
+  .tp-app-mark {
     width: 7px; height: 7px;
-    background: var(--tp-ink);
-    transform: rotate(45deg);
+    background: #5b8ff9;
+    border-radius: 2px;
     flex-shrink: 0;
   }
-  .tp-path {
-    font-family: var(--font-mono);
+  .tp-title {
     font-size: 8px;
-    color: var(--tp-ink-mute);
+    font-weight: 650;
+    color: var(--tp-ink);
     flex: 1;
   }
-  .tp-path b { color: var(--tp-ink); }
-  .tp-leds { display: flex; gap: 3px; }
-  .tp-leds .l { width: 6px; height: 6px; border-radius: 2px; }
-  .tp-leds .l.min { background: #ffc857; }
-  .tp-leds .l.max { background: #00ff9f; }
-  .tp-leds .l.close { background: #ff5a5a; }
+  .tp-controls { display: flex; align-items: center; height: 100%; }
+  .tp-controls span {
+    width: 18px;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    color: var(--tp-ink-mute);
+    font-size: 9px;
+  }
+  .tp-controls .close { color: #ff8585; }
   .tp-body {
     display: flex;
+    min-height: 88px;
+  }
+  .tp-sidebar {
+    width: 58px;
+    border-right: 1px solid var(--tp-line);
+    padding: 11px 8px;
+    display: flex;
+    flex-direction: column;
     gap: 7px;
-    padding: 9px;
+  }
+  .tp-sidebar span {
+    height: 5px;
+    width: 70%;
+    border-radius: 2px;
+    background: var(--tp-line-bright);
+  }
+  .tp-sidebar span.active { width: 100%; background: #5b8ff9; }
+  .tp-main { flex: 1; padding: 10px; }
+  .tp-card-row { display: flex; gap: 6px; }
+  .tp-table {
+    margin-top: 7px;
+    border: 1px solid var(--tp-line);
+    border-radius: 3px;
+    padding: 4px 7px;
+  }
+  .tp-table span {
+    display: block;
+    height: 1px;
+    margin: 5px 0;
+    background: var(--tp-line-bright);
   }
   .tp-card {
     flex: 1;
     background: var(--tp-panel-elev);
     border: 1px solid var(--tp-line);
-    border-radius: 5px;
-    padding: 7px 8px;
+    border-radius: 3px;
+    padding: 6px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
   }
-  .tp-tab-pz {
-    font-family: var(--font-mono);
+  .tp-card span {
     font-size: 7px;
     color: var(--tp-ink-mute);
-    letter-spacing: 0.5px;
-    font-weight: 700;
   }
-  .tp-card-body {
-    font-family: var(--font-mono);
-    font-size: 16px;
-    font-weight: 700;
+  .tp-card b {
+    font-size: 11px;
+    font-weight: 650;
     color: var(--tp-ink);
-    margin-top: 2px;
-    line-height: 1;
   }
-  .tp-card-body .sub {
-    font-size: 7px;
-    color: #00ff9f;
-    font-weight: 600;
-    margin-top: 3px;
-  }
-  /* Cubitos LED del reloj (firma) */
-  .tp-clock-led {
-    position: absolute;
-    bottom: 30px;
-    right: 22px;
-    display: flex;
-    gap: 2px;
-    align-items: flex-end;
-  }
-  .tp-clock-led .d {
-    width: 4px; height: 7px;
-    background: var(--tp-ink-mute);
-    border-radius: 1px;
-    opacity: 0.5;
-  }
+  .tp-card b.status { color: #7aa7ff; }
   /* Taskbar del preview */
   .tp-taskbar {
     position: absolute;
@@ -626,41 +597,34 @@
     justify-content: space-between;
     padding: 0 10px;
   }
-  .tp-taskbar .logo { width: 14px; height: 13px; }
+  .tp-start { width: 10px; height: 10px; border-radius: 2px; background: #5b8ff9; }
+  .tp-running { width: 46px; height: 3px; margin-left: 8px; border-radius: 1px; background: var(--tp-line-bright); }
   .tp-taskbar .clock {
-    font-family: var(--font-mono);
     font-size: 9px;
     color: var(--tp-ink);
-    font-weight: 600;
+    margin-left: auto;
   }
 
   .theme-card-label {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 13px;
+    padding: 11px 13px;
     font-size: 12px;
     font-weight: 600;
     color: var(--ink);
   }
+  .theme-card-label > span:first-child { display: flex; flex-direction: column; gap: 2px; }
+  .theme-card-label small { color: var(--ink-mute); font-size: 10px; font-weight: 400; }
   .theme-card-label .check {
-    width: 16px; height: 16px;
+    width: 18px; height: 18px;
     border-radius: 4px;
-    border: 1px solid var(--line-bright);
-  }
-  .theme-card.active .theme-card-label .check {
     background: var(--signal);
     border-color: var(--signal);
-    position: relative;
-  }
-  .theme-card.active .theme-card-label .check::after {
-    content: '✓';
-    position: absolute;
-    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #0a0a0c;
+    color: white;
     font-size: 11px;
     font-weight: 700;
   }
@@ -673,7 +637,7 @@
   }
   .accent-dot {
     width: 38px; height: 38px;
-    border-radius: 9px;
+    border-radius: 5px;
     cursor: pointer;
     border: 2px solid transparent;
     transition: transform 0.12s;
@@ -699,11 +663,9 @@
     max-width: 480px;
   }
   .custom-hex-label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--ink-mute);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    font-weight: 600;
+    font-weight: 500;
     display: block;
     margin-bottom: 8px;
   }
@@ -714,14 +676,14 @@
   }
   .hex-preview {
     width: 38px; height: 38px;
-    border-radius: 8px;
+    border-radius: 5px;
     border: 1px solid var(--line);
     flex-shrink: 0;
   }
   .form-input {
     background: var(--canvas-soft);
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: 4px;
     padding: 10px 12px;
     color: var(--ink);
     font-family: var(--font-mono);
@@ -735,13 +697,10 @@
     padding: 10px 18px;
     background: transparent;
     border: 1px solid var(--line-bright);
-    border-radius: 7px;
+    border-radius: 4px;
     color: var(--ink-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     cursor: pointer;
     transition: color 0.12s, border-color 0.12s;
   }
@@ -760,13 +719,10 @@
     gap: 7px;
     padding: 8px 14px;
     border: 1px solid var(--line-bright);
-    border-radius: 7px;
+    border-radius: 4px;
     color: var(--ink-dim);
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     cursor: pointer;
     transition: color 0.12s, border-color 0.12s;
   }
@@ -787,7 +743,7 @@
   }
   .wall-item {
     aspect-ratio: 16/10;
-    border-radius: 9px;
+    border-radius: 5px;
     overflow: hidden;
     cursor: pointer;
     position: relative;
@@ -809,14 +765,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 13px;
+    font-weight: 650;
     color: var(--ink-mute);
-    letter-spacing: 1.5px;
-    background:
-      linear-gradient(rgba(0, 255, 159, 0.04) 1px, transparent 1px) 0 0 / 16px 16px,
-      linear-gradient(90deg, rgba(0, 255, 159, 0.04) 1px, transparent 1px) 0 0 / 16px 16px,
-      var(--canvas-soft);
+    background: linear-gradient(145deg, var(--panel-elev), var(--canvas-soft));
   }
   .wall-check {
     position: absolute;
@@ -843,7 +795,7 @@
     backdrop-filter: blur(4px);
   }
   .wall-tag-sys { background: rgba(0,0,0,0.5); color: rgba(255,255,255,0.85); }
-  .wall-tag-user { background: rgba(0,255,159,0.2); color: #00ff9f; }
+  .wall-tag-user { background: rgba(91,143,249,0.22); color: #9ab9ff; }
   .wall-delete {
     position: absolute;
     top: 6px; left: 6px;
@@ -870,7 +822,7 @@
     padding: 14px 16px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 9px;
+    border-radius: 5px;
     margin-bottom: 8px;
     max-width: 640px;
   }
@@ -884,17 +836,16 @@
     gap: 4px;
     background: var(--canvas-soft);
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: 4px;
     padding: 3px;
   }
   .opt-btn {
     padding: 6px 13px;
     background: transparent;
     border: none;
-    border-radius: 5px;
+    border-radius: 3px;
     color: var(--ink-mute);
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: color 0.12s, background 0.12s;
@@ -908,9 +859,8 @@
     padding: 10px 14px;
     background: var(--canvas-soft);
     border: 1px solid var(--line);
-    border-radius: 7px;
-    font-family: var(--font-mono);
-    font-size: 10px;
+    border-radius: 4px;
+    font-size: 12px;
     color: var(--ink-mute);
     letter-spacing: 0.3px;
     max-width: 640px;
@@ -934,7 +884,7 @@
   .field-group {
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 5px;
     overflow: hidden;
     max-width: 480px;
   }
@@ -952,7 +902,6 @@
   .form-msg {
     font-size: 12px;
     color: var(--ink-dim);
-    font-family: var(--font-mono);
   }
   .form-msg.error { color: #ff5a5a; }
 </style>
