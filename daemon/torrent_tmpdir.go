@@ -20,7 +20,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 )
@@ -29,7 +31,7 @@ import (
 // un pool montado. Prioridad: pool primario → primer pool con mountpoint.
 // Error si no hay ningún pool montado.
 func torrentTmpDir() (string, error) {
-	mount, err := firstMountedPoolPath()
+	mount, err := firstWritablePoolPath()
 	if err != nil {
 		return "", err
 	}
@@ -38,6 +40,52 @@ func torrentTmpDir() (string, error) {
 		return "", fmt.Errorf("creando tmp dir en pool: %w", err)
 	}
 	return tmpDir, nil
+}
+
+// handleTorrentStorageStatus informa de la puerta de escritura real. Es
+// deliberadamente independiente de torrentd: aunque el servicio esté parado,
+// el usuario debe poder saber que primero necesita un pool sano y montado.
+func handleTorrentStorageStatus(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	_, err := firstWritablePoolPath()
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ready":   false,
+			"message": torrentStorageErrorMessage(err),
+		})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"ready": true})
+}
+
+// firstWritablePoolPath mantiene la prioridad del pool primario, pero no deja
+// que un primario en solo lectura o desmontado oculte otro pool sano.
+func firstWritablePoolPath() (string, error) {
+	if storageService == nil {
+		return "", fmt.Errorf("storage service not initialized")
+	}
+	pools, err := storageService.ListPools(context.Background())
+	if err != nil {
+		return "", fmt.Errorf("listing pools: %w", err)
+	}
+	for _, primaryOnly := range []bool{true, false} {
+		for _, pool := range pools {
+			if pool.IsPrimary != primaryOnly || pool.MountPoint == "" {
+				continue
+			}
+			if err := assertPoolWritable(pool.MountPoint); err == nil {
+				return pool.MountPoint, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("no mounted writable pool available")
+}
+
+func torrentStorageErrorMessage(err error) string {
+	if writableErr, ok := err.(*PoolWritableError); ok && writableErr.Code == "read_only" {
+		return "El pool está en solo lectura; revisa su estado antes de descargar"
+	}
+	return "Necesitas un pool local montado y disponible para descargar"
 }
 
 // firstMountedPoolPath resuelve el mountpoint de un pool montado, primario si

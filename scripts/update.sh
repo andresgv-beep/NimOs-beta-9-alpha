@@ -26,6 +26,11 @@ tree_hash() {
   (cd "$root" && find . "$@" -type f -exec sha256sum {} \; 2>/dev/null) \
     | sort | sha256sum | cut -d' ' -f1
 }
+torrent_tree_hash() {
+  local root="$1"
+  (cd "$root" && find . \( -name '*.cpp' -o -name '*.h' -o -name 'makefile' \) -type f -exec sha256sum {} \; 2>/dev/null) \
+    | sort | sha256sum | cut -d' ' -f1
+}
 
 PREV="$(version_from "$DIR")"
 log "Current version: $PREV"
@@ -49,11 +54,15 @@ DAEMON_HASH="$(tree_hash "$DIR/daemon" -name '*.go')"
 DAEMON_HASH_NEW="$(tree_hash "$STAGE/daemon" -name '*.go')"
 FRONTEND_HASH="$(tree_hash "$DIR/src")"
 FRONTEND_HASH_NEW="$(tree_hash "$STAGE/src")"
+TORRENT_HASH="$(torrent_tree_hash "$DIR/torrentd")"
+TORRENT_HASH_NEW="$(torrent_tree_hash "$STAGE/torrentd")"
 
 DAEMON_CHANGED=false
 FRONTEND_CHANGED=false
+TORRENT_CHANGED=false
 [[ "$DAEMON_HASH" != "$DAEMON_HASH_NEW" || ! -x "$DIR/daemon/nimos-daemon" ]] && DAEMON_CHANGED=true
 [[ "$FRONTEND_HASH" != "$FRONTEND_HASH_NEW" || ! -f "$DIR/dist/.nimos-build" ]] && FRONTEND_CHANGED=true
+[[ "$TORRENT_HASH" != "$TORRENT_HASH_NEW" || ! -x /usr/local/bin/nimos-torrentd ]] && TORRENT_CHANGED=true
 
 if [[ "$DAEMON_CHANGED" == true ]]; then
   log "Daemon source changed — building in staging..."
@@ -68,6 +77,26 @@ if [[ "$DAEMON_CHANGED" == true ]]; then
     exit 1
   fi
   chmod 0755 "$STAGE/daemon/nimos-daemon"
+fi
+
+if [[ "$TORRENT_CHANGED" == true ]]; then
+  log "NimTorrent source changed — building in staging..."
+  if ! command -v g++ >/dev/null 2>&1 || ! command -v make >/dev/null 2>&1; then
+    log "ERROR: C++ compiler or make is not installed"
+    result_error "torrent_build_tools_missing"
+    exit 1
+  fi
+  if ! dpkg -s libtorrent-rasterbar-dev >/dev/null 2>&1; then
+    log "ERROR: libtorrent-rasterbar-dev is not installed"
+    result_error "torrent_dependency_missing"
+    exit 1
+  fi
+  if ! (cd "$STAGE/torrentd" && make clean && make) 2>&1 | tee -a "$LOG_FILE"; then
+    log "ERROR: NimTorrent build failed; installed files were not modified"
+    result_error "torrent_build_failed"
+    exit 1
+  fi
+  chmod 0755 "$STAGE/torrentd/nimos-torrentd"
 fi
 
 if [[ "$FRONTEND_CHANGED" == true ]]; then
@@ -98,6 +127,9 @@ fi
 
 log "All builds passed — installing $NEW..."
 systemctl stop nimos-daemon 2>/dev/null || true
+if [[ "$TORRENT_CHANGED" == true ]]; then
+  systemctl stop nimos-torrentd 2>/dev/null || true
+fi
 
 tar -C "$STAGE" \
   --exclude='./dist' --exclude='./node_modules' --exclude='./.svelte-kit' \
@@ -113,6 +145,11 @@ fi
 
 if [[ -f "$DIR/scripts/nimos-daemon.service" ]]; then
   cp "$DIR/scripts/nimos-daemon.service" /etc/systemd/system/nimos-daemon.service
+  systemctl daemon-reload
+fi
+if [[ "$TORRENT_CHANGED" == true ]]; then
+  install -m 0755 "$STAGE/torrentd/nimos-torrentd" /usr/local/bin/nimos-torrentd
+  install -m 0644 "$STAGE/torrentd/nimos-torrentd.service" /etc/systemd/system/nimos-torrentd.service
   systemctl daemon-reload
 fi
 chown -R nimos:nimos "$DIR" 2>/dev/null || true
@@ -134,6 +171,7 @@ fi
 rm -rf -- "$DIR/dist.previous"
 UPDATE_TYPE="none"
 [[ "$FRONTEND_CHANGED" == true ]] && UPDATE_TYPE="frontend"
+[[ "$TORRENT_CHANGED" == true ]] && UPDATE_TYPE="full"
 [[ "$DAEMON_CHANGED" == true ]] && UPDATE_TYPE="full"
 log "OK: $PREV -> $NEW ($UPDATE_TYPE)"
 printf '{"type":"%s","prev":"%s","new":"%s","time":"%s"}\n' \

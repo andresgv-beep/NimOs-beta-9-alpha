@@ -203,16 +203,22 @@ int main() {
         auto file = get_json_string(req.body, "file");
         auto save_path = get_json_string(req.body, "save_path");
 
-        std::string hash;
-        if (!magnet.empty()) {
-            hash = engine.addMagnet(magnet, save_path);
-        } else if (!file.empty()) {
-            hash = engine.addTorrentFile(file, save_path);
-        } else {
-            res.set_content("{\"error\":\"Provide magnet or file\"}", "application/json");
-            return;
+        try {
+            std::string hash;
+            if (!magnet.empty()) {
+                hash = engine.addMagnet(magnet, save_path);
+            } else if (!file.empty()) {
+                hash = engine.addTorrentFile(file, save_path);
+            } else {
+                res.status = 400;
+                res.set_content("{\"error\":\"Provide magnet or file\"}", "application/json");
+                return;
+            }
+            res.set_content("{\"ok\":true,\"hash\":\"" + hash + "\"}", "application/json");
+        } catch (const std::invalid_argument& e) {
+            res.status = 409;
+            res.set_content("{\"error\":\"No mounted writable pool available\"}", "application/json");
         }
-        res.set_content("{\"ok\":true,\"hash\":\"" + hash + "\"}", "application/json");
     });
 
     // Pause

@@ -149,6 +149,13 @@ func handleTorrentProxy(w http.ResponseWriter, r *http.Request) {
 
 	urlPath := r.URL.Path
 
+	// Estado de almacenamiento propio del proxy. No depende de que torrentd
+	// esté arrancado y permite a la UI explicar por qué no puede añadir datos.
+	if urlPath == "/api/torrent/storage" && r.Method == http.MethodGet {
+		handleTorrentStorageStatus(w)
+		return
+	}
+
 	// Special: torrent file upload (multipart)
 	if urlPath == "/api/torrent/upload" && r.Method == "POST" {
 		handleTorrentUploadGo(w, r, session)
@@ -257,10 +264,15 @@ func resolveTorrentSavePath(w http.ResponseWriter, session *DBSession, body []by
 		return nil, false
 	}
 
-	// Debe estar en un pool montado (no en el disco de sistema).
-	// Las carpetas remotas se permiten (ya validadas por el montaje NFS).
-	if !share.IsRemote() && !isPathOnMountedPool(share.Path) {
-		jsonError(w, 409, "La carpeta no está en un pool montado")
+	// NimTorrent descarga exclusivamente en storage local administrado. Un
+	// montaje remoto puede desaparecer a mitad de escritura y no representa
+	// un pool activo de NimOS.
+	if share.IsRemote() {
+		jsonError(w, 400, "NimTorrent necesita una carpeta de un pool local")
+		return nil, false
+	}
+	if err := assertPoolWritable(share.Path); err != nil {
+		jsonError(w, 409, torrentStorageErrorMessage(err))
 		return nil, false
 	}
 
@@ -314,8 +326,12 @@ func handleTorrentUploadGo(w http.ResponseWriter, r *http.Request, session *DBSe
 		jsonError(w, 403, "Sin permiso de escritura en esa carpeta")
 		return
 	}
-	if !share.IsRemote() && !isPathOnMountedPool(share.Path) {
-		jsonError(w, 409, "La carpeta no está en un pool montado")
+	if share.IsRemote() {
+		jsonError(w, 400, "NimTorrent necesita una carpeta de un pool local")
+		return
+	}
+	if err := assertPoolWritable(share.Path); err != nil {
+		jsonError(w, 409, torrentStorageErrorMessage(err))
 		return
 	}
 	// Mismo FIX que en el add por magnet: destino = share elegido tal cual

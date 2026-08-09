@@ -13,6 +13,8 @@
 #include <mutex>
 #include <memory>
 #include <optional>
+#include <atomic>
+#include <thread>
 
 namespace lt = libtorrent;
 
@@ -63,8 +65,12 @@ private:
     std::string state_path_;
     std::string default_save_path_;
     std::mutex mutex_;
+    std::atomic<bool> stop_safety_watchdog_{false};
+    std::thread safety_watchdog_;
 
     std::optional<lt::torrent_handle> findHandle(const std::string& hash);
     std::string hashToHex(const lt::torrent_handle& h);
     std::string stateToString(lt::torrent_status::state_t s, bool paused);
+    std::string requireSafeSavePath(const std::string& requested_path) const;
+    void storageSafetyLoop();
 };

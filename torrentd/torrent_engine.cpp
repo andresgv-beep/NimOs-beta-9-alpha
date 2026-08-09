@@ -14,8 +14,46 @@
 #include <sstream>
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
+#include <sys/statvfs.h>
+#include <chrono>
 
 namespace fs = std::filesystem;
+
+namespace {
+std::string poolMountForPath(const std::string& path) {
+    const std::string prefix = "/nimos/pools/";
+    if (path.rfind(prefix, 0) != 0) return "";
+    auto end = path.find('/', prefix.size());
+    return end == std::string::npos ? path : path.substr(0, end);
+}
+
+bool isMountedWritablePoolPath(const std::string& path) {
+    const auto pool_mount = poolMountForPath(path);
+    if (pool_mount.empty()) return false;
+
+    std::ifstream mounts("/proc/self/mountinfo");
+    std::string line;
+    bool mounted = false;
+    while (std::getline(mounts, line)) {
+        std::istringstream fields(line);
+        std::string field;
+        int index = 0;
+        while (fields >> field) {
+            if (index++ == 4 && field == pool_mount) {
+                mounted = true;
+                break;
+            }
+        }
+        if (mounted) break;
+    }
+    if (!mounted) return false;
+
+    struct statvfs fs_info {};
+    return statvfs(pool_mount.c_str(), &fs_info) == 0 &&
+           (fs_info.f_flag & ST_RDONLY) == 0;
+}
+}
 
 // ═══════════════════════════════════
 // Constructor / Destructor
@@ -38,25 +76,13 @@ TorrentEngine::TorrentEngine(const std::string& config_path, const std::string& 
         }
     }
 
-    // Validate save path — must be under /nimos/pools/ (not system disk)
-    // If invalid or not mounted, use empty string (user must choose per-torrent)
-    if (!default_save_path_.empty()) {
-        if (default_save_path_.find("/nimos/pools/") != 0) {
-            std::cerr << "[torrentd] WARNING: download_dir '" << default_save_path_ 
-                      << "' is not under /nimos/pools/ — ignoring to protect system disk\n";
-            default_save_path_ = "";
-        } else {
-            // Check if the pool is actually mounted
-            try {
-                if (!fs::exists(default_save_path_)) {
-                    std::cerr << "[torrentd] WARNING: download_dir '" << default_save_path_ 
-                              << "' does not exist (pool not mounted?) — downloads disabled until path exists\n";
-                    // Don't clear — it may mount later. Just don't create dirs.
-                }
-            } catch (...) {
-                default_save_path_ = "";
-            }
-        }
+
+    // Sin un mount real y escribible no existe ningún fallback. Dejar la ruta
+    // vacía es intencional: las altas y restauraciones se rechazan/omiten.
+    if (!default_save_path_.empty() && !isMountedWritablePoolPath(default_save_path_)) {
+        std::cerr << "[torrentd] WARNING: unsafe download_dir '" << default_save_path_
+                  << "' — downloads disabled\n";
+        default_save_path_ = "";
     }
 
     // Only create directories if the path exists and is on a real pool
@@ -102,9 +128,12 @@ TorrentEngine::TorrentEngine(const std::string& config_path, const std::string& 
 
     // Load saved torrents
     loadState();
+    safety_watchdog_ = std::thread(&TorrentEngine::storageSafetyLoop, this);
 }
 
 TorrentEngine::~TorrentEngine() {
+    stop_safety_watchdog_ = true;
+    if (safety_watchdog_.joinable()) safety_watchdog_.join();
     saveState();
 }
 
@@ -116,7 +145,7 @@ std::string TorrentEngine::addMagnet(const std::string& magnet, const std::strin
     std::lock_guard<std::mutex> lock(mutex_);
 
     lt::add_torrent_params p = lt::parse_magnet_uri(magnet);
-    p.save_path = save_path.empty() ? default_save_path_ : save_path;
+    p.save_path = requireSafeSavePath(save_path);
 
     // CRITICAL: Set flags BEFORE add_torrent — not running, not auto_managed
     p.flags &= ~lt::torrent_flags::paused;
@@ -138,7 +167,7 @@ std::string TorrentEngine::addTorrentFile(const std::string& torrent_path, const
 
     lt::add_torrent_params p;
     p.ti = std::make_shared<lt::torrent_info>(torrent_path);
-    p.save_path = save_path.empty() ? default_save_path_ : save_path;
+    p.save_path = requireSafeSavePath(save_path);
 
     // CRITICAL: Set flags BEFORE add_torrent
     p.flags &= ~lt::torrent_flags::paused;
@@ -161,6 +190,7 @@ bool TorrentEngine::resume(const std::string& hash) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto h = findHandle(hash);
     if (!h) return false;
+    if (!isMountedWritablePoolPath(h->status().save_path)) return false;
     h->unset_flags(lt::torrent_flags::auto_managed);
     h->unset_flags(lt::torrent_flags::paused);
     h->resume();
@@ -278,14 +308,12 @@ void TorrentEngine::loadState() {
 
                 lt::add_torrent_params p = lt::read_resume_data(buf);
 
-                // OVERRIDE save_path: force to current pool, ignore stale paths
-                // This prevents writing to system disk when pools change
-                if (!default_save_path_.empty()) {
-                    if (p.save_path.find("/nimos/pools/") != 0) {
-                        std::cerr << "[torrentd] Overriding stale save_path '" << p.save_path 
-                                  << "' → '" << default_save_path_ << "'\n";
-                        p.save_path = default_save_path_;
-                    }
+                // Nunca restaurar sobre una carpeta que solo parece un pool.
+                // Si el mount desapareció, esa ruta cae en el disco del sistema.
+                if (!isMountedWritablePoolPath(p.save_path)) {
+                    std::cerr << "[torrentd] Skipping resume " << file
+                              << " — destination pool is not mounted and writable\n";
+                    continue;
                 }
 
                 // Force running state on load
@@ -310,10 +338,7 @@ void TorrentEngine::loadState() {
 
                 lt::add_torrent_params p = lt::parse_magnet_uri(magnet);
 
-                // Force save_path to current pool — never use stale paths
-                if (!default_save_path_.empty()) {
-                    p.save_path = default_save_path_;
-                } else if (!save_path.empty() && save_path.find("/nimos/pools/") == 0) {
+                if (isMountedWritablePoolPath(save_path)) {
                     p.save_path = save_path;
                 } else {
                     std::cerr << "[torrentd] Skipping magnet " << hash 
@@ -327,6 +352,35 @@ void TorrentEngine::loadState() {
                 session_->async_add_torrent(p);
             } catch (std::exception& e) {
                 std::cerr << "[torrentd] Failed to load magnet: " << file << " — " << e.what() << "\n";
+            }
+        }
+    }
+}
+
+std::string TorrentEngine::requireSafeSavePath(const std::string& requested_path) const {
+    const auto& resolved = requested_path.empty() ? default_save_path_ : requested_path;
+    if (!isMountedWritablePoolPath(resolved)) {
+        throw std::invalid_argument("destination must be on a mounted writable NimOS pool");
+    }
+    return resolved;
+}
+
+void TorrentEngine::storageSafetyLoop() {
+    while (!stop_safety_watchdog_) {
+        for (int i = 0; i < 20 && !stop_safety_watchdog_; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        if (stop_safety_watchdog_) break;
+
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (auto const& handle : session_->get_torrents()) {
+            auto status = handle.status();
+            if (!isMountedWritablePoolPath(status.save_path) &&
+                (status.flags & lt::torrent_flags::paused) == lt::torrent_flags_t{}) {
+                std::cerr << "[torrentd] SAFETY: pausing '" << status.name
+                          << "' — destination pool is no longer writable\n";
+                handle.unset_flags(lt::torrent_flags::auto_managed);
+                handle.pause();
             }
         }
     }
