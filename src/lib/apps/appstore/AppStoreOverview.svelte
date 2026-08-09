@@ -35,6 +35,7 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import AppShell from '$lib/components/AppShell.svelte';
   import AppCard from './AppCard.svelte';
+  import AppStoreDetail from './AppStoreDetail.svelte';
   import { fetchCatalog, countByCategory, listCatalogApps, appSupportsArch } from './catalog.js';
   import { getToken } from '$lib/stores/auth.js';
   import { getInstalledApps, getUpdatesSummary } from './api.js';
@@ -60,6 +61,7 @@
 
   // Búsqueda libre
   let search = '';
+  let selectedAppId = null;
 
   // Sprint Updates · IDs de apps que tienen update pendiente (en Set para
   // lookup O(1) al pasar prop hasUpdate a cada AppCard).
@@ -88,6 +90,7 @@
   // Filtrado por sección activa + search
   /** @type {AppView[]} */
   $: visibleViews = filterViews(allViews, active, search);
+  $: selectedView = selectedAppId ? allViews.find((view) => view.id === selectedAppId) : null;
 
   // Sidebar dinámico
   $: sidebarSections = buildSidebarSections(counts, categoriesMap, installed.length, updatesCount);
@@ -211,7 +214,16 @@
   // ── Eventos ────────────────────────────────────────────────────────
   /** @param {CustomEvent<{appId: string}>} ev */
   function onSelect(ev) {
+    selectedAppId = ev.detail.appId;
     dispatch('select', ev.detail);
+  }
+
+  function backToCatalog() {
+    selectedAppId = null;
+  }
+
+  function handleSidebarNavigate() {
+    selectedAppId = null;
   }
 </script>
 
@@ -223,11 +235,23 @@
   sections={sidebarSections}
   bind:active
   bodyPadding={false}
+  on:navigate={handleSidebarNavigate}
 >
   <!-- Título en la barra (page-header), como el resto de apps (NimHealth, Files…) -->
   <svelte:fragment slot="page-header">
-    <b>{activeLabel}</b>
-    {#if !loading && !loadError}
+    {#if selectedAppId}
+      <button class="page-back" on:click={backToCatalog} type="button" aria-label="Volver al catálogo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Catálogo
+      </button>
+      <span class="page-separator" aria-hidden="true">/</span>
+      <b>{selectedView?.name || 'Detalle'}</b>
+    {:else}
+      <b>{activeLabel}</b>
+    {/if}
+    {#if !selectedAppId && !loading && !loadError}
       <span class="head-meta">· {visibleViews.length} de {allViews.length}{#if installed.length > 0} · {installed.length} instalada{installed.length === 1 ? '' : 's'}{/if}</span>
     {/if}
   </svelte:fragment>
@@ -242,6 +266,10 @@
       <div class="err-title">No se pudo cargar el catálogo</div>
       <div class="err-body">{loadError}</div>
       <button class="err-btn" on:click={load}>Reintentar</button>
+    </div>
+  {:else if selectedAppId}
+    <div class="detail-host">
+      <AppStoreDetail appId={selectedAppId} on:back={backToCatalog} />
     </div>
   {:else}
     <div class="overview">
@@ -391,6 +419,22 @@
     color: var(--ink-mute);
     font-variant-numeric: tabular-nums;
   }
+  .page-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink-dim);
+    font: 500 var(--fs-11) / 1 var(--font-sans);
+    cursor: pointer;
+  }
+  .page-back:hover { color: var(--ink); background: var(--panel-deep); }
+  .page-back svg { width: 13px; height: 13px; }
+  .page-separator { color: var(--ink-faint); }
+  .detail-host { height: 100%; min-height: 0; overflow: hidden; }
   .head-search {
     margin-left: auto;
     display: flex;
@@ -440,7 +484,7 @@
   /* Grid · auto-fill responsive */
   .apps-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 14px;
   }
 

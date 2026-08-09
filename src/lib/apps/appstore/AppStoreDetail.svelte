@@ -577,17 +577,6 @@
   </div>
 {:else if view}
   <div class="detail-wrap">
-    <!-- Barra superior · back + título · fila fija FUERA del scroll -->
-    <div class="detail-bar">
-      <button class="back-btn" on:click={handleBack} type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-        Volver al catálogo
-      </button>
-      <span class="detail-bar-title">{view.name}</span>
-    </div>
-
     <div class="detail-scroll">
     <!-- HERO horizontal -->
     <section class="hero">
@@ -1088,8 +1077,7 @@
   .err-body { color: var(--ink-dim); font-family: var(--font-mono); font-size: var(--fs-11); max-width: 420px; word-break: break-word; }
 
   /* ═══ Scroll container ═══ */
-  /* Wrapper · barra fija + scroll. Igual que AppShell: la barra vive FUERA
-     del scroll para que la barra de scroll no la cruce. */
+  /* Wrapper de contenido dentro del AppShell persistente. */
   .detail-wrap {
     height: 100%;
     display: flex;
@@ -1104,33 +1092,8 @@
     padding: 0;
     width: 100%;
   }
-  /* Barra superior · fila fija (no sticky). Sin z-index alto: debe quedar
-     BAJO la .drag-zone de WindowFrame (z-index 5) para poder arrastrar la
-     ventana desde la barra. */
-  .detail-bar {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 24px;
-    background: var(--canvas);
-    border-bottom: 1px solid var(--line);
-  }
-  /* El back-btn se "perfora" por encima de la drag-zone para ser clickable;
-     su SVG no captura el click (si no, lo come la drag-zone). El resto de la
-     barra (vacío + título) queda bajo la drag-zone → arrastrar funciona. */
-  .detail-bar .back-btn { position: relative; z-index: 6; }
-  .detail-bar .back-btn svg,
-  .detail-bar .back-btn svg * { pointer-events: none; }
-  .detail-bar-title {
-    font-size: var(--fs-14, 14px);
-    font-weight: 600;
-    color: var(--ink-mute);
-  }
-  /* Hijos del scroll: max 920px centrado · EXCEPTO el back-btn (que tiene su propio ancho natural) */
-  /* La barra va a ancho completo (sticky); el resto del contenido
-     centrado con padding lateral, ya que el scroll no lo aporta. */
-  .detail-scroll > *:not(.detail-bar) {
+  /* Contenido centrado con padding lateral. */
+  .detail-scroll > * {
     max-width: 920px;
     margin-left: auto;
     margin-right: auto;
@@ -1140,7 +1103,7 @@
   }
   .detail-scroll > .hero { padding-top: var(--sp-5); }
   /* Separación entre secciones */
-  .detail-scroll > *:not(.detail-bar) + *:not(.detail-bar) {
+  .detail-scroll > * + * {
     margin-top: var(--sp-5);
   }
   /* Aire al final del scroll */
@@ -1149,29 +1112,6 @@
     display: block;
     height: var(--sp-6);
   }
-
-  /* ═══ Back button ═══ */
-  .back-btn {
-    background: var(--panel-elev);
-    border: 1px solid var(--line);
-    color: var(--ink-dim);
-    cursor: pointer;
-    font-size: var(--fs-12);
-    font-family: inherit;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    border-radius: 4px;
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
-    flex-shrink: 0;
-  }
-  .back-btn:hover {
-    color: var(--ink);
-    background: var(--line);
-    border-color: var(--line-bright);
-  }
-  .back-btn svg { width: 13px; height: 13px; }
 
   /* ═══ HERO horizontal ═══ */
   .hero {

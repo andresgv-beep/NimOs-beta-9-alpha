@@ -66,7 +66,7 @@
    *   - LEDs orden: min · max · close (close al final, protege accidentes)
    *   - Sin glass, sin border-radius
    */
-  import { getContext } from 'svelte';
+  import { getContext, createEventDispatcher } from 'svelte';
   import { user } from '$lib/stores/auth.js';
   import LED from '$lib/ui/LED.svelte';
   import KeyBind from '$lib/ui/KeyBind.svelte';
@@ -99,11 +99,13 @@
   export let sidebarWidth = '220px';
 
   const wc = getContext('windowControls');
+  const dispatch = createEventDispatcher();
 
   $: userName = $user?.username || 'user';
 
   function handleItem(itemId) {
     active = itemId;
+    dispatch('navigate', { itemId });
   }
 </script>
 

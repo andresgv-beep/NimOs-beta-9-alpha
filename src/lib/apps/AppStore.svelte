@@ -7,21 +7,16 @@
    *   1. Sin pool        → AppStoreSetup (mockup 1)
    *   2. Sin Docker      → AppStoreSetup (mockup 2)
    *   3. Catálogo        → AppStoreOverview (mockup 3 · Fase 3 ✓)
-   *   4. Detalle de app  → AppStoreDetail (mockup 4 · Fase 4 ✓)
+   *   4. Detalle de app  → se resuelve dentro del AppShell del catálogo.
    *
-   * El estado de navegación dentro del módulo es muy simple:
-   *   - selectedAppId  · si null, muestra catálogo; si tiene valor, detalle.
-   *
-   * La transición catálogo ↔ detalle ocurre dentro de la misma ventana
-   * (modelo "una ventana por app" del desktop NimOS). El botón "Volver"
-   * del detalle limpia selectedAppId.
+   * AppStoreOverview conserva el sidebar y cambia únicamente el contenido
+   * principal al navegar catálogo ↔ detalle.
    */
 
   import { onMount } from 'svelte';
   import { getCapabilities } from './appstore/api.js';
   import AppStoreSetup from './appstore/AppStoreSetup.svelte';
   import AppStoreOverview from './appstore/AppStoreOverview.svelte';
-  import AppStoreDetail from './appstore/AppStoreDetail.svelte';
 
   /** @typedef {import('./appstore/types').AppStoreCapabilities} AppStoreCapabilities */
 
@@ -29,9 +24,6 @@
   let capabilities = null;
   let loading = true;
   let loadError = '';
-
-  /** ID de la app seleccionada · null = vista catálogo */
-  let selectedAppId = null;
 
   onMount(loadCapabilities);
 
@@ -52,14 +44,6 @@
     await loadCapabilities();
   }
 
-  /** @param {CustomEvent<{appId: string}>} ev */
-  function handleSelectApp(ev) {
-    selectedAppId = ev.detail.appId;
-  }
-
-  function handleBackToCatalog() {
-    selectedAppId = null;
-  }
 </script>
 
 {#if loading}
@@ -76,12 +60,9 @@
 {:else if !capabilities?.hasPool || !capabilities?.dockerInstalled}
   <!-- Setup · sin pool o sin Docker -->
   <AppStoreSetup {capabilities} onReady={handleSetupReady} />
-{:else if selectedAppId}
-  <!-- Detalle · Fase 4 ✓ -->
-  <AppStoreDetail appId={selectedAppId} on:back={handleBackToCatalog} />
 {:else}
-  <!-- Catálogo · Fase 3 ✓ -->
-  <AppStoreOverview on:select={handleSelectApp} />
+  <!-- Catálogo y detalle comparten una única estructura de ventana. -->
+  <AppStoreOverview />
 {/if}
 
 <style>
