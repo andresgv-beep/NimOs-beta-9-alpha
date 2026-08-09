@@ -99,34 +99,34 @@
 </div>
 
 <style>
-  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-mono); }
-  .mono { font-family: var(--font-mono); }
+  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-sans); }
+  .mono { font-family: var(--font-sans); }
 
   .r-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .r-stat { background: var(--bg-card, #15151a); border-radius: 8px; padding: 12px 12px 11px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  .r-stat { background: var(--bg-card, #15151a); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; padding: 12px 12px 11px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
   .r-stat::before { content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: var(--stat-edge, transparent); opacity: 0.7; }
-  .r-stat.ok { --stat-edge: var(--st-ok, #00ff9f); }
+  .r-stat.ok { --stat-edge: var(--signal, #5b8ff9); }
   .r-stat.info { --stat-edge: var(--st-info, #4db8ff); }
   .r-stat.crit { --stat-edge: var(--st-crit, #ff5a5a); }
   .r-stat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .r-stat-lbl { font-size: 10px; color: var(--fg-4, #7a7a82); font-weight: 500; letter-spacing: 0.6px; text-transform: uppercase; }
-  .r-stat-tag { font-size: 9px; color: var(--fg-4, #7a7a82); display: flex; align-items: center; gap: 4px; font-family: var(--font-mono); }
+  .r-stat-lbl { font-size: 10px; color: var(--fg-4, #7a7a82); font-weight: 500; }
+  .r-stat-tag { font-size: 9px; color: var(--fg-4, #7a7a82); display: flex; align-items: center; gap: 4px; font-family: var(--font-sans); }
   .r-stat-tag .d { width: 5px; height: 5px; border-radius: 1.5px; background: var(--fg-4, #7a7a82); }
-  .r-stat-tag.ok { color: var(--st-ok, #00ff9f); }
-  .r-stat-tag.ok .d { background: var(--st-ok, #00ff9f); }
+  .r-stat-tag.ok { color: var(--signal, #5b8ff9); }
+  .r-stat-tag.ok .d { background: var(--signal, #5b8ff9); }
   .r-stat-tag.info { color: var(--st-info, #4db8ff); }
   .r-stat-tag.info .d { background: var(--st-info, #4db8ff); }
-  .r-stat-val { font-size: 22px; font-weight: 500; color: var(--fg, #f0f0f0); line-height: 1; letter-spacing: -0.4px; font-family: var(--font-mono); }
-  .r-stat-val.ok { color: var(--st-ok, #00ff9f); }
+  .r-stat-val { font-size: 22px; font-weight: 500; color: var(--fg, #f0f0f0); line-height: 1; letter-spacing: -0.4px; font-family: var(--font-sans); }
+  .r-stat-val.ok { color: var(--signal, #5b8ff9); }
   .r-stat-val.crit { color: var(--st-crit, #ff5a5a); }
 
   .r-sec { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
-  .r-sec-lbl { font-size: 11px; color: var(--fg-4, #7a7a82); font-weight: 500; letter-spacing: 0.6px; font-family: var(--font-mono); text-transform: uppercase; }
+  .r-sec-lbl { font-size: 11px; color: var(--fg-4, #7a7a82); font-weight: 600; font-family: var(--font-sans); }
   .r-sec-lbl .ac { color: var(--fg-2, #d0d0d4); margin-left: 4px; }
 
-  .sev-bars { background: var(--bg-card, #15151a); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .sev-bars { background: var(--bg-card, #15151a); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
   .sev-row { display: grid; grid-template-columns: 90px 1fr 50px; gap: 12px; align-items: center; font-size: 11px; }
-  .sev-name { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.6px; color: var(--fg-3, #9c9ca4); font-size: 10px; }
+  .sev-name { display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); color: var(--fg-3, #9c9ca4); font-size: 10px; }
   .sev-led { width: 8px; height: 8px; border-radius: 1.5px; }
   .sev-led.crit { background: var(--st-crit, #ff5a5a); }
   .sev-led.high { background: var(--st-warn, #ffc857); }
@@ -136,16 +136,16 @@
   .sev-fill.crit { background: var(--st-crit, #ff5a5a); }
   .sev-fill.high { background: var(--st-warn, #ffc857); }
   .sev-fill.med { background: var(--st-info, #4db8ff); }
-  .sev-count { font-family: var(--font-mono); font-size: 12px; color: var(--fg, #f0f0f0); text-align: right; font-variant-numeric: tabular-nums; }
+  .sev-count { font-family: var(--font-sans); font-size: 12px; color: var(--fg, #f0f0f0); text-align: right; font-variant-numeric: tabular-nums; }
 
   .recent-events { display: flex; flex-direction: column; gap: 4px; }
-  .event-row { background: var(--bg-card, #15151a); border-radius: 7px; padding: 10px 14px; display: grid; grid-template-columns: 8px 80px 80px 1fr auto auto; gap: 10px; align-items: center; font-size: 11px; }
+  .event-row { background: var(--bg-card, #15151a); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; padding: 10px 14px; display: grid; grid-template-columns: 8px 80px 80px 1fr auto auto; gap: 10px; align-items: center; font-size: 11px; }
   .event-led { width: 8px; height: 8px; border-radius: 1.5px; }
   .event-led.crit { background: var(--st-crit, #ff5a5a); }
   .event-led.high { background: var(--st-warn, #ffc857); }
   .event-led.med { background: var(--st-info, #4db8ff); }
   .event-time { font-family: var(--font-mono); font-size: 10px; color: var(--fg-4, #7a7a82); font-variant-numeric: tabular-nums; }
-  .event-cat { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 600; padding: 2px 7px; border-radius: 3px; text-align: center; }
+  .event-cat { font-family: var(--font-sans); font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 3px; text-align: center; }
   .event-cat.auth { background: rgba(255,200,87,0.10); color: var(--st-warn, #ffc857); }
   .event-cat.traversal { background: rgba(255,90,90,0.10); color: var(--st-crit, #ff5a5a); }
   .event-cat.injection { background: rgba(255,90,90,0.10); color: var(--st-crit, #ff5a5a); }

@@ -1083,7 +1083,7 @@
     0%, 100% { opacity: 0.3; transform: scale(0.9); }
     50%      { opacity: 1;   transform: scale(1.1); }
   }
-  .state-text { color: var(--ink-mute); font-family: var(--font-mono); font-size: var(--fs-11); }
+  .state-text { color: var(--ink-mute); font-family: var(--font-sans); font-size: var(--fs-11); }
   .err-title { color: var(--crit); font-weight: 600; font-size: var(--fs-13); }
   .err-body { color: var(--ink-dim); font-family: var(--font-mono); font-size: var(--fs-11); max-width: 420px; word-break: break-word; }
 
@@ -1162,7 +1162,7 @@
     align-items: center;
     gap: 6px;
     padding: 8px 14px;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     transition: background 0.12s, color 0.12s, border-color 0.12s;
     flex-shrink: 0;
   }
@@ -1183,7 +1183,7 @@
   .hero-icon {
     width: 96px;
     height: 96px;
-    border-radius: 22px;
+    border-radius: 6px;
     background: var(--canvas);
     display: flex;
     align-items: center;
@@ -1202,7 +1202,7 @@
     color: var(--ink);
     font-size: 40px;
     font-weight: 700;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .hero-info {
     flex: 1;
@@ -1224,11 +1224,10 @@
     color: var(--ink-mute);
   }
   .badge-official {
-    color: var(--signal);
-    font-family: var(--font-mono);
+    color: var(--info, #5b8ff9);
+    font-family: var(--font-sans);
     font-size: var(--fs-10);
     letter-spacing: 0.5px;
-    text-transform: uppercase;
   }
   .hero-tags {
     display: flex;
@@ -1243,10 +1242,10 @@
     padding: 2px 9px;
     background: var(--canvas);
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: 4px;
     font-size: var(--fs-10);
     color: var(--ink-dim);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     line-height: 1.5;
   }
   .tag-port {
@@ -1257,12 +1256,12 @@
   .tag-status .status-dot {
     width: 6px;
     height: 6px;
-    border-radius: 50%;
+    border-radius: 2px;
     background: var(--ink-faint);
   }
-  .tag-status.ok .status-dot { background: var(--signal); box-shadow: 0 0 4px var(--signal-glow); }
-  .tag-status.warn .status-dot { background: var(--warn); box-shadow: 0 0 4px var(--warn-glow); }
-  .tag-status.crit .status-dot { background: var(--crit); box-shadow: 0 0 4px var(--crit-glow); }
+  .tag-status.ok .status-dot { background: var(--info, #5b8ff9); }
+  .tag-status.warn .status-dot { background: var(--warn); }
+  .tag-status.crit .status-dot { background: var(--crit); }
 
   .hero-action {
     flex-shrink: 0;
@@ -1277,7 +1276,7 @@
     color: var(--canvas);
     border: 1px solid var(--info);
     padding: 9px 16px;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     font-size: var(--fs-12);
     font-weight: 600;
     font-family: inherit;
@@ -1286,7 +1285,7 @@
     align-items: center;
     gap: 6px;
     transition: filter 0.12s, transform 0.08s;
-    box-shadow: 0 0 12px var(--info-glow, rgba(77, 184, 255, 0.3));
+    box-shadow: none;
   }
   .btn-update:hover {
     filter: brightness(1.1);
@@ -1306,7 +1305,7 @@
     padding: 10px 14px;
     background: var(--canvas);
     border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     color: var(--ink-dim);
     font-size: var(--fs-12);
   }
@@ -1336,8 +1335,7 @@
     font-weight: 600;
     color: var(--ink);
     margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.7px;
+    letter-spacing: 0;
     color: var(--ink-mute);
   }
 
@@ -1345,7 +1343,7 @@
   .install-section {
     background: var(--canvas);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: 5px;
     padding: var(--sp-4);
   }
 
@@ -1389,7 +1387,7 @@
     flex: 0 0 auto;
     width: 340px;
     aspect-ratio: 16 / 10;
-    border-radius: var(--radius-md);
+    border-radius: 5px;
     overflow: hidden;
     background: var(--canvas);
     border: 1px solid var(--line);
@@ -1424,7 +1422,7 @@
     max-width: 94%;
     max-height: 94%;
     object-fit: contain;
-    border-radius: var(--radius-md);
+    border-radius: 5px;
     box-shadow: 0 16px 56px rgba(0, 0, 0, 0.6);
   }
   .lightbox-close {
@@ -1453,7 +1451,7 @@
     color: #fff;
     background: rgba(0, 0, 0, 0.32);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 5px;
     cursor: pointer;
     opacity: 0.85;
     transition: opacity 0.12s, background 0.12s;
@@ -1490,7 +1488,7 @@
     gap: var(--sp-3);
     background: var(--canvas);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: 5px;
     padding: 12px 14px;
     min-height: 48px;
   }
@@ -1533,7 +1531,7 @@
     flex-direction: column;
     background: var(--canvas);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: 5px;
     overflow: hidden;
   }
   .cred-row {
@@ -1551,8 +1549,7 @@
     color: var(--ink-mute);
     min-width: 100px;
     font-size: var(--fs-10);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-weight: 600;
   }
   .cred-v {
     color: var(--ink);
@@ -1598,10 +1595,10 @@
   }
   .copy-feedback {
     font-size: var(--fs-11);
-    color: var(--signal);
+    color: var(--info, #5b8ff9);
     padding: 4px 0;
     text-align: right;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
 
   /* ═══ Uninstall section · sutil al final ═══ */
@@ -1620,7 +1617,7 @@
   /* ═══ Botones ═══ */
   .btn {
     padding: 10px 22px;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     border: 1px solid transparent;
     font-size: var(--fs-12);
     font-weight: 600;
@@ -1685,7 +1682,7 @@
     padding: 14px;
     background: var(--canvas);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: 5px;
     cursor: pointer;
     transition: background 0.12s, border-color 0.12s;
   }
@@ -1725,14 +1722,12 @@
     font-size: var(--fs-10);
     padding: 2px 8px;
     border-radius: 4px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
   }
   .mode-badge-ok {
-    background: var(--signal-dim, rgba(0, 255, 159, 0.12));
-    color: var(--signal);
+    background: rgba(91, 143, 249, 0.12);
+    color: var(--info, #5b8ff9);
   }
   .mode-desc {
     color: var(--ink-dim);
@@ -1758,7 +1753,7 @@
     padding: 14px 16px;
     background: var(--canvas);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: 5px;
   }
   .uninstall-step-label {
     color: var(--ink);
@@ -1768,7 +1763,7 @@
   .uninstall-led {
     width: 10px;
     height: 10px;
-    border-radius: 50%;
+    border-radius: 2px;
     flex-shrink: 0;
     background: var(--ink-faint);
     transition: background 0.2s, box-shadow 0.2s;
@@ -1779,8 +1774,8 @@
     animation: led-pulse 1.2s ease-in-out infinite;
   }
   .uninstall-led.led-ok {
-    background: var(--signal);
-    box-shadow: 0 0 8px var(--signal-glow, rgba(0, 255, 159, 0.5));
+    background: var(--info, #5b8ff9);
+    box-shadow: none;
   }
   .uninstall-led.led-crit {
     background: var(--crit);
@@ -1841,7 +1836,7 @@
     padding: 12px 14px;
     background: var(--canvas);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: 5px;
   }
   .update-confirm-k {
     color: var(--ink-mute);

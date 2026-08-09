@@ -82,7 +82,7 @@
     {:else}
       <span class="foot-badge available">Disponible</span>
     {/if}
-    <span class="foot-action">{app.installed ? 'Abrir →' : 'Ver →'}</span>
+    <span class="foot-action">{app.installed ? 'Abrir' : 'Ver detalles'}</span>
   </div>
 </button>
 
@@ -90,13 +90,13 @@
   .app-card {
     background: var(--panel-deep);
     border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    border-radius: 5px;
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 13px;
     cursor: pointer;
-    transition: border-color 0.15s, transform 0.15s, background 0.15s;
+    transition: border-color 0.15s, background 0.15s;
     font-family: inherit;
     color: var(--ink);
     width: 100%;
@@ -106,7 +106,6 @@
   .app-card:hover {
     border-color: var(--line-bright);
     background: var(--panel);
-    transform: translateY(-2px);
   }
   .app-card:focus-visible {
     outline: 1px solid var(--info);
@@ -122,7 +121,7 @@
   .app-icon-wrap {
     width: 52px;
     height: 52px;
-    border-radius: 13px;
+    border-radius: 5px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -148,7 +147,7 @@
     color: var(--ink-dim);
     font-size: 22px;
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .card-info {
     flex: 1;
@@ -166,7 +165,7 @@
   .app-category {
     font-size: var(--fs-11, 11px);
     color: var(--ink-mute);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     line-height: 1.3;
     margin-top: 2px;
   }
@@ -194,16 +193,15 @@
     align-items: center;
     gap: 5px;
     font-size: 10px;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-family: var(--font-sans);
+    font-weight: 600;
     padding: 3px 8px;
     border-radius: 5px;
   }
   .foot-badge svg { width: 11px; height: 11px; }
   .foot-badge.installed {
-    background: var(--signal-soft, rgba(0, 255, 159, 0.12));
-    color: var(--signal);
+    background: rgba(91, 143, 249, 0.12);
+    color: var(--info, #5b8ff9);
   }
   .foot-badge.available {
     background: rgba(255, 255, 255, 0.05);
@@ -211,7 +209,7 @@
   }
   .foot-action {
     font-size: 11px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     color: var(--info);
   }
 
@@ -230,9 +228,8 @@
     border-radius: 4px;
     background: var(--info);
     color: var(--canvas);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     z-index: 3;
-    box-shadow: 0 0 8px var(--info-glow, rgba(77, 184, 255, 0.4));
-    text-transform: uppercase;
+    box-shadow: none;
   }
 </style>

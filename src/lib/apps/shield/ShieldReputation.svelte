@@ -17,7 +17,7 @@
     if (s == null) return 'var(--fg-4, #7a7a82)';
     if (s < 30) return 'var(--st-crit, #f87171)';
     if (s < 70) return 'var(--st-warn, #ffc857)';
-    return 'var(--nim-green, #00ff9f)';
+    return 'var(--signal, #5b8ff9)';
   }
 </script>
 
@@ -64,9 +64,9 @@
 </div>
 
 <style>
-  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-mono); }
-  .block-table { background: var(--bg-card, #15151a); border-radius: 8px; overflow: hidden; }
-  .block-head { display: grid; grid-template-columns: 120px 1fr 80px 90px 90px 100px; gap: 12px; padding: 9px 14px; background: var(--bg-inner, #101015); border-bottom: 1px solid var(--bd-2, #20202a); font-family: var(--font-mono); font-size: 9px; color: var(--fg-5, #5a5a62); letter-spacing: 0.8px; text-transform: uppercase; font-weight: 600; }
+  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-sans); }
+  .block-table { background: var(--bg-card, #15151a); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; overflow: hidden; }
+  .block-head { display: grid; grid-template-columns: 120px 1fr 80px 90px 90px 100px; gap: 12px; padding: 9px 14px; background: var(--bg-inner, #101015); border-bottom: 1px solid var(--bd-2, #20202a); font-family: var(--font-sans); font-size: 10px; color: var(--fg-5, #5a5a62); font-weight: 600; }
   .block-row { display: grid; grid-template-columns: 120px 1fr 80px 90px 90px 100px; gap: 12px; padding: 11px 14px; align-items: center; font-size: 11px; }
   .block-row + .block-row { border-top: 1px solid #1a1a20; }
   .block-ip { font-family: var(--font-mono); font-size: 12px; color: var(--fg, #f0f0f0); font-variant-numeric: tabular-nums; font-weight: 500; }
@@ -75,7 +75,7 @@
 
   /* Reputación: misma rejilla que Bloqueos, columnas propias */
   .rep-intro { margin: 0 0 14px; }
-  .rep-intro b { color: var(--nim-green, #00ff9f); }
+  .rep-intro b { color: var(--signal, #5b8ff9); }
   .rep-head, .rep-row { grid-template-columns: 120px 100px 96px 64px 56px 1fr 64px; }
   .rep-num { font-family: var(--font-mono); font-size: 12px; color: var(--fg-3, #b0b0b8); font-variant-numeric: tabular-nums; }
   .rep-streak { color: var(--st-warn, #ffc857); font-weight: 600; }
@@ -85,8 +85,8 @@
   .score-num { font-family: var(--font-mono); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; }
   .score-bar { height: 3px; border-radius: 2px; background: var(--bd-2, #20202a); overflow: hidden; }
   .score-fill { display: block; height: 100%; border-radius: 2px; transition: width 0.3s ease; }
-  .lvl-pill { display: inline-block; font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--bd-3, #2a2a32); color: var(--fg-4, #7a7a82); letter-spacing: 0.3px; }
-  .lvl-trusted { border-color: rgba(0,255,159,0.4); color: var(--nim-green, #00ff9f); background: rgba(0,255,159,0.06); }
+  .lvl-pill { display: inline-block; font-family: var(--font-sans); font-size: 10px; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--bd-3, #2a2a32); color: var(--fg-4, #7a7a82); }
+  .lvl-trusted { border-color: rgba(91,143,249,0.4); color: var(--signal, #5b8ff9); background: rgba(91,143,249,0.08); }
   .lvl-known { border-color: rgba(122,158,177,0.5); color: #9bb8c7; background: rgba(122,158,177,0.08); }
   .lvl-unknown { /* neutro, hereda */ }
   .lvl-distrust { border-color: rgba(248,113,113,0.5); color: var(--st-crit, #f87171); background: rgba(248,113,113,0.08); }

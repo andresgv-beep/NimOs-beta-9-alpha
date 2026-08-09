@@ -70,24 +70,24 @@
 </div>
 
 <style>
-  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-mono); }
+  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-sans); }
 
   .filters { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .filter-group { display: flex; gap: 4px; align-items: center; }
-  .filter-lbl { font-family: var(--font-mono); font-size: 9px; color: var(--fg-5, #5a5a62); text-transform: uppercase; letter-spacing: 0.8px; margin-right: 4px; }
-  .pill { padding: 4px 9px; background: transparent; border: 1px solid var(--bd-2, #20202a); border-radius: 4px; color: var(--fg-3, #9c9ca4); font-size: 10px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.4px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .filter-lbl { font-family: var(--font-sans); font-size: 10px; color: var(--fg-5, #5a5a62); margin-right: 4px; }
+  .pill { padding: 4px 9px; background: transparent; border: 1px solid var(--bd-2, #20202a); border-radius: 4px; color: var(--fg-3, #9c9ca4); font-size: 10px; font-family: var(--font-sans); cursor: pointer; display: flex; align-items: center; gap: 4px; }
   .pill:hover { color: var(--fg, #f0f0f0); border-color: var(--bd-3, #2a2a32); }
-  .pill.active { color: var(--nim-green, #00ff9f); border-color: rgba(0,255,159,0.35); background: rgba(0,255,159,0.06); }
+  .pill.active { color: var(--signal, #5b8ff9); border-color: rgba(91,143,249,0.4); background: rgba(91,143,249,0.09); }
   .pill.crit.active { color: var(--st-crit, #ff5a5a); border-color: rgba(255,90,90,0.35); background: rgba(255,90,90,0.06); }
   .pill.warn.active { color: var(--st-warn, #ffc857); border-color: rgba(255,200,87,0.35); background: rgba(255,200,87,0.06); }
 
   .search-box { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--bd-2, #20202a); border-radius: 5px; background: var(--bg-inner, #101015); margin-left: auto; width: 200px; }
   .search-box svg { width: 11px; height: 11px; color: var(--fg-4, #7a7a82); flex-shrink: 0; }
-  .search-box input { flex: 1; min-width: 0; background: transparent; border: none; color: var(--fg, #f0f0f0); outline: none; font-family: var(--font-mono); font-size: 11px; }
+  .search-box input { flex: 1; min-width: 0; background: transparent; border: none; color: var(--fg, #f0f0f0); outline: none; font-family: var(--font-sans); font-size: 11px; }
   .search-box input::placeholder { color: var(--fg-5, #5a5a62); }
 
-  .evt-table { background: var(--bg-card, #15151a); border-radius: 8px; overflow: hidden; }
-  .evt-head { display: grid; grid-template-columns: 14px 95px 90px 130px 1fr 60px 70px; gap: 12px; padding: 9px 14px; background: var(--bg-inner, #101015); border-bottom: 1px solid var(--bd-2, #20202a); font-family: var(--font-mono); font-size: 9px; color: var(--fg-5, #5a5a62); letter-spacing: 0.8px; text-transform: uppercase; font-weight: 600; }
+  .evt-table { background: var(--bg-card, #15151a); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; overflow: hidden; }
+  .evt-head { display: grid; grid-template-columns: 14px 95px 90px 130px 1fr 60px 70px; gap: 12px; padding: 9px 14px; background: var(--bg-inner, #101015); border-bottom: 1px solid var(--bd-2, #20202a); font-family: var(--font-sans); font-size: 10px; color: var(--fg-5, #5a5a62); font-weight: 600; }
   .evt-row { display: grid; grid-template-columns: 14px 95px 90px 130px 1fr 60px 70px; gap: 12px; padding: 8px 14px; align-items: center; font-size: 11px; transition: background 0.1s; }
   .evt-row + .evt-row { border-top: 1px solid #1a1a20; }
   .evt-row:hover { background: rgba(255,255,255,0.015); }
@@ -98,7 +98,7 @@
   .event-led.high { background: var(--st-warn, #ffc857); }
   .event-led.med { background: var(--st-info, #4db8ff); }
   .event-time { font-family: var(--font-mono); font-size: 10px; color: var(--fg-4, #7a7a82); font-variant-numeric: tabular-nums; }
-  .event-cat { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 600; padding: 2px 7px; border-radius: 3px; text-align: center; }
+  .event-cat { font-family: var(--font-sans); font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 3px; text-align: center; }
   .event-cat.auth { background: rgba(255,200,87,0.10); color: var(--st-warn, #ffc857); }
   .event-cat.traversal { background: rgba(255,90,90,0.10); color: var(--st-crit, #ff5a5a); }
   .event-cat.injection { background: rgba(255,90,90,0.10); color: var(--st-crit, #ff5a5a); }

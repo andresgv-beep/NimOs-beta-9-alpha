@@ -319,9 +319,9 @@
   }
   .state-text {
     color: var(--ink-mute);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: var(--fs-11);
-    letter-spacing: 0.5px;
+    letter-spacing: 0;
   }
   .err-title {
     color: var(--crit);
@@ -330,7 +330,7 @@
   }
   .err-body {
     color: var(--ink-dim);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: var(--fs-11);
     max-width: 420px;
     word-break: break-word;
@@ -339,7 +339,7 @@
   .err-btn {
     margin-top: var(--sp-2);
     padding: 8px 16px;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     border: 1px solid var(--line);
     background: transparent;
     color: var(--ink-dim);
@@ -451,7 +451,7 @@
     color: var(--ink-mute);
     font-size: var(--fs-12);
     border: 1px dashed var(--line);
-    border-radius: var(--radius-md);
+    border-radius: 5px;
     background: var(--panel-deep);
     line-height: 1.7;
   }

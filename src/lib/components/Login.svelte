@@ -219,13 +219,8 @@
     overflow: hidden;
     font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
     background:
-      /* Glow verde en esquinas */
-      radial-gradient(ellipse 800px 600px at 20% 30%, rgba(0, 80, 50, 0.12) 0%, transparent 65%),
-      radial-gradient(ellipse 600px 400px at 80% 70%, rgba(0, 100, 70, 0.06) 0%, transparent 60%),
-      /* Grid muy sutil */
-      linear-gradient(rgba(0, 255, 159, 0.012) 1px, transparent 1px) 0 0 / 24px 24px,
-      linear-gradient(90deg, rgba(0, 255, 159, 0.012) 1px, transparent 1px) 0 0 / 24px 24px,
-      #050507;
+      radial-gradient(ellipse 760px 520px at 50% 20%, rgba(91, 143, 249, 0.06) 0%, transparent 68%),
+      #090c12;
   }
 
   .login-wrap {
@@ -343,8 +338,8 @@
     color: var(--ink-trace);
   }
   .field input:focus {
-    border-color: rgba(0, 255, 159, 0.35);
-    background: rgba(0, 255, 159, 0.03);
+    border-color: rgba(91, 143, 249, 0.65);
+    background: rgba(91, 143, 249, 0.04);
   }
   .field input:disabled {
     opacity: 0.6;
@@ -495,8 +490,8 @@
     width: 6px;
     height: 6px;
     border-radius: 1.5px;
-    background: var(--signal);
-    box-shadow: 0 0 4px rgba(0, 255, 159, 0.5);
+    background: var(--info, #5b8ff9);
+    box-shadow: none;
     animation: pulse 2.5s ease-in-out infinite;
   }
   @keyframes pulse {

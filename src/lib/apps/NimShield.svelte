@@ -120,16 +120,16 @@
 
 <style>
   .ns-sub { color: var(--fg-4, #7a7a82); font-size: 12px; font-weight: 400; }
-  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-mono); }
+  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-sans); }
 
   /* ═══ ENGINE TOGGLE (sidebar foot) ═══ */
-  .engine-toggle { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(0, 255, 159, 0.05); border: 1px solid rgba(0, 255, 159, 0.18); border-radius: 6px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+  .engine-toggle { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(91,143,249,0.07); border: 1px solid rgba(91,143,249,0.22); border-radius: 4px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
   .engine-toggle.off { background: rgba(255, 90, 90, 0.04); border-color: rgba(255, 90, 90, 0.18); }
   .engine-lbl { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--fg-2, #d0d0d4); font-weight: 500; }
-  .engine-led { width: 7px; height: 7px; border-radius: 1.5px; background: var(--st-ok, #00ff9f); box-shadow: 0 0 5px rgba(0, 255, 159, 0.4); animation: pulse 2.5s ease-in-out infinite; }
+  .engine-led { width: 7px; height: 7px; border-radius: 1.5px; background: var(--signal, #5b8ff9); box-shadow: none; animation: pulse 2.5s ease-in-out infinite; }
   .engine-led.off { background: var(--st-crit, #ff5a5a); box-shadow: 0 0 5px rgba(255, 90, 90, 0.4); animation: none; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
-  .toggle-switch { width: 28px; height: 16px; background: var(--nim-green, #00ff9f); border-radius: 3px; position: relative; transition: background 0.15s; flex-shrink: 0; }
+  .toggle-switch { width: 28px; height: 16px; background: var(--signal, #5b8ff9); border-radius: 3px; position: relative; transition: background 0.15s; flex-shrink: 0; }
   .toggle-switch::after { content: ''; position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; background: var(--bg-window, #16161a); border-radius: 2px; transition: right 0.15s, left 0.15s; }
   .toggle-switch.off { background: var(--bd-3, #2a2a32); }
   .toggle-switch.off::after { right: 14px; }

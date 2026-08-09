@@ -307,8 +307,8 @@
     {
       label: 'Monitor',
       items: [
-        { id: 'tasks',  label: 'Task Manager', keyHint: 'T', badge: services.length, badgeVariant: 'default' },
-        { id: 'system', label: 'Sistema',      keyHint: 'S' },
+        { id: 'tasks',  label: 'Task Manager', badge: services.length, badgeVariant: 'default' },
+        { id: 'system', label: 'Sistema' },
       ],
     },
   ]}
@@ -652,7 +652,7 @@
 
   .nh-table-wrap {
     padding: 14px 18px 18px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   /* Altura de fila uniforme · con o sin icono miden lo mismo */
   .nh-table-wrap :global(.dt-row) {
@@ -769,7 +769,7 @@
     display: flex;
     flex-direction: column;
     gap: 22px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
 
   .detail-head {

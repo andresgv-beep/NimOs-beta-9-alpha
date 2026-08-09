@@ -161,7 +161,9 @@
             <span class="cpu-avatar">{(u.username || '?')[0].toUpperCase()}</span>
             <span class="cpu-name">{u.username}</span>
             <span>
-              <span class="cpu-badge" class:admin={u.role === 'admin'}>{u.role || 'user'}</span>
+              <span class="cpu-badge" class:admin={u.role === 'admin'}>
+                {u.role === 'admin' ? 'Administrador' : 'Usuario'}
+              </span>
             </span>
             <div class="cpu-row-actions">
               <button class="cpu-icon" on:click={() => startEditUser(u)} title="Editar">
@@ -202,35 +204,34 @@
   .cpu-avatar {
     width: 24px;
     height: 24px;
-    border-radius: 6px;
-    background: rgba(0, 255, 159, 0.1);
-    color: var(--nim-green, #00ff9f);
+    border-radius: 4px;
+    background: rgba(91, 143, 249, 0.12);
+    color: var(--signal, #5b8ff9);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 11px;
     font-weight: 600;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .cpu-name {
     color: var(--fg, #f0f0f0);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .cpu-badge {
-    font-size: 9px;
-    font-family: var(--font-mono);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 10px;
+    font-family: var(--font-sans);
+    font-weight: 600;
     padding: 2px 7px;
     border-radius: 3px;
     border: 1px solid var(--bd-2, #20202a);
     color: var(--fg-4, #7a7a82);
   }
   .cpu-badge.admin {
-    color: var(--nim-green, #00ff9f);
-    border-color: rgba(0, 255, 159, 0.3);
-    background: rgba(0, 255, 159, 0.06);
+    color: var(--signal, #5b8ff9);
+    border-color: rgba(91, 143, 249, 0.35);
+    background: rgba(91, 143, 249, 0.08);
   }
   .cpu-row-actions { display: flex; gap: 4px; justify-content: flex-end; }
   .cpu-icon {
@@ -253,7 +254,8 @@
   /* Formulario */
   .cpu-form {
     background: var(--bg-card, #15151a);
-    border-radius: 8px;
+    border: 1px solid var(--bd-2, #20202a);
+    border-radius: 5px;
     padding: 18px;
     display: flex;
     flex-direction: column;
@@ -262,28 +264,27 @@
   .cpu-form-title {
     font-size: 13px;
     color: var(--fg, #f0f0f0);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-weight: 600;
   }
   .cpu-field { display: flex; flex-direction: column; gap: 6px; }
   .cpu-label {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--fg-4, #7a7a82);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
+    font-weight: 600;
   }
   .cpu-input {
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 9px 12px;
     color: var(--fg, #f0f0f0);
     font-size: 13px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     outline: none;
   }
-  .cpu-input:focus { border-color: rgba(0, 255, 159, 0.35); }
+  .cpu-input:focus { border-color: rgba(91, 143, 249, 0.55); }
   .cpu-input:disabled { opacity: 0.5; }
 
   .cpu-roles { display: flex; gap: 6px; }
@@ -292,22 +293,22 @@
     padding: 8px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--fg-3, #9c9ca4);
     font-size: 11px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
   }
   .cpu-role.active {
-    color: var(--nim-green, #00ff9f);
-    border-color: rgba(0, 255, 159, 0.35);
-    background: rgba(0, 255, 159, 0.06);
+    color: var(--signal, #5b8ff9);
+    border-color: rgba(91, 143, 249, 0.4);
+    background: rgba(91, 143, 249, 0.09);
   }
 
   .cpu-msg {
     font-size: 11px;
     color: var(--fg-3, #9c9ca4);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
   .cpu-msg.error { color: var(--st-crit, #ff5a5a); }
 
@@ -316,18 +317,18 @@
     padding: 9px 16px;
     background: var(--bg-inner, #101015);
     border: 1px solid var(--bd-2, #20202a);
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--fg-3, #9c9ca4);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     cursor: pointer;
     transition: all 0.12s;
   }
   .cpu-btn:hover:not(:disabled) { color: var(--fg, #f0f0f0); border-color: var(--bd-3, #2a2a32); }
   .cpu-btn.primary {
-    background: var(--nim-green, #00ff9f);
-    border-color: var(--nim-green, #00ff9f);
-    color: var(--bg-window, #16161a);
+    background: var(--signal, #5b8ff9);
+    border-color: var(--signal, #5b8ff9);
+    color: white;
     font-weight: 600;
   }
   .cpu-btn.primary:hover:not(:disabled) { filter: brightness(1.08); }
@@ -339,6 +340,6 @@
     text-align: center;
     color: var(--fg-5, #5a5a62);
     font-size: 12px;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
   }
 </style>

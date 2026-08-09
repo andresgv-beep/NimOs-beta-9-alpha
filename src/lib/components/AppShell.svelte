@@ -173,11 +173,11 @@
           <div class="sb-footer">
             <div class="sb-footer-row">
               <LED size={7} />
-              <span class="k">daemon</span>
-              <span class="v">running</span>
+              <span class="k">Sistema</span>
+              <span class="v">Conectado</span>
             </div>
             <div class="sb-footer-row">
-              <span class="k">user</span>
+              <span class="k">Usuario</span>
               <span class="v">{userName}</span>
             </div>
           </div>
@@ -427,14 +427,15 @@
     gap: 8px;
   }
   .sb-footer .k {
-    color: var(--ink-trace, #44444a);
+    color: var(--ink-mute, #9a9aa3);
     letter-spacing: 0;
-    font-size: 9px;
+    font-size: 11px;
   }
   .sb-footer .v {
     color: var(--ink-dim, #c8c8cf);
     margin-left: auto;
     font-weight: 500;
+    font-size: 11px;
   }
 
   /* ═══════════════════════════════════════════════════════════

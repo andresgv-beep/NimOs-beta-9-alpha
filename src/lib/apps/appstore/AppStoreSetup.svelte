@@ -31,8 +31,8 @@
    *   - installError: string · mensaje si install failed
    */
 
-  import { onMount, getContext } from 'svelte';
-  import { openWindow, closeWindow } from '$lib/stores/windows.js';
+  import { onMount } from 'svelte';
+  import { openWindow } from '$lib/stores/windows.js';
   import { getCapabilities, installDockerEngine } from './api.js';
 
   /** @typedef {import('./types').AppStoreCapabilities} AppStoreCapabilities */
@@ -42,17 +42,6 @@
   export let capabilities = null;
   /** @type {() => void} */
   export let onReady = () => {};
-
-  // WindowFrame expone setContext('windowControls') con close/minimize/maximize
-  // que delegan al store de windows. Lo capturamos para hacer funcional el
-  // botón de cerrar del titlebar custom de este setup.
-  const wc = getContext('windowControls');
-
-  function handleClose() {
-    if (wc && typeof wc.close === 'function') {
-      wc.close();
-    }
-  }
 
   // ── Estado interno ─────────────────────────────────────────────────
   let viewMode = 'no-pool'; // 'no-pool' | 'no-docker' | 'installing'
@@ -214,17 +203,6 @@
 </script>
 
 <div class="setup-window">
-  <!-- Titlebar de la ventana · solo botón cerrar funcional · los otros eran decorativos -->
-  <div class="setup-titlebar">
-    <button
-      type="button"
-      class="ctl ctl-close"
-      title="Cerrar"
-      aria-label="Cerrar"
-      on:click={handleClose}
-    ></button>
-  </div>
-
   <div class="setup-content">
     {#if viewMode === 'no-pool'}
       <!-- ═══ Empty state · sin pool ═══ -->
@@ -389,33 +367,6 @@
     font-family: var(--font-sans);
   }
 
-  /* Titlebar absoluto · réplica fiel del patrón de AppShell */
-  .setup-titlebar {
-    position: absolute;
-    top: var(--sp-3);
-    right: var(--sp-4);
-    display: flex;
-    gap: 6px;
-    z-index: 10;
-  }
-  .ctl {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    background: var(--crit);
-    cursor: pointer;
-    border: none;
-    padding: 0;
-    transition: filter 0.12s, transform 0.08s;
-  }
-  .ctl:hover {
-    filter: brightness(1.15);
-  }
-  .ctl:active {
-    transform: scale(0.92);
-  }
-  .ctl-close { background: var(--crit); }
-
   /* Contenido centrado · padding generoso */
   .setup-content {
     flex: 1;
@@ -442,7 +393,7 @@
   .card-icon {
     width: 88px;
     height: 88px;
-    border-radius: 20px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;

@@ -95,7 +95,7 @@
     gap: var(--sp-3);
     background: var(--panel-elev);
     color: var(--ink-mute);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: var(--fs-11);
   }
   .loading-dot {
@@ -109,7 +109,7 @@
     0%, 100% { opacity: 0.3; transform: scale(0.9); }
     50%      { opacity: 1;   transform: scale(1.1); }
   }
-  .loading-text { letter-spacing: 0.5px; }
+  .loading-text { letter-spacing: 0; }
 
   /* ═══ Error fatal ═══ */
   .appstore-error {
@@ -132,7 +132,7 @@
   .err-body {
     font-size: var(--fs-11);
     color: var(--ink-dim);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     max-width: 420px;
     line-height: 1.55;
     word-break: break-word;

@@ -45,9 +45,9 @@
 </div>
 
 <style>
-  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-mono); }
-  .block-table { background: var(--bg-card, #15151a); border-radius: 8px; overflow: hidden; }
-  .block-head { display: grid; grid-template-columns: 120px 1fr 80px 90px 90px 100px; gap: 12px; padding: 9px 14px; background: var(--bg-inner, #101015); border-bottom: 1px solid var(--bd-2, #20202a); font-family: var(--font-mono); font-size: 9px; color: var(--fg-5, #5a5a62); letter-spacing: 0.8px; text-transform: uppercase; font-weight: 600; }
+  .ns-msg { padding: 24px; text-align: center; color: var(--fg-5, #5a5a62); font-size: 12px; font-family: var(--font-sans); }
+  .block-table { background: var(--bg-card, #15151a); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; overflow: hidden; }
+  .block-head { display: grid; grid-template-columns: 120px 1fr 80px 90px 90px 100px; gap: 12px; padding: 9px 14px; background: var(--bg-inner, #101015); border-bottom: 1px solid var(--bd-2, #20202a); font-family: var(--font-sans); font-size: 10px; color: var(--fg-5, #5a5a62); font-weight: 600; }
   .block-row { display: grid; grid-template-columns: 120px 1fr 80px 90px 90px 100px; gap: 12px; padding: 11px 14px; align-items: center; font-size: 11px; }
   .block-row + .block-row { border-top: 1px solid #1a1a20; }
   .block-ip { font-family: var(--font-mono); font-size: 12px; color: var(--fg, #f0f0f0); font-variant-numeric: tabular-nums; font-weight: 500; }
@@ -59,7 +59,7 @@
   .block-actions { display: flex; gap: 4px; }
   .icon-btn { width: 26px; height: 26px; background: transparent; border: 1px solid var(--bd-2, #20202a); border-radius: 4px; color: var(--fg-3, #9c9ca4); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
   .icon-btn:hover:not(:disabled) { color: var(--fg, #f0f0f0); border-color: var(--bd-3, #2a2a32); }
-  .icon-btn.ok:hover:not(:disabled) { color: var(--st-ok, #00ff9f); border-color: rgba(0,255,159,0.3); }
+  .icon-btn.ok:hover:not(:disabled) { color: var(--signal, #5b8ff9); border-color: rgba(91,143,249,0.35); }
   .icon-btn:disabled { opacity: 0.4; cursor: default; }
   .icon-btn svg { width: 11px; height: 11px; pointer-events: none; }
 </style>
