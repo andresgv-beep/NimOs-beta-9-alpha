@@ -1,7 +1,7 @@
 {
 	"name": "nimos-beta-9",
 	"private": true,
-	"version": "0.9.4-alpha",
+	"version": "0.9.5-alpha",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",

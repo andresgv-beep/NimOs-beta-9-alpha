@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -486,25 +485,51 @@ func handleUpdateApply(w http.ResponseWriter) {
 	}
 
 	os.Remove("/var/log/nimos/update-result.json")
-
-	cmd := exec.Command("setsid", "bash", "-c",
-		`bash "$1"; status=$?; rm -f -- "$1"; exit "$status"`,
-		"nimos-update-runner", runPath)
-	cmd.Dir = "/opt/nimos"
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+	lockPath := "/run/nimos-update.lock"
+	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		os.Remove(runPath)
+		if os.IsExist(err) {
+			jsonError(w, http.StatusConflict, "Ya hay una actualización en curso")
+			return
+		}
+		jsonError(w, 500, "Failed to lock update process")
+		return
 	}
+	lockFile.Close()
+
+	// setsid no separa un proceso del cgroup de systemd. El updater debe vivir en
+	// una unidad transitoria propia; de lo contrario, al parar nimos-daemon,
+	// systemd mata también la actualización y deja el equipo a medias.
+	unitName := fmt.Sprintf("nimos-update-%d", time.Now().UnixNano())
+	cmd := exec.Command("systemd-run",
+		"--unit="+unitName,
+		"--collect",
+		"--no-block",
+		"--working-directory=/opt/nimos",
+		"/bin/bash", "-c",
+		`bash "$1"; status=$?; rm -f -- "$1" "$2"; exit "$status"`,
+		"nimos-update-runner", runPath, lockPath)
 	logFile, err := os.OpenFile("/var/log/nimos/update.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err == nil {
 		cmd.Stdout = logFile
 		cmd.Stderr = logFile
 	}
-	if err := cmd.Start(); err != nil {
+	// --no-block hace que systemd-run vuelva en cuanto la unidad queda creada;
+	// esperamos ese resultado breve para no afirmar que arrancó si fue rechazada.
+	if err := cmd.Run(); err != nil {
+		if logFile != nil {
+			logFile.Close()
+		}
 		os.Remove(runPath)
+		os.Remove(lockPath)
 		jsonError(w, 500, fmt.Sprintf("Failed to start update: %v", err))
 		return
 	}
-	jsonOk(w, map[string]interface{}{"ok": true, "message": "Update started."})
+	if logFile != nil {
+		logFile.Close()
+	}
+	jsonOk(w, map[string]interface{}{"ok": true, "message": "Update started.", "unit": unitName})
 }
 
 func handleUpdateStatus(w http.ResponseWriter) {

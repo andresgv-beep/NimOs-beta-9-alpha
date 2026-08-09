@@ -34,6 +34,29 @@
     return data;
   }
 
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  async function waitForUpdate() {
+    // El daemon puede dejar de responder unos segundos mientras se reemplaza.
+    // Es un estado esperado: seguimos consultando hasta obtener el resultado.
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+      await wait(2000);
+      let r;
+      try {
+        r = await fetch('/api/system/update/status', { headers: hdrs() });
+      } catch {
+        continue;
+      }
+      const status = await readUpdateResponse(r);
+      if (!status.done) continue;
+      if (status.type === 'error') {
+        throw new Error(status.error || 'La actualización no pudo completarse');
+      }
+      return status;
+    }
+    throw new Error('La actualización sigue ejecutándose. Revisa el estado en unos minutos.');
+  }
+
   async function loadInfo() {
     loading = true;
     checkError = '';
@@ -71,12 +94,20 @@
     if (!confirm('¿Aplicar la actualización? El sistema puede reiniciarse.')) return;
     applying = true;
     msg = '';
+    msgError = false;
     try {
       const r = await fetch('/api/system/update/apply', { method: 'POST', headers: hdrs() });
-      if (r.ok) { msg = 'Actualización en curso…'; msgError = false; }
-      else { msg = 'Error al actualizar'; msgError = true; }
-    } catch { msg = 'Error de red'; msgError = true; }
-    applying = false;
+      await readUpdateResponse(r);
+      msg = 'Actualización en curso… No cierres esta ventana.';
+      const result = await waitForUpdate();
+      msg = `Actualización completada: ${result.prev || current} → ${result.new || latest}`;
+      await loadInfo();
+    } catch (error) {
+      msg = error?.message || 'No se pudo completar la actualización';
+      msgError = true;
+    } finally {
+      applying = false;
+    }
   }
 
   onMount(loadInfo);
