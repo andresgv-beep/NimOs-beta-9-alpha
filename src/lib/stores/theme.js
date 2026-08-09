@@ -22,7 +22,8 @@ import { isMobileDevice } from './viewport.js';
  */
 
 const ACCENT_COLORS = {
-  green:    '#00ff9f', // default · verde fósforo NimOS
+  blue:     '#5b8ff9',
+  green:    '#3fb984', // compatibilidad con preferencias anteriores
   amber:    '#ffb800',
   cyan:     '#4db8ff',
   magenta:  '#e873ff',
@@ -37,8 +38,8 @@ const DEFAULTS = {
   theme: 'dark', // 'dark' | 'cream'
 
   // ─── Accent color ───
-  accentColor: 'green',
-  customAccentColor: '#00ff9f',
+  accentColor: 'blue',
+  customAccentColor: '#5b8ff9',
 
   // ─── Taskbar ───
   taskbarSize:     'medium',    // 'small' (44px) | 'medium' (52px) | 'large' (60px)
@@ -180,7 +181,7 @@ function applyToDOM(p) {
   root.setAttribute('data-theme', theme);
 
   // ─── Accent color ───
-  const accentHex = ACCENT_COLORS[p.accentColor] || p.customAccentColor || ACCENT_COLORS.green;
+  const accentHex = ACCENT_COLORS[p.accentColor] || p.customAccentColor || ACCENT_COLORS.blue;
 
   // Modo nuevo · HSL para que app.css derive variantes
   const hsl = hexToHsl(accentHex);

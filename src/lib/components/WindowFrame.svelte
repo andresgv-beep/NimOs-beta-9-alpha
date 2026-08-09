@@ -158,20 +158,22 @@
   on:mousedown={() => focusWindow(win.id)}
   role="application"
 >
-  <!-- Drag zone invisible en la titlebar -->
-  <div
-    class="drag-zone"
-    on:mousedown={onTitleMouseDown}
-    role="presentation"
-  ></div>
-
-  <!-- Controles de ventana · anclados a la VENTANA (no al shtml interno),
-       así nunca se pierden por mucho que se encoja o por el min-width
-       del contenido de la app. -->
-  <div class="win-controls">
-    <button class="wc-ctl min" on:click|stopPropagation={() => minimizeWindow(win.id)} title="Minimizar" aria-label="Minimizar"></button>
-    <button class="wc-ctl max" on:click|stopPropagation={doMaximize} title="Maximizar" aria-label="Maximizar"></button>
-    <button class="wc-ctl close" on:click|stopPropagation={() => closeWindow(win.id)} title="Cerrar" aria-label="Cerrar"></button>
+  <div class="window-titlebar" on:mousedown={onTitleMouseDown} on:dblclick={doMaximize} role="presentation">
+    <div class="window-identity">
+      <span class="window-mark" aria-hidden="true"></span>
+      <span class="window-title">{meta.name}</span>
+    </div>
+    <div class="win-controls">
+      <button class="wc-ctl min" on:click|stopPropagation={() => minimizeWindow(win.id)} title="Minimizar" aria-label="Minimizar">
+        <span aria-hidden="true">−</span>
+      </button>
+      <button class="wc-ctl max" on:click|stopPropagation={doMaximize} title={win.maximized ? 'Restaurar' : 'Maximizar'} aria-label={win.maximized ? 'Restaurar' : 'Maximizar'}>
+        <span aria-hidden="true">{win.maximized ? '❐' : '□'}</span>
+      </button>
+      <button class="wc-ctl close" on:click|stopPropagation={() => closeWindow(win.id)} title="Cerrar" aria-label="Cerrar">
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
   </div>
 
   <!-- App content — el .content ocupa toda la ventana, incluyendo titlebar -->
@@ -288,19 +290,14 @@
     position: fixed;
     display: flex;
     flex-direction: column;
-    background: var(--bg-window, #16161a);
+    background: var(--window-bg, #1b2129);
+    border: 1px solid var(--window-border, #3a4553);
     border-radius: 6px;
     overflow: hidden;
     /* Ventana profesional: sólida + filo definido + elevación.
        Solo sombras (coste 0 en GPU). El contorno oscuro (0 0 0 1px negro)
        le da filo sobre cualquier wallpaper, claro u oscuro. */
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 0 0 1px rgba(0, 0, 0, 0.45),
-      0 0 0 1.5px rgba(255, 255, 255, 0.07),
-      0 4px 10px rgba(0, 0, 0, 0.35),
-      0 14px 30px rgba(0, 0, 0, 0.45),
-      0 30px 70px rgba(0, 0, 0, 0.55);
+    box-shadow: var(--window-shadow, 0 18px 48px rgba(0, 0, 0, 0.46));
     color: var(--ink);
     transition: opacity 0.15s ease;
     animation: win-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -313,39 +310,66 @@
      Al vivir en .window (que tiene overflow:hidden y es el contenedor
      que se redimensiona), siempre quedan arriba-derecha visibles, por
      mucho que el contenido interno tenga su propio min-width. */
-  .win-controls {
-    position: absolute;
-    top: 12px;
-    right: 14px;
-    z-index: 100;
+  .window-titlebar {
+    height: 42px;
+    flex: 0 0 42px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    padding-left: 14px;
+    background: #232b35;
+    border-bottom: 1px solid var(--line, #2a323d);
+    cursor: default;
+    z-index: 100;
+  }
+  .window-identity {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+  .window-mark {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--signal, #5b8ff9);
+  }
+  .window-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-dim, #c4ccd6);
+    font: 500 12.5px/1 var(--font-sans);
+  }
+  .win-controls {
+    align-self: stretch;
+    display: flex;
+    align-items: stretch;
   }
   .win-controls .wc-ctl {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    background: var(--ctl-color, #2a2a30);
+    width: 42px;
+    height: 100%;
+    border-radius: 0;
+    background: transparent;
     border: none;
+    border-left: 1px solid transparent;
+    color: var(--ink-mute, #8f9aa8);
     cursor: pointer;
     padding: 0;
-    transition: filter 0.12s, transform 0.12s, opacity 0.12s;
+    font: 400 18px/1 var(--font-sans);
+    transition: background 0.12s ease, color 0.12s ease;
   }
-  .win-controls .wc-ctl.min   { --ctl-color: #ffc857; }
-  .win-controls .wc-ctl.max   { --ctl-color: #00ff9f; }
-  .win-controls .wc-ctl.close { --ctl-color: #ff5a5a; }
-  .win-controls .wc-ctl:hover  { filter: brightness(1.25); }
-  .win-controls .wc-ctl:active { transform: scale(0.9); }
-  .window.inactive .win-controls .wc-ctl {
-    --ctl-color: var(--line-bright);
-    opacity: 0.6;
+  .win-controls .wc-ctl span { display: block; transform: translateY(-1px); }
+  .win-controls .wc-ctl:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--ink, #f0f3f7);
   }
+  .win-controls .wc-ctl.close:hover { background: #c94c57; color: #fff; }
+  .win-controls .wc-ctl:active { background: rgba(255, 255, 255, 0.11); }
 
   /* Estado inactivo · ventana atenuada */
-  .window.inactive {
-    opacity: 0.92;
-  }
+  .window.inactive { opacity: 0.96; border-color: var(--line, #2a323d); }
+  .window.inactive .window-titlebar { background: #1d242d; }
 
   /* Ventana maximizada · sin border-radius, ocupa todo.
      Sin `zoom` el espacio de coordenadas es honesto: 100vw/100vh ya
@@ -359,22 +383,11 @@
     height: calc(100vh - var(--taskbar-height, 3.25rem)) !important;
   }
 
-  .drag-zone {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 80px; /* deja libre la esquina de controles flotantes (top:12 right:14) */
-    height: 44px; /* cubre la franja del page-header para arrastrar */
-    z-index: 5;
-    cursor: default;
-    pointer-events: auto;
-  }
-
   .content {
     flex: 1;
     overflow: hidden;
     min-height: 0;
-    background: transparent;
+    background: var(--main-bg, #1b2129);
   }
 
   /* Placeholder · cuando se abre un app sin módulo todavía */
@@ -393,7 +406,7 @@
   .ph-ic {
     font-size: 48px;
     opacity: 0.85;
-    filter: drop-shadow(0 0 6px var(--accent-glow-soft, rgba(220, 255, 235, 0.6)));
+    filter: none;
   }
   .placeholder p {
     font-size: 15px;

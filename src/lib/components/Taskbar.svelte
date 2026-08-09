@@ -42,86 +42,8 @@
   let now = new Date();
   let clockInterval;
 
-  // Canvas refs para el LCD
-  let lcdHoursCanvas;
-  let lcdMinutesCanvas;
-
-  // ─── LCD digit segments matrix (7-segment classic) ───
-  const LCD_DIGITS = [
-    [1,1,1,1,1,1,0], // 0
-    [0,1,1,0,0,0,0], // 1
-    [1,1,0,1,1,0,1], // 2
-    [1,1,1,1,0,0,1], // 3
-    [0,1,1,0,0,1,1], // 4
-    [1,0,1,1,0,1,1], // 5
-    [1,0,1,1,1,1,1], // 6
-    [1,1,1,0,0,0,0], // 7
-    [1,1,1,1,1,1,1], // 8
-    [1,1,1,1,0,1,1], // 9
-  ];
-
-  /**
-   * Dibuja una pareja de dígitos en un canvas (HH o MM)
-   * Mismo patrón que el widget del dashboard pero blanco plano sin gradiente
-   */
-  function drawLcdPair(canvas, val) {
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    // Tamaño compacto para taskbar (vs widget que es más grande)
-    const DW = 14, DH = 24, S = 2, GAP_D = 4, PAD = 2;
-    const cw = PAD * 2 + DW * 2 + GAP_D;
-    const ch = PAD * 2 + DH;
-    canvas.width = cw * dpr;
-    canvas.height = ch * dpr;
-    canvas.style.width = cw + 'px';
-    canvas.style.height = ch + 'px';
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, cw, ch);
-
-    // Color blanco plano · sin gradiente · sin drop-shadow
-    const ON  = 'rgba(255, 255, 255, 0.95)';
-    const OFF = 'rgba(255, 255, 255, 0.05)';
-
-    function seg(x, y, isOn, horiz) {
-      ctx.fillStyle = isOn ? ON : OFF;
-      const r = 1;
-      const rw = horiz ? DW - S * 2 : S;
-      const rh = horiz ? S : (DH - S * 3) / 2;
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.lineTo(x + rw - r, y);
-      ctx.quadraticCurveTo(x + rw, y, x + rw, y + r);
-      ctx.lineTo(x + rw, y + rh - r);
-      ctx.quadraticCurveTo(x + rw, y + rh, x + rw - r, y + rh);
-      ctx.lineTo(x + r, y + rh);
-      ctx.quadraticCurveTo(x, y + rh, x, y + rh - r);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    function digit(n, ox, oy) {
-      const d = LCD_DIGITS[n] || LCD_DIGITS[0];
-      const hh = (DH - S * 3) / 2;
-      seg(ox + S,    oy,            d[0], true);  // top
-      seg(ox + DW-S, oy + S,        d[1], false); // top-right
-      seg(ox + DW-S, oy + S*2 + hh, d[2], false); // bot-right
-      seg(ox + S,    oy + DH - S,   d[3], true);  // bottom
-      seg(ox,        oy + S*2 + hh, d[4], false); // bot-left
-      seg(ox,        oy + S,        d[5], false); // top-left
-      seg(ox + S,    oy + S + hh,   d[6], true);  // middle
-    }
-
-    digit(Math.floor(val / 10), PAD, PAD);
-    digit(val % 10, PAD + DW + GAP_D, PAD);
-  }
-
   function updateClock() {
     now = new Date();
-    drawLcdPair(lcdHoursCanvas, now.getHours());
-    drawLcdPair(lcdMinutesCanvas, now.getMinutes());
   }
 
   onMount(() => {
@@ -134,8 +56,11 @@
   });
 
   $: dd = String(now.getDate()).padStart(2, '0');
-  $: MON = now.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase().replace('.', '');
-  $: DOW = now.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase().replace('.', '');
+  $: MON = now.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+  $: DOW = now.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+  $: timeText = now.toLocaleTimeString('es-ES', {
+    hour: '2-digit', minute: '2-digit', hour12: !$prefs.clock24,
+  });
 
   // ─── Context menu (pin/unpin) ───
   let ctxMenu = null;
@@ -321,17 +246,9 @@
 
     <div class="tb-sep"></div>
 
-    <!-- Reloj LCD canvas · mismo patrón que widget del dashboard · blanco plano sin gradiente -->
     <div class="tb-clock" title={now.toLocaleString('es-ES')}>
-      <div class="lcd-row">
-        <canvas bind:this={lcdHoursCanvas} class="lcd-canvas"></canvas>
-        <span class="lcd-colon">
-          <span class="dot"></span>
-          <span class="dot"></span>
-        </span>
-        <canvas bind:this={lcdMinutesCanvas} class="lcd-canvas"></canvas>
-      </div>
-      <span class="clock-date">{DOW} · {dd} {MON}</span>
+      <span class="clock-time">{timeText}</span>
+      <span class="clock-date">{DOW}, {dd} {MON}</span>
     </div>
 
     <!-- Cuenta · abre menú (reiniciar, cerrar sesión, etc.) -->
@@ -356,15 +273,13 @@
     /* Cristal translúcido: la barra es fija → el blur cuesta poco y
        deja translucir el wallpaper. El color/opacidad vienen del tema
        (--taskbar-bg): oscuro en dark, claro en cream. */
-    background: var(--taskbar-bg, rgba(19, 19, 22, 0.78));
-    backdrop-filter: blur(20px) saturate(1.2);
-    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    background: var(--taskbar-bg, #171c23);
     border-top: 1px solid var(--taskbar-border-top, rgba(255, 255, 255, 0.08));
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.22);
     display: flex;
     align-items: stretch;
     z-index: 9000;
-    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-family: var(--font-sans, Inter, sans-serif);
   }
 
   .tb-left, .tb-right {
@@ -403,7 +318,8 @@
     position: relative;
   }
   .tb-logo-btn:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
   }
   /* Cuando el launcher está abierto · sin marco verde, sin línea, solo el logo brilla más */
   .tb-logo-btn.active {
@@ -416,15 +332,11 @@
   }
   /* Cuando el launcher está abierto · logo se ilumina con drop-shadow lechoso (firma del boot) */
   .tb-logo-btn.active .nimos-logo {
-    filter:
-      drop-shadow(0 0 6px rgba(220, 255, 235, 0.6))
-      drop-shadow(0 0 2px rgba(255, 255, 255, 0.7));
+    filter: none;
   }
   /* Hover también ilumina sutilmente como preview del estado activo */
   .tb-logo-btn:hover .nimos-logo {
-    filter:
-      drop-shadow(0 0 4px rgba(220, 255, 235, 0.4))
-      drop-shadow(0 0 1px rgba(255, 255, 255, 0.5));
+    filter: none;
   }
 
   /* ─── App icon · sin border-radius · LED bajo cuando está abierta ─── */
@@ -443,15 +355,11 @@
   }
   .tb-app:hover {
     background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
   }
   /* AppIcon ya define width/height vía size="sm" (36px).
      NO sobreescribimos width/height aquí (rompía la proporción)
      ni añadimos drop-shadow (los SVG ya tienen su propio look). */
-  .tb-emoji {
-    font-size: var(--fs-22);
-    line-height: 1;
-  }
-
   /* LED barrita bajo apps abiertas · 16×2px verde luminoso */
   .tb-app.open::after {
     content: '';
@@ -461,12 +369,10 @@
     transform: translateX(-50%);
     width: 1rem;
     height: 2px;
-    background: var(--accent-color, #00ff9f);
-    box-shadow: 0 0 5px var(--accent-color, #00ff9f);
+    background: var(--signal, #5b8ff9);
   }
   .tb-app.focused::after {
     width: 1.375rem;
-    box-shadow: 0 0 7px var(--accent-color, #00ff9f);
   }
   .tb-app.minimized::after {
     width: 0.5rem;
@@ -482,17 +388,16 @@
     background: var(--bg-elev, #242429);
     border: 1px solid var(--border-bright, #2a2a2a);
     padding: var(--sp-1) 0.625rem;
-    font-family: var(--font-mono, monospace);
-    font-size: var(--fs-9);
+    font-family: var(--font-sans, Inter, sans-serif);
+    font-size: var(--fs-11);
     color: var(--ink);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    font-weight: 600;
+    letter-spacing: 0;
+    font-weight: 500;
     white-space: nowrap;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.12s;
-    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%);
+    border-radius: 4px;
   }
   .tb-app:hover .tb-tooltip {
     opacity: 1;
@@ -518,17 +423,16 @@
     color: var(--ink);
   }
   .tb-tray.active {
-    background: rgba(0, 255, 159, 0.08);
-    color: var(--accent-color, #00ff9f);
-    text-shadow: 0 0 5px rgba(0, 255, 159, 0.4);
+    background: var(--signal-soft);
+    color: var(--signal, #5b8ff9);
+    border-radius: 4px;
   }
   .tb-tray.has-activity .tray-ic {
-    color: var(--accent-color, #00ff9f);
-    text-shadow: 0 0 4px rgba(0, 255, 159, 0.4);
+    color: var(--signal, #5b8ff9);
   }
   .tray-ic {
     line-height: 1;
-    filter: drop-shadow(0 0 3px rgba(220, 255, 235, 0.28));
+    filter: none;
   }
 
   .tray-badge {
@@ -550,16 +454,10 @@
     border: 1px solid rgba(0, 0, 0, 0.6);
   }
   .tray-badge.active {
-    background: var(--accent-color, #00ff9f);
-    color: #0a0a0a;
-    box-shadow: 0 0 4px rgba(0, 255, 159, 0.4);
+    background: var(--signal, #5b8ff9);
+    color: #fff;
   }
 
-  /* ─── Reloj LCD · mismo patrón que widget del dashboard ───
-     OJO: los dígitos son un <canvas> (lcd-canvas) dibujado en JS a px
-     fijos. Hasta que el canvas sea consciente de la escala (pasada JS,
-     mismo saco que el grid de widgets), el reloj se queda en px para no
-     descuadrar dígitos-canvas vs CSS escalado. NO migrar a rem todavía. */
   .tb-clock {
     display: flex;
     flex-direction: column;
@@ -567,37 +465,20 @@
     padding: 0 14px;
     line-height: 1;
     cursor: pointer;
-    gap: 3px;
-  }
-  .lcd-row {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-  .lcd-canvas {
-    display: block;
-    /* Sin filter, sin shadow, sin gradient · blanco plano puro */
-  }
-  .lcd-colon {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
     gap: 4px;
-    height: 24px;
-    padding: 0 1px;
   }
-  .lcd-colon .dot {
-    width: 2px;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.95);
-    display: block;
+  .clock-time {
+    color: var(--ink, #f0f3f7);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
   .clock-date {
-    font-family: var(--font-mono, monospace);
-    font-size: 8px;
-    color: var(--ink-mute, #5a5a62);
-    letter-spacing: 1.5px;
-    font-weight: 600;
+    font-family: var(--font-sans, Inter, sans-serif);
+    font-size: 10px;
+    color: var(--ink-mute, #8f9aa8);
+    letter-spacing: 0;
+    font-weight: 500;
   }
 
   /* ─── Power ─── */
@@ -624,7 +505,7 @@
     width: 1.3125rem;
     height: 1.3125rem;
     display: block;
-    filter: drop-shadow(0 0 3px rgba(220, 255, 235, 0.18));
+    filter: none;
   }
 
   /* ═══════════════════════════════════════════════════════════
@@ -638,16 +519,14 @@
   .ctx-menu {
     position: fixed;
     min-width: 13.125rem;
-    background: linear-gradient(180deg, #161616 0%, #0f0f0f 100%);
+    background: var(--panel-elev, #232b35);
     border: 1px solid var(--border-bright, #2a2a2a);
-    box-shadow:
-      0 -8px 30px rgba(0, 0, 0, 0.6),
-      0 0 40px rgba(220, 255, 235, 0.03);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
     z-index: 9510;
-    font-family: var(--font-mono, monospace);
-    font-size: var(--fs-11);
+    font-family: var(--font-sans, Inter, sans-serif);
+    font-size: var(--fs-12);
     padding: var(--sp-1);
-    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+    border-radius: 6px;
   }
   .ctx-item {
     padding: var(--sp-2) var(--sp-3);
@@ -657,11 +536,11 @@
     gap: 0.625rem;
     cursor: pointer;
     transition: background 0.08s, color 0.08s;
-    letter-spacing: 0.5px;
+    letter-spacing: 0;
   }
   .ctx-item:hover {
-    background: rgba(0, 255, 159, 0.07);
-    color: var(--accent-color, #00ff9f);
+    background: var(--signal-soft);
+    color: var(--signal, #5b8ff9);
   }
   .ctx-ic {
     color: var(--fg-mute, #5a5a62);
@@ -669,7 +548,7 @@
     text-align: center;
     font-size: var(--fs-11);
   }
-  .ctx-item:hover .ctx-ic { color: var(--accent-color, #00ff9f); }
+  .ctx-item:hover .ctx-ic { color: var(--signal, #5b8ff9); }
   .ctx-sep {
     height: 1px;
     background: var(--border, #1f1f1f);

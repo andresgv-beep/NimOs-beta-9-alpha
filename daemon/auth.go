@@ -65,7 +65,7 @@ const base32Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 
 var defaultPreferences = map[string]interface{}{
 	"theme":            "dark",
-	"accentColor":      "orange",
+	"accentColor":      "blue",
 	"glowIntensity":    float64(50),
 	"taskbarSize":      "medium",
 	"taskbarPosition":  "bottom",

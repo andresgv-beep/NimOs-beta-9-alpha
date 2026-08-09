@@ -144,7 +144,6 @@
                   role="button"
                   tabindex="0"
                 >
-                  <span class="sb-prefix">{active === item.id ? '▸' : '\u00A0'}</span>
                   {#if item.icon}
                     <span class="sb-icon">{@html item.icon}</span>
                   {/if}
@@ -238,7 +237,7 @@
     color: var(--ink, #f2f2f5);
     display: flex;
     flex-direction: column;
-    min-width: 780px;
+    min-width: 720px;
     overflow: hidden;
   }
 
@@ -253,9 +252,7 @@
   .win-ctl-bar {
     position: absolute;
     top: 12px;
-    /* dejamos hueco a la derecha para los 3 controles de ventana
-       (viven en WindowFrame: ~3×12px + gaps + right:14px ≈ 70px) */
-    right: 74px;
+    right: 16px;
     z-index: 20;
     display: flex;
     align-items: center;
@@ -289,7 +286,7 @@
 
   /* ─── Sidebar ─── */
   .sidebar {
-    background: var(--side-bg, #131316);
+    background: var(--side-bg, #171c23);
     border-right: 1px solid var(--side-border, rgba(255, 255, 255, 0.04));
     display: flex;
     flex-direction: column;
@@ -298,7 +295,7 @@
     overflow: hidden;
   }
   .sb-header {
-    padding: 14px 12px 16px;
+    padding: 16px 14px 18px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -307,9 +304,10 @@
   .sb-header-icon {
     width: 22px;
     height: 22px;
-    border-radius: 5px;
-    background: var(--signal, #00ff9f);
-    color: var(--bg-window, #16161a);
+    border-radius: 4px;
+    background: #252e39;
+    border: 1px solid var(--line-bright);
+    color: var(--signal, #5b8ff9);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -320,9 +318,9 @@
   .sb-title {
     color: var(--ink, #f2f2f5);
     font-weight: 600;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    font-size: 12px;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 13px;
   }
 
   .sb-scroll {
@@ -332,12 +330,12 @@
   }
 
   .sb-section {
-    padding: 14px 8px 6px;
-    font-size: 10px;
+    padding: 16px 8px 7px;
+    font-size: 11px;
     color: var(--ink-trace, #5a5a62);
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
   }
 
   .sb-item {
@@ -346,26 +344,24 @@
     gap: 9px;
     padding: 7px 8px;
     margin: 1px 0;
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--ink-dim, #9c9ca4);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
-    font-size: 12px;
-    font-weight: 400;
+    font-size: 13px;
+    font-weight: 450;
   }
   .sb-item:hover {
     background: var(--side-hover, rgba(255, 255, 255, 0.025));
     color: var(--ink, #d0d0d4);
   }
   .sb-item.active {
+    border-left: 2px solid var(--signal, #5b8ff9);
     background: var(--side-active-bg, rgba(122, 158, 177, 0.10));
     color: var(--side-active-fg, #7a9eb1);
   }
   .sb-item {
     position: relative;
-  }
-  .sb-prefix {
-    display: none;
   }
   .sb-icon {
     width: 14px;
@@ -423,7 +419,7 @@
     color: var(--ink-mute, #9a9aa3);
     flex-shrink: 0;
     background: transparent;
-    font-family: var(--font-mono, monospace);
+    font-family: var(--font-sans, Inter, sans-serif);
   }
   .sb-footer-row {
     display: flex;
@@ -432,8 +428,7 @@
   }
   .sb-footer .k {
     color: var(--ink-trace, #44444a);
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    letter-spacing: 0;
     font-size: 9px;
   }
   .sb-footer .v {
@@ -463,19 +458,12 @@
   .content.padded {
     padding: 14px 22px 20px;
   }
-  /* Sin page-header ni toolbar, el contenido empieza pegado arriba y
-     quedaría bajo los controles de ventana flotantes (top:12 right:14).
-     Reservamos una franja superior para que no se solapen. */
-  .content.no-header {
-    padding-top: 40px;
-  }
-  .content.padded.no-header {
-    padding: 40px 22px 20px;
-  }
+  .content.no-header { padding-top: 0; }
+  .content.padded.no-header { padding: 20px 22px; }
 
   /* Page header opcional · título y descripción (sin titlebar encima) */
   .page-header {
-    padding: 14px 78px 14px 22px;
+    padding: 14px 22px;
     background: transparent;
     font-family: var(--font-sans);
     font-size: 14px;
@@ -545,10 +533,10 @@
     display: flex;
     align-items: center;
     padding: 0 18px;
-    font-family: var(--font-mono, monospace);
+    font-family: var(--font-sans, Inter, sans-serif);
     font-size: 10px;
     color: var(--ink-mute, #9a9aa3);
-    letter-spacing: 0.5px;
+    letter-spacing: 0;
     flex-shrink: 0;
   }
   .inner-footer .left, .inner-footer .right {

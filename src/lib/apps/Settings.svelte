@@ -46,7 +46,7 @@
 
   // ───── Theme state ─────
   $: currentTheme = $prefs.theme || 'dark';
-  $: currentAccent = $prefs.accentColor || 'green';
+  $: currentAccent = $prefs.accentColor || 'blue';
   $: customAccent = $prefs.customAccentColor || '';
   $: currentWallpaper = $prefs.wallpaper || '';
 
@@ -217,7 +217,7 @@
 
   // Accent colors disponibles (los 6 predefinidos + custom)
   const ACCENT_PRESETS = [
-    { id: 'green',   hex: '#00ff9f', label: 'Verde fósforo' },
+    { id: 'blue',    hex: '#5b8ff9', label: 'Azul' },
     { id: 'amber',   hex: '#ffb800', label: 'Ámbar' },
     { id: 'cyan',    hex: '#4db8ff', label: 'Cian' },
     { id: 'magenta', hex: '#e873ff', label: 'Magenta' },

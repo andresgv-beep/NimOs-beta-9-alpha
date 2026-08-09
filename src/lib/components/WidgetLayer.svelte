@@ -601,23 +601,19 @@
        OJO rendimiento Pi: backdrop-filter es caro y los widgets son
        permanentes + se redibujan al arrastrar ventanas encima.
        Si hay tirones, bajar el blur (16px → 8px) o quitarlo. */
-    background: rgba(20, 20, 26, 0.68);
-    backdrop-filter: blur(16px) saturate(1.3);
-    -webkit-backdrop-filter: blur(16px) saturate(1.3);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 12px;
+    background: var(--canvas-soft, #161b22);
+    border: 1px solid var(--line, #2a323d);
+    border-radius: 6px;
     overflow: hidden;
     cursor: grab;
     user-select: none;
     touch-action: none;
     pointer-events: auto;
-    box-shadow:
-      0 10px 30px rgba(0, 0, 0, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .widget:hover {
-    border-color: rgba(255, 255, 255, 0.16);
+    border-color: var(--line-bright, #374250);
   }
   .widget.dragging {
     cursor: grabbing;
@@ -703,7 +699,7 @@
   .drop-hint {
     position: absolute;
     border: 1px dashed var(--signal);
-    border-radius: 12px;
+    border-radius: 6px;
     background: var(--signal-soft);
     pointer-events: none;
   }
@@ -728,16 +724,15 @@
     padding: 6px;
     background: var(--panel-elev);
     border: 1px solid var(--line-bright);
-    border-radius: 10px;
+    border-radius: 6px;
     box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
     pointer-events: auto;
   }
   .ctx-label {
     padding: 5px 10px 3px;
-    font-family: var(--font-mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    letter-spacing: 0;
     color: var(--ink-faint);
   }
   .ctx-item {
@@ -748,7 +743,7 @@
     padding: 7px 10px;
     border: none;
     background: transparent;
-    border-radius: 6px;
+    border-radius: 4px;
     font-family: var(--font-sans);
     font-size: 12.5px;
     color: var(--ink);

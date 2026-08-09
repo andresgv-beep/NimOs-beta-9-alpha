@@ -264,9 +264,7 @@
     flex-direction: column;
     align-items: center;
     padding: 7vh 4vw 4vh;
-    background: rgba(12, 12, 16, 0.55);
-    backdrop-filter: blur(30px) saturate(1.25);
-    -webkit-backdrop-filter: blur(30px) saturate(1.25);
+    background: rgba(12, 15, 19, 0.96);
     font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
     animation: lx-in 0.22s cubic-bezier(0.2, 0, 0, 1.1);
   }
@@ -297,11 +295,11 @@
     transition: border-color 0.15s, background 0.15s;
   }
   .lx-search:focus-within {
-    border-color: rgba(0, 255, 159, 0.35);
+    border-color: rgba(91, 143, 249, 0.55);
     background: rgba(255, 255, 255, 0.08);
   }
   .lx-search-ic { color: var(--ink-faint, #7a7a82); flex-shrink: 0; }
-  .lx-search:focus-within .lx-search-ic { color: var(--signal, #00ff9f); }
+  .lx-search:focus-within .lx-search-ic { color: var(--signal, #5b8ff9); }
   .lx-search-input {
     flex: 1;
     background: transparent;
@@ -336,7 +334,7 @@
     gap: 12px;
     width: 116px;
     padding: 14px 6px;
-    border-radius: 14px;
+    border-radius: 6px;
     cursor: pointer;
     position: relative;
     background: transparent;
@@ -349,7 +347,7 @@
   .app-tile:hover .app-tile-ico { transform: scale(1.06); }
   .app-tile:focus-visible {
     outline: none;
-    background: rgba(0, 255, 159, 0.1);
+    background: var(--signal-soft);
   }
 
   .app-tile-ico {
@@ -388,9 +386,8 @@
     right: 26px;
     width: 6px;
     height: 6px;
-    background: var(--signal, #00ff9f);
-    border-radius: 50%;
-    box-shadow: 0 0 5px var(--signal, #00ff9f);
+    background: var(--signal, #5b8ff9);
+    border-radius: 2px;
   }
 
   /* ─── Puntos de paginación ─── */
@@ -415,7 +412,7 @@
   .lx-dot.active {
     width: 22px;
     border-radius: 4px;
-    background: var(--signal, #00ff9f);
+    background: var(--signal, #5b8ff9);
   }
 
   /* ─── Empty ─── */
@@ -444,9 +441,10 @@
   .lx-user-avatar {
     width: 30px;
     height: 30px;
-    border-radius: 50%;
-    background: var(--signal, #00ff9f);
-    color: #0d0d11;
+    border-radius: 5px;
+    background: #252e39;
+    border: 1px solid var(--line-bright);
+    color: var(--ink);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -457,10 +455,10 @@
   .lx-user-info { display: flex; flex-direction: column; gap: 1px; }
   .lx-user-name { font-size: 13px; color: var(--ink, #e8e8ea); font-weight: 500; }
   .lx-user-status {
-    font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 9px;
-    color: var(--signal, #00ff9f);
-    letter-spacing: 0.3px;
+    font-family: var(--font-sans, Inter, sans-serif);
+    font-size: 10px;
+    color: var(--ink-mute);
+    letter-spacing: 0;
   }
   .lx-power {
     width: 32px;
