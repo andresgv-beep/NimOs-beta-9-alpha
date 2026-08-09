@@ -4,8 +4,8 @@
    * StorageDisks · Vista de discos del sistema.
    * ────────────────────────────────────────────
    * Tres secciones:
-   *   · Discos asignados a pools (read-only, acciones Fase B7)
-   *   · Discos libres (con acción Formatear → emite 'wipe')
+   *   · Discos asignados a volúmenes
+   *   · Discos disponibles (con acción de limpieza confirmada)
    *   · USB si hay (read-only)
    *
    * Props:
@@ -84,12 +84,12 @@
 
 <div class="st-section">
   <div class="section-row">
-    <SectionHead count={`· ${totalDisksAssigned + totalDisksFree} detectados`}>
+    <SectionHead count={`${totalDisksAssigned + totalDisksFree} detectados`}>
       Discos del sistema
     </SectionHead>
     <div class="section-actions">
       <BevelButton size="sm" onClick={() => dispatch('rescan')} disabled={scanning}>
-        {scanning ? '▸ Escaneando...' : '↻ Rescan buses'}
+        {scanning ? 'Actualizando…' : 'Actualizar lista'}
       </BevelButton>
       <BevelButton
         variant="primary"
@@ -100,56 +100,51 @@
           ? 'Crear un nuevo pool con los discos libres'
           : 'No hay discos libres para crear un pool'}
       >
-        + Crear volumen
+        Crear volumen
       </BevelButton>
     </div>
   </div>
 
   <!-- Discos asignados a pools -->
   {#if totalDisksAssigned > 0}
-    <SectionHead count={`· ${totalDisksAssigned}`}>Asignados a pools</SectionHead>
+    <SectionHead count={`${totalDisksAssigned}`}>Discos en uso</SectionHead>
     {#each pools as pool}
       <div class="pool-group">
         <div class="pool-group-head">
           <div class="pool-group-title">
-            <Badge size="sm" variant="accent">{pool.name}</Badge>
-            <span class="sm tc-dim">· {(pool.devices || []).length} {(pool.devices || []).length === 1 ? 'disco' : 'discos'}</span>
+            <span class="pool-name">{pool.name}</span>
+            <span class="pool-device-count">{(pool.devices || []).length} {(pool.devices || []).length === 1 ? 'disco' : 'discos'}</span>
             {#if pool.kernel_devices_missing > 0}
               <span
-                class="sm tc-warn mono"
+                class="pool-warning"
                 title="El kernel ve {pool.kernel_devices_expected} discos en este filesystem y faltan {pool.kernel_devices_missing}. Puede haber discos ausentes que NimOS no tiene registrados (p.ej. añadidos por CLI fuera de la app)."
-              >⚠ kernel {pool.kernel_devices_online}/{pool.kernel_devices_expected} · faltan {pool.kernel_devices_missing}</span>
+              >Faltan {pool.kernel_devices_missing} discos</span>
             {/if}
           </div>
-          {#if pool.mounted}
-            <span class="sm tc-faint mono">montado · para destruir, desmóntalo primero</span>
-          {:else}
-            <span class="sm tc-faint mono">no montado</span>
-          {/if}
+          <span class:mounted={pool.mounted} class="pool-state">
+            <span class="pool-state-dot"></span>
+            {pool.mounted ? 'Montado' : 'Desmontado'}
+          </span>
         </div>
         {#if pool.health?.resilver_active}
-          <div class="sm tc-warn mono" style="padding:2px 0 6px;">
-            ⟳ reconstruyendo redundancia · {(pool.health?.resilver_progress ?? 0).toFixed(1)}%
+          <div class="pool-rebuild">
+            Reconstruyendo redundancia · {(pool.health?.resilver_progress ?? 0).toFixed(1)}%
           </div>
         {/if}
-        <DataTable cols="130px 1fr 90px 100px 110px 200px" headers={['Dispositivo', 'Modelo', 'Capacidad', 'Pool', 'SMART', 'Acción']}>
+        <DataTable cols="130px minmax(130px, 1fr) 100px 120px 112px" headers={['Dispositivo', 'Modelo', 'Capacidad', 'SMART', '>Acción']}>
           {#each (pool.devices || []) as disk}
             <div class="dt-row">
-              <span class="mono dt-trunc">{disk.current_path || '—'}</span>
-              <span class="mono dt-trunc">{disk.model || '—'}</span>
+              <span class="device-path dt-trunc">{disk.current_path || '—'}</span>
+              <span class="dt-trunc">{disk.model || '—'}</span>
               <span>{fmtBytes(disk.size_bytes) || '—'}</span>
-              <span><Badge size="sm" variant="accent">{pool.name}</Badge></span>
               <span class="dt-flex">
                 <LED size={7} variant={smartVariant(disk.smart_status)} />
                 <span class="tc-dim sm">{disk.smart_status || 'unknown'}</span>
               </span>
               <span class="disk-actions">
-                <button class="disk-action-btn" disabled title="Disponible en Fase B7">
-                  Desasignar <span class="action-tag">B7</span>
-                </button>
                 {#if (disks.eligible?.length || 0) > 0}
                   <button
-                    class="disk-action-btn"
+                    class="row-action"
                     on:click={() => dispatch('replace-device', { pool, disk })}
                     title={disk.smart_status === 'missing'
                       ? 'Reemplazar este disco que falta por uno libre (repara el pool)'
@@ -158,9 +153,7 @@
                     Reemplazar
                   </button>
                 {:else}
-                  <button class="disk-action-btn" disabled title="No hay discos libres para reemplazar">
-                    Reemplazar
-                  </button>
+                  <span class="no-action" title="No hay discos libres para reemplazar">—</span>
                 {/if}
               </span>
             </div>
@@ -172,17 +165,17 @@
 
   <!-- Discos libres -->
   <div style="margin-top:24px">
-    <SectionHead count={`· ${disks.eligible?.length || 0}`}>Discos libres (elegibles)</SectionHead>
+    <SectionHead count={`${disks.eligible?.length || 0}`}>Discos disponibles</SectionHead>
     {#if !disks.eligible || disks.eligible.length === 0}
       <EmptyState icon="◌" title="Sin discos libres" hint="Todos los discos están asignados a pools" />
     {:else}
-      <DataTable cols="120px 1fr 90px 70px 100px 230px" headers={['Dispositivo', 'Modelo', 'Capacidad', 'Tipo', 'Estado', 'Acción']}>
+      <DataTable cols="120px minmax(130px, 1fr) 90px 70px 110px 112px" headers={['Dispositivo', 'Modelo', 'Capacidad', 'Tipo', 'Estado', '>Acción']}>
         {#each disks.eligible as disk}
           {@const dPath = disk.path || '/dev/' + disk.name}
           {@const dStatus = diskStatus(dPath)}
           <div class="dt-row" class:has-orphan={dStatus.kind === 'orphan'}>
-            <span class="mono dt-trunc">{dPath}</span>
-            <span class="mono dt-trunc">{disk.model || '—'}</span>
+            <span class="device-path dt-trunc">{dPath}</span>
+            <span class="dt-trunc">{disk.model || '—'}</span>
             <span>{fmtBytes(disk.size)}</span>
             <span>
               <Badge size="sm" variant={disk.rotational ? 'default' : 'info'}>
@@ -201,20 +194,13 @@
             </span>
             <span class="disk-actions">
               <button
-                class="disk-action-btn primary"
-                disabled
-                title="Crear un volumen nuevo con este disco · Disponible en Fase B5"
-              >
-                + Usar en volumen <span class="action-tag">B5</span>
-              </button>
-              <button
-                class="disk-action-btn warn"
+                class="row-action danger"
                 on:click={() => dispatch('wipe', { path: dPath, serial: disk.serial })}
                 title={dStatus.kind === 'orphan'
-                  ? '⚠ Atención: este disco tiene datos. Formatear los borrará permanentemente.'
-                  : 'Formatear disco (borra restos de formatos anteriores)'}
+                  ? 'Este disco tiene datos. Limpiarlo los borrará permanentemente.'
+                  : 'Borrar particiones y restos de formatos anteriores'}
               >
-                Formatear
+                Limpiar disco
               </button>
             </span>
           </div>
@@ -226,12 +212,12 @@
   <!-- USB si hay -->
   {#if disks.usb?.length > 0}
     <div style="margin-top:24px">
-      <SectionHead count={`· ${disks.usb.length}`}>Dispositivos USB</SectionHead>
+      <SectionHead count={`${disks.usb.length}`}>Dispositivos USB</SectionHead>
       <DataTable cols="130px 1fr 100px 120px 130px" headers={['Dispositivo', 'Modelo', 'Capacidad', 'Tipo', 'Estado']}>
         {#each disks.usb as disk}
           <div class="dt-row">
-            <span class="mono dt-trunc">{disk.path || '/dev/' + disk.name}</span>
-            <span class="mono dt-trunc">{disk.model || '—'}</span>
+            <span class="device-path dt-trunc">{disk.path || '/dev/' + disk.name}</span>
+            <span class="dt-trunc">{disk.model || '—'}</span>
             <span>{fmtBytes(disk.size)}</span>
             <span><Badge size="sm" variant="warn">USB</Badge></span>
             <span><Badge size="sm">externo</Badge></span>
@@ -252,8 +238,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 9px 14px;
-    background: var(--bg-inner, #101015);
+    min-height: 48px;
+    padding: 0 14px;
+    background: var(--panel-elev, #252d38);
     border: 1px solid var(--bd-2, #20202a);
     border-bottom: none;
     border-radius: 8px 8px 0 0;
@@ -261,12 +248,52 @@
   .pool-group-title {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-family: var(--font-mono);
+    gap: 10px;
+    min-width: 0;
+  }
+  .pool-name {
+    color: var(--ink, #e7ebf0);
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .pool-device-count {
+    color: var(--ink-faint, #788392);
+    font-size: 12px;
+  }
+  .pool-warning {
+    padding: 3px 7px;
+    border: 1px solid var(--warn-border, rgba(255, 184, 0, 0.35));
+    border-radius: 4px;
+    color: var(--warn, #ffc857);
+    background: var(--warn-dim, rgba(255, 184, 0, 0.07));
+    font-size: 11px;
+  }
+  .pool-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--ink-faint, #788392);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .pool-state-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    background: var(--ink-mute, #596372);
+  }
+  .pool-state.mounted { color: var(--ink-dim, #a8b0bc); }
+  .pool-state.mounted .pool-state-dot { background: var(--signal, #5b8ff9); }
+  .pool-rebuild {
+    padding: 8px 12px;
+    border-inline: 1px solid var(--bd-2, #20202a);
+    color: var(--warn, #ffc857);
+    background: var(--warn-dim, rgba(255, 184, 0, 0.05));
+    font-size: 11.5px;
   }
   /* La tabla de discos del grupo (DataTable) pega bajo la cabecera del grupo,
      continuando el borde lateral para formar una sola card. */
-  .pool-group-head + :global(.data-table) {
+  .pool-group > :global(.data-table) {
     border-top-left-radius: 0;
     border-top-right-radius: 0;
     border: 1px solid var(--bd-2, #20202a);
@@ -275,58 +302,46 @@
 
   .disk-actions {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    overflow: visible;
-  }
-  .disk-action-btn {
-    padding: 3px 8px;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    background: var(--bg-2);
-    border: 1px solid var(--border-bright);
-    color: var(--fg-dim);
-    cursor: pointer;
-    transition: all 0.12s;
-    clip-path: polygon(
-      0 0, calc(100% - 4px) 0, 100% 4px,
-      100% 100%, 4px 100%, 0 calc(100% - 4px)
-    );
-    display: inline-flex;
     align-items: center;
-    gap: 4px;
+    justify-content: flex-end;
+    min-width: 0;
   }
-  .disk-action-btn:hover:not(:disabled) {
-    border-color: var(--accent);
-    color: var(--accent);
+  .row-action {
+    min-height: 30px;
+    padding: 5px 10px;
+    border: 1px solid var(--line-bright, #3b4654);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink-dim, #a8b0bc);
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    font-weight: 550;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.12s, background 0.12s, border-color 0.12s;
   }
-  .disk-action-btn.primary {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-dim, rgba(255,145,68,0.05));
+  .row-action:hover {
+    border-color: var(--signal, #5b8ff9);
+    background: var(--signal-soft, rgba(91, 143, 249, 0.08));
+    color: var(--ink, #e7ebf0);
   }
-  .disk-action-btn.primary:hover:not(:disabled) {
-    background: rgba(255, 145, 68, 0.12);
+  .row-action.danger {
+    color: var(--ink-dim, #a8b0bc);
   }
-  .disk-action-btn.warn {
-    border-color: var(--border-bright);
-    color: var(--warn);
+  .row-action.danger:hover {
+    border-color: var(--crit, #ff6464);
+    background: var(--crit-dim, rgba(255, 90, 90, 0.08));
+    color: var(--crit, #ff6464);
   }
-  .disk-action-btn.warn:hover:not(:disabled) {
-    border-color: var(--crit);
-    color: var(--crit);
-    background: rgba(255, 90, 90, 0.04);
+  .no-action {
+    padding-right: 10px;
+    color: var(--ink-mute, #596372);
   }
-  .disk-action-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-  .action-tag {
-    font-size: 8px;
-    color: var(--fg-faint);
-    margin-left: 2px;
+  .device-path {
+    color: var(--ink, #e7ebf0);
+    font-family: var(--font-sans);
+    font-feature-settings: "tnum";
   }
 
   /* Bloque C3.3: indicadores en lista de discos */

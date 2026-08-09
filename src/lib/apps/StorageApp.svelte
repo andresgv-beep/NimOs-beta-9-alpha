@@ -72,7 +72,7 @@
   let creatingPool = false;  // true = wizard abierto
   let upgradingPool = null;  // pool en proceso de upgrade a RAID1 (modal abierto)
 
-  // Formatear disco (wipe)
+  // Limpiar disco (wipe)
   let wipeDisk = null;         // path del disco a formatear (null = dialog cerrado)
   let wipeSerial = '';         // serial esperado del disco (AUDIT F10)
   let wipeProcessing = false;
@@ -369,7 +369,7 @@
     await loadAll();              // recargar lista de pools (el pool ya no debería estar)
   }
 
-  // ─── Formatear disco (wipe) ───
+  // ─── Limpiar disco (wipe) ───
   function openWipeDialog(diskPath, diskSerial = '') {
     wipeDisk = diskPath;
     wipeSerial = diskSerial; // AUDIT F10: identidad que verá el backend
@@ -760,13 +760,13 @@
   />
 {/if}
 
-<!-- ConfirmDialog · Formatear disco (wipe) -->
+<!-- ConfirmDialog · Limpiar disco (wipe) -->
 <ConfirmDialog
   open={wipeDisk !== null}
-  title="Formatear disco"
+  title="Limpiar disco"
   message={`Esta acción borrará todos los datos de ${wipeDisk || ''}. No se puede deshacer.`}
-  confirmLabel="Formatear disco"
-  inputConfirm="FORMATEAR"
+  confirmLabel="Limpiar disco"
+  inputConfirm="LIMPIAR"
   variant="danger"
   processing={wipeProcessing}
   on:confirm={confirmWipe}

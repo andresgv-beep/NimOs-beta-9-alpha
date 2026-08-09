@@ -29,7 +29,7 @@
     white-space: nowrap;
   }
   .count {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: var(--fs-11);
     font-weight: 500;
     color: var(--ink-mute);
