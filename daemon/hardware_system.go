@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -278,29 +279,130 @@ func handleSystemPost(w http.ResponseWriter, r *http.Request, session *DBSession
 	}
 }
 
-func handleUpdateCheck(w http.ResponseWriter) {
-	currentVersion := "0.0.0"
-	if data, err := os.ReadFile("/opt/nimos/package.json"); err == nil {
-		var pkg map[string]interface{}
-		if json.Unmarshal(data, &pkg) == nil {
-			if v, ok := pkg["version"].(string); ok {
-				currentVersion = v
+const updatePackageURL = "https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9-alpha/main/package.json"
+
+var semverPattern = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$`)
+
+type parsedSemver struct {
+	major, minor, patch int
+	pre                 string
+}
+
+func parseSemver(value string) (parsedSemver, bool) {
+	match := semverPattern.FindStringSubmatch(strings.TrimSpace(value))
+	if match == nil {
+		return parsedSemver{}, false
+	}
+	major, errMajor := strconv.Atoi(match[1])
+	minor, errMinor := strconv.Atoi(match[2])
+	patch, errPatch := strconv.Atoi(match[3])
+	if errMajor != nil || errMinor != nil || errPatch != nil {
+		return parsedSemver{}, false
+	}
+	return parsedSemver{major: major, minor: minor, patch: patch, pre: match[4]}, true
+}
+
+func comparePrerelease(a, b string) int {
+	if a == b {
+		return 0
+	}
+	if a == "" {
+		return 1
+	}
+	if b == "" {
+		return -1
+	}
+	aParts, bParts := strings.Split(a, "."), strings.Split(b, ".")
+	for i := 0; i < len(aParts) && i < len(bParts); i++ {
+		if aParts[i] == bParts[i] {
+			continue
+		}
+		aNum, aErr := strconv.Atoi(aParts[i])
+		bNum, bErr := strconv.Atoi(bParts[i])
+		switch {
+		case aErr == nil && bErr == nil:
+			if aNum < bNum {
+				return -1
 			}
+			return 1
+		case aErr == nil:
+			return -1
+		case bErr == nil:
+			return 1
+		case aParts[i] < bParts[i]:
+			return -1
+		default:
+			return 1
 		}
 	}
-	latestVersion := "0.0.0"
-	if out, ok := runSafe("curl", "-fsSL", "https://raw.githubusercontent.com/andresgv-beep/NimOs-beta-9-alpha/main/package.json"); ok {
-		var pkg map[string]interface{}
-		if json.Unmarshal([]byte(out), &pkg) == nil {
-			if v, ok := pkg["version"].(string); ok {
-				latestVersion = v
-			}
+	if len(aParts) < len(bParts) {
+		return -1
+	}
+	return 1
+}
+
+// compareSemver devuelve -1 si a < b, 0 si son equivalentes y 1 si a > b.
+func compareSemver(a, b string) (int, bool) {
+	va, okA := parseSemver(a)
+	vb, okB := parseSemver(b)
+	if !okA || !okB {
+		return 0, false
+	}
+	for _, pair := range [][2]int{{va.major, vb.major}, {va.minor, vb.minor}, {va.patch, vb.patch}} {
+		if pair[0] < pair[1] {
+			return -1, true
 		}
+		if pair[0] > pair[1] {
+			return 1, true
+		}
+	}
+	return comparePrerelease(va.pre, vb.pre), true
+}
+
+func packageVersion(data []byte) (string, error) {
+	var pkg struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(data, &pkg); err != nil {
+		return "", err
+	}
+	if _, ok := parseSemver(pkg.Version); !ok {
+		return "", fmt.Errorf("invalid version %q", pkg.Version)
+	}
+	return pkg.Version, nil
+}
+
+func handleUpdateCheck(w http.ResponseWriter) {
+	data, err := os.ReadFile("/opt/nimos/package.json")
+	if err != nil {
+		jsonError(w, http.StatusInternalServerError, "No se pudo leer la versión instalada")
+		return
+	}
+	currentVersion, err := packageVersion(data)
+	if err != nil {
+		jsonError(w, http.StatusInternalServerError, "La versión instalada no es válida")
+		return
+	}
+
+	out, ok := runSafe("curl", "--connect-timeout", "5", "--max-time", "15", "-fsSL", updatePackageURL)
+	if !ok || strings.TrimSpace(out) == "" {
+		jsonError(w, http.StatusBadGateway, "No se pudo consultar el servidor de actualizaciones")
+		return
+	}
+	latestVersion, err := packageVersion([]byte(out))
+	if err != nil {
+		jsonError(w, http.StatusBadGateway, "El servidor devolvió una versión no válida")
+		return
+	}
+	comparison, ok := compareSemver(currentVersion, latestVersion)
+	if !ok {
+		jsonError(w, http.StatusInternalServerError, "No se pudieron comparar las versiones")
+		return
 	}
 	jsonOk(w, map[string]interface{}{
 		"currentVersion":  currentVersion,
 		"latestVersion":   latestVersion,
-		"updateAvailable": latestVersion != currentVersion,
+		"updateAvailable": comparison < 0,
 		"installDir":      "/opt/nimos",
 	})
 }

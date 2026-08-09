@@ -19,28 +19,49 @@
   let loading = true;
   let msg = '';
   let msgError = false;
+  let checkError = '';
 
   $: current = updateData.currentVersion || updateData.current || updateData.version || '—';
-  $: latest = updateData.latestVersion || updateData.latest || '—';
+  $: latest = checkError ? 'Sin comprobar' : (updateData.latestVersion || updateData.latest || '—');
   $: available = !!updateData.updateAvailable;
 
+  async function readUpdateResponse(response) {
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || `Error HTTP ${response.status}`);
+    }
+    return data;
+  }
+
   async function loadInfo() {
+    loading = true;
+    checkError = '';
     try {
       const r = await fetch('/api/system/update/check', { headers: hdrs() });
-      if (r.ok) updateData = await r.json();
-    } catch {}
-    loading = false;
+      updateData = await readUpdateResponse(r);
+    } catch (error) {
+      updateData = {};
+      checkError = error?.message || 'No se pudo comprobar si hay actualizaciones';
+    } finally {
+      loading = false;
+    }
   }
 
   async function checkForUpdates() {
     if (checking) return;
     checking = true;
     msg = '';
+    msgError = false;
+    checkError = '';
     try {
       const r = await fetch('/api/system/update/check', { headers: hdrs() });
-      if (r.ok) updateData = await r.json();
-      else { msg = 'Error al comprobar'; msgError = true; }
-    } catch { msg = 'Error de red'; msgError = true; }
+      updateData = await readUpdateResponse(r);
+    } catch (error) {
+      updateData = {};
+      checkError = error?.message || 'No se pudo comprobar si hay actualizaciones';
+      msg = checkError;
+      msgError = true;
+    }
     checking = false;
   }
 
@@ -63,13 +84,21 @@
 <div class="cp-updates">
   <div class="cpu-stats">
     <StatCard label="Versión actual" value={current} variant="info" tag="instalada" tagVariant="info" />
-    <StatCard label="Última versión" value={latest} variant={available ? 'warn' : 'ok'} tag={available ? 'disponible' : 'al día'} tagVariant={available ? 'warn' : 'ok'} />
+    <StatCard
+      label="Última versión"
+      value={latest}
+      variant={checkError ? 'crit' : (available ? 'warn' : 'ok')}
+      tag={checkError ? 'error' : (available ? 'disponible' : 'al día')}
+      tagVariant={checkError ? 'crit' : (available ? 'warn' : 'ok')}
+    />
   </div>
 
-  <div class="cpu-state" class:available>
+  <div class="cpu-state" class:available class:error={!!checkError}>
     <span class="cpu-state-dot"></span>
     {#if loading}
       Comprobando estado…
+    {:else if checkError}
+      No se pudo comprobar el estado remoto
     {:else if available}
       Hay una actualización disponible
     {:else}
@@ -118,6 +147,8 @@
     background: var(--st-warn, #ffc857);
   }
   .cpu-state.available { color: var(--st-warn, #ffc857); }
+  .cpu-state.error { color: var(--st-crit, #ff5a5a); }
+  .cpu-state.error .cpu-state-dot { background: var(--st-crit, #ff5a5a); }
 
   .cpu-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .cpu-btn {
