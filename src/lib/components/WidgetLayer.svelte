@@ -602,7 +602,7 @@
        permanentes + se redibujan al arrastrar ventanas encima.
        Si hay tirones, bajar el blur (16px → 8px) o quitarlo. */
     background: color-mix(in srgb, var(--panel, #171c26) 94%, transparent);
-    border: 1px solid var(--line, #2a323d);
+    border: 1px solid var(--line, #343834);
     border-radius: 5px;
     overflow: hidden;
     cursor: grab;
@@ -613,7 +613,7 @@
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .widget:hover {
-    border-color: var(--line-bright, #374250);
+    border-color: var(--line-bright, #404640);
   }
   .widget.dragging {
     cursor: grabbing;

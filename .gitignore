@@ -1,0 +1,11 @@
+# Frontend dependencies and generated output
+node_modules/
+.svelte-kit/
+dist/
+
+# Local build and tool logs
+*.log
+
+# Editor and operating-system metadata
+.DS_Store
+Thumbs.db

@@ -96,7 +96,7 @@
     gap: 8px;
     position: relative;
     font-family: var(--font-sans);
-    background: var(--bg-card, #202731);
+    background: var(--bg-card, #272a27);
     border: 1px solid var(--line);
     border-radius: 6px;
   }

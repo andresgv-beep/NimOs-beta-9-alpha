@@ -290,8 +290,8 @@
     position: fixed;
     display: flex;
     flex-direction: column;
-    background: var(--window-bg, #1b2129);
-    border: 1px solid var(--window-border, #3a4553);
+    background: var(--window-bg, #222422);
+    border: 1px solid var(--window-border, #414641);
     border-radius: 6px;
     overflow: hidden;
     /* Ventana profesional: sólida + filo definido + elevación.
@@ -317,8 +317,8 @@
     align-items: center;
     justify-content: space-between;
     padding-left: 14px;
-    background: #232b35;
-    border-bottom: 1px solid var(--line, #2a323d);
+    background: var(--panel-elev);
+    border-bottom: 1px solid var(--line, #343834);
     cursor: default;
     z-index: 100;
   }
@@ -368,8 +368,8 @@
   .win-controls .wc-ctl:active { background: rgba(255, 255, 255, 0.11); }
 
   /* Estado inactivo · ventana atenuada */
-  .window.inactive { opacity: 0.96; border-color: var(--line, #2a323d); }
-  .window.inactive .window-titlebar { background: #1d242d; }
+  .window.inactive { opacity: 0.96; border-color: var(--line, #343834); }
+  .window.inactive .window-titlebar { background: var(--canvas-soft); }
 
   /* Ventana maximizada · sin border-radius, ocupa todo.
      Sin `zoom` el espacio de coordenadas es honesto: 100vw/100vh ya
@@ -387,7 +387,7 @@
     flex: 1;
     overflow: hidden;
     min-height: 0;
-    background: var(--main-bg, #1b2129);
+    background: var(--main-bg, #222422);
   }
 
   /* Placeholder · cuando se abre un app sin módulo todavía */

@@ -189,7 +189,7 @@
     align-items: center;
     padding: 10px 14px;
     border-bottom: 1px solid var(--border);
-    background: #232b35;
+    background: var(--panel-elev);
     flex-shrink: 0;
     gap: 10px;
   }

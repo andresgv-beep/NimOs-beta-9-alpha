@@ -166,45 +166,46 @@ html {
 :root,
 [data-theme="dark"] {
   /* ── Fondos (escalera de elevación) ──
-     Valores con tinte azul-violeta sutil (B > R=G) del mockup
-     nimos-storage validado. Da identidad NimOS sin ser saturado. */
-  --canvas:         #111419;
-  --canvas-soft:    #161b22;
-  --panel:          #1b2129;
-  --panel-elev:     #232b35;
-  --panel-deep:     #151a21;
+     Pizarra ahumada: fría, pero casi neutra. La separación entre planos
+     depende de luminosidad y no de saturación azul, para conservar la misma
+     lectura tanto en OLED como en paneles VA con negros elevados. */
+  --canvas:         #171817;
+  --canvas-soft:    #1c1e1c;
+  --panel:          #222422;
+  --panel-elev:     #292c29;
+  --panel-deep:     #1a1c1a;
 
   /* ── Texto (4 niveles de jerarquía) ──────────────────────── */
-  --ink:            #f0f3f7;
-  --ink-dim:        #c4ccd6;
-  --ink-mute:       #8f9aa8;
-  --ink-faint:      #66717f;
-  --ink-trace:      #45505d;
+  --ink:            #f2f2f1;
+  --ink-dim:        #cbcdcb;
+  --ink-mute:       #969b97;
+  --ink-faint:      #6d736e;
+  --ink-trace:      #4d534e;
 
   /* ── Bordes ──────────────────────────────────────────────── */
-  --line:           #2a323d;
-  --line-bright:    #374250;
-  --line-strong:    #4a5869;
+  --line:           #343834;
+  --line-bright:    #404640;
+  --line-strong:    #515851;
 
-  /* ── Ventanas ─ usando el azulado del mockup ─────────────── */
-  --window-bg:      #1b2129;
-  --window-border:  #3a4553;
+  /* ── Ventanas ─ neutrales; el azul queda para interacción ── */
+  --window-bg:      #222422;
+  --window-border:  #414641;
   --window-shadow:  0 18px 48px rgba(0, 0, 0, 0.46);
 
   /* ── Sidebar interno de apps · más oscuro que ventana ────── */
-  --side-bg:        #171c23;
+  --side-bg:        #1d201e;
   --side-border:    var(--line);
   --side-hover:     rgba(255, 255, 255, 0.04);
-  --side-active-bg: rgba(91, 143, 249, 0.14);
+  --side-active-bg: rgba(91, 143, 249, 0.10);
   --side-active-fg: #7da7ff;
 
   /* ── Taskbar · translúcida (deja translucir el fondo con blur) ─ */
-  --taskbar-bg:           #171c23;
-  --taskbar-border-top:   #303946;
+  --taskbar-bg:           #1b1e1c;
+  --taskbar-border-top:   #383d38;
   --account-ic-color:     #f2f2f5;  /* icono de cuenta · blanco en dark */
 
   /* ── Main content área ─ ligeramente más claro que ventana ─ */
-  --main-bg:        #1b2129;
+  --main-bg:        #222422;
   --main-fg:        var(--ink);
   --main-fg-mute:   var(--ink-mute);
   --main-fg-faint:  var(--ink-faint);
@@ -227,8 +228,8 @@ html {
      - Grid técnico blanco 40px tenue
      - Base casi negra #0a0a0c */
   --wallpaper:
-    radial-gradient(circle at 18% 8%, rgba(91, 143, 249, 0.055), transparent 32%),
-    linear-gradient(145deg, #13171d 0%, #0f1216 100%);
+    radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.018), transparent 32%),
+    linear-gradient(145deg, #191b19 0%, #121312 100%);
 
   /* ── Scrollbar ───────────────────────────────────────────── */
   --scroll-thumb:        rgba(255, 255, 255, 0.12);
@@ -454,9 +455,9 @@ html {
 :root,
 [data-theme="dark"] {
   --ui-select:         #7da7ff;
-  --ui-select-bg:      rgba(91, 143, 249, 0.14);
-  --ui-select-border:  rgba(91, 143, 249, 0.42);
-  --bd-2:              #303946;
+  --ui-select-bg:      rgba(91, 143, 249, 0.10);
+  --ui-select-border:  rgba(91, 143, 249, 0.34);
+  --bd-2:              #383d38;
 
   /* Color de identidad para shares/recursos remotos.
      Pareja semántica con --signal (verde NimOS = local).
@@ -469,12 +470,12 @@ html {
      estados de sistema. */
   --nim-folder:        #ff9c5a;
 
-  /* Fondos del mockup · valores literales */
-  --bg-window:         #1b2129;
-  --bg-main:           #1b2129;
-  --bg-side:           #171c23;
-  --bg-card:           #202731;
-  --bg-inner:          #151a21;
+  /* Fondos compatibles con la nueva escalera pizarra ahumada */
+  --bg-window:         #222422;
+  --bg-main:           #222422;
+  --bg-side:           #1d201e;
+  --bg-card:           #272a27;
+  --bg-inner:          #1a1c1a;
 }
 
 [data-theme="cream"] {

@@ -273,7 +273,7 @@
     /* Cristal translúcido: la barra es fija → el blur cuesta poco y
        deja translucir el wallpaper. El color/opacidad vienen del tema
        (--taskbar-bg): oscuro en dark, claro en cream. */
-    background: var(--taskbar-bg, #171c23);
+    background: var(--taskbar-bg, #1b1e1c);
     border-top: 1px solid var(--taskbar-border-top, rgba(255, 255, 255, 0.08));
     box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.22);
     display: flex;
@@ -519,7 +519,7 @@
   .ctx-menu {
     position: fixed;
     min-width: 13.125rem;
-    background: var(--panel-elev, #232b35);
+    background: var(--panel-elev, #292c29);
     border: 1px solid var(--border-bright, #2a2a2a);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
     z-index: 9510;

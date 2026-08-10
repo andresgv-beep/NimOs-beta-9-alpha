@@ -288,7 +288,7 @@
 
   /* ─── Sidebar ─── */
   .sidebar {
-    background: var(--side-bg, #171c23);
+    background: var(--side-bg, #1d201e);
     border-right: 1px solid var(--side-border, rgba(255, 255, 255, 0.04));
     display: flex;
     flex-direction: column;
@@ -307,7 +307,7 @@
     width: 22px;
     height: 22px;
     border-radius: 4px;
-    background: #252e39;
+    background: var(--panel-elev);
     border: 1px solid var(--line-bright);
     color: var(--signal, #5b8ff9);
     display: flex;

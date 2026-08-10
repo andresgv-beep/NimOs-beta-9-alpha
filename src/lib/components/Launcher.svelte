@@ -442,7 +442,7 @@
     width: 30px;
     height: 30px;
     border-radius: 5px;
-    background: #252e39;
+    background: var(--panel-elev);
     border: 1px solid var(--line-bright);
     color: var(--ink);
     display: flex;
