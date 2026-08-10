@@ -19,7 +19,6 @@
   let shares = [];
   let selectedShare = '';
   let storage = { ready: false, message: 'Comprobando almacenamiento…' };
-  let destinationOpen = false;
 
   let addOpen = false;
   let addError = '';
@@ -36,7 +35,6 @@
 
   $: filtered = torrents.filter(stateMatches[active] || stateMatches.all);
   $: selected = torrents.find(torrent => torrent.hash === selectedHash) || null;
-  $: selectedShareLabel = shares.find(share => share.name === selectedShare)?.displayName || selectedShare || 'Sin destino';
   $: canAdd = storage.ready && shares.length > 0;
   $: counts = Object.fromEntries(Object.entries(stateMatches).map(([key, match]) => [key, torrents.filter(match).length]));
   const dot = kind => `<span class="torrent-nav-dot ${kind}"></span>`;
@@ -135,7 +133,6 @@
 
   function openAdd() {
     if (!canAdd) return;
-    destinationOpen = false;
     addError = '';
     addOpen = true;
   }
@@ -182,26 +179,11 @@
   </svelte:fragment>
 
   <div class="toolbar" slot="toolbar">
-    <div class="destination">
-      <button class="destination-button" disabled={!canAdd} on:click={() => destinationOpen = !destinationOpen} aria-expanded={destinationOpen}>
-        <span><small>Destino</small><strong>{selectedShareLabel}</strong></span>
-        <span class="chevron">⌄</span>
-      </button>
-      {#if destinationOpen}
-        <div class="destination-menu">
-          {#each shares as share (share.name)}
-            <button class:selected={share.name === selectedShare} on:click={() => { selectedShare = share.name; destinationOpen = false; }}>
-              <span>{share.displayName || share.name}</span>{#if share.name === selectedShare}<strong>✓</strong>{/if}
-            </button>
-          {/each}
-        </div>
-      {/if}
-    </div>
     <button class="secondary" on:click={pauseAll} disabled={!torrents.some(torrent => !torrent.paused)}>Pausar todas</button>
     <button class="primary" on:click={openAdd} disabled={!canAdd}>Añadir torrent</button>
   </div>
 
-  <main class:with-warning={!canAdd}>
+  <main class:with-warning={!canAdd} class:with-detail={Boolean(selected)}>
     {#if !canAdd}
       <div class="storage-warning">
         <div><strong>Descargas bloqueadas por seguridad</strong><span>{storage.ready ? 'Crea una carpeta compartida con permiso de escritura para elegirla como destino.' : storage.message}</span></div>
@@ -215,12 +197,14 @@
       {error}
       on:select={(event) => selectedHash = event.detail}
     />
-    <TorrentDetail
-      torrent={selected}
-      busy={selected ? busy.has(selected.hash) : false}
-      on:toggle={(event) => togglePause(event.detail)}
-      on:remove={(event) => removeTorrent(event.detail)}
-    />
+    {#if selected}
+      <TorrentDetail
+        torrent={selected}
+        busy={busy.has(selected.hash)}
+        on:toggle={(event) => togglePause(event.detail)}
+        on:remove={(event) => removeTorrent(event.detail)}
+      />
+    {/if}
   </main>
 
   <AddTorrentWizard
@@ -248,25 +232,16 @@
   .page-description { margin-left: 10px; color: var(--ink-mute); font-size: 12px; font-weight: 400; }
   .toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--line); }
   button { font-family: var(--font-sans); }
-  .destination { position: relative; }
-  .destination-button { min-width: 190px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg-card); color: var(--ink-dim); cursor: pointer; text-align: left; }
-  .destination-button span:first-child { min-width: 0; display: grid; gap: 2px; }
-  .destination-button small { color: var(--ink-mute); font-size: 9px; }
-  .destination-button strong { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-size: 11px; }
-  .destination-button:disabled { opacity: .5; cursor: default; }
-  .chevron { color: var(--ink-mute); }
-  .destination-menu { position: absolute; top: calc(100% + 5px); right: 0; z-index: 30; width: 230px; max-height: 250px; overflow: auto; padding: 5px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg-window); box-shadow: 0 14px 35px rgba(0,0,0,.35); }
-  .destination-menu button { width: 100%; display: flex; justify-content: space-between; padding: 9px 10px; border: 0; border-radius: 5px; background: transparent; color: var(--ink-dim); font-size: 11px; text-align: left; cursor: pointer; }
-  .destination-menu button:hover, .destination-menu button.selected { background: var(--side-hover); color: var(--ink); }
-  .destination-menu strong { color: var(--signal); }
   .secondary, .primary { padding: 8px 13px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
   .secondary { border: 1px solid var(--line); background: var(--bg-card); color: var(--ink-dim); }
   .primary { border: 0; background: var(--signal); color: var(--bg-window); }
   .secondary:hover:not(:disabled) { color: var(--ink); background: var(--side-hover); }
   .primary:hover:not(:disabled) { filter: brightness(1.08); }
   .secondary:disabled, .primary:disabled { opacity: .4; cursor: default; }
-  main { height: 100%; min-height: 0; overflow: auto; padding: 16px 20px 20px; display: grid; grid-template-rows: minmax(230px, 1.1fr) minmax(230px, .9fr); gap: 14px; }
-  main.with-warning { grid-template-rows: auto minmax(230px, 1.1fr) minmax(230px, .9fr); }
+  main { height: 100%; min-height: 0; overflow: auto; padding: 16px 20px 20px; display: grid; grid-template-rows: minmax(230px, 1fr); gap: 14px; }
+  main.with-detail { grid-template-rows: minmax(230px, 1.1fr) minmax(230px, .9fr); }
+  main.with-warning { grid-template-rows: auto minmax(230px, 1fr); }
+  main.with-warning.with-detail { grid-template-rows: auto minmax(230px, 1.1fr) minmax(230px, .9fr); }
   .storage-warning { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line)); border-left: 3px solid var(--warn); border-radius: 7px; background: color-mix(in srgb, var(--warn) 6%, var(--bg-card)); }
   .storage-warning div { display: grid; gap: 4px; }
   .storage-warning strong { color: var(--ink); font-size: 12px; }
@@ -275,5 +250,5 @@
   :global(.app-footer) span { font-size: 10px; color: var(--ink-mute); }
   :global(.app-footer) strong { margin-left: 4px; color: var(--ink-dim); font-weight: 500; font-variant-numeric: tabular-nums; }
   .footer-separator { margin: 0 8px; }
-  @media (max-width: 850px) { .safe-label { display: none; } .destination-button { min-width: 150px; } }
+  @media (max-width: 850px) { .safe-label { display: none; } }
 </style>
