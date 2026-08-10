@@ -1,14 +1,13 @@
 <script>
   /**
-   * AppIcon · Icono de app adaptativo (Beta 8.1)
+   * AppIcon · Icono común de aplicación
    * ──────────────────────────────────────────────
-   * Renderiza el icono SVG correspondiente al tema actual.
+   * Renderiza el mismo icono SVG en todos los temas.
    *
    * Acepta `src` en dos formatos:
    *
    *   1. Nombre lógico (Beta 8.1+): "storage", "files", "network", ...
-   *      → resuelve a /icons/<theme>/<name>.svg
-   *      → cambia automáticamente al cambiar el tema
+   *      → resuelve a /icons/dark/<name>.svg
    *
    *   2. Ruta directa (retrocompat): "/icons/storage.png", "/foo/bar.svg"
    *      → se usa tal cual (apps Docker custom, paths absolutos, etc.)
@@ -24,8 +23,6 @@
    *   md ·  52px · Launcher
    *   lg ·  80px · Launcher grande
    */
-  import { currentTheme } from '$lib/stores/theme.js';
-
   export let src = '';
   export let alt = '';
   /** xs | sm | md | lg */
@@ -38,27 +35,16 @@
   let imgFailed = false;
   function handleError() { imgFailed = true; }
 
-  // Mapa de tema → carpeta de iconos.
-  // dark   → /icons/dark/
-  // cream  → /icons/light/  (cream usa los SVG light)
-  // futuro → /icons/<theme>/ si se añaden más temas
-  function themeFolder(theme) {
-    if (theme === 'cream' || theme === 'light') return 'light';
-    return 'dark';
-  }
-
   // Resuelve la ruta final del icono.
   // · Si src empieza con '/' o 'http' → ruta directa (retrocompat)
-  // · Si src es un identificador simple → /icons/<theme>/<src>.svg
+  // · Si src es un identificador simple → juego común /icons/dark/<src>.svg
   $: resolvedSrc = (() => {
     if (!src) return '';
     if (src.startsWith('/') || src.startsWith('http')) return src;
-    const folder = themeFolder($currentTheme);
-    return `/icons/${folder}/${src}.svg?v=9-modern-2`;
+    return `/icons/dark/${src}.svg?v=9-modern-2`;
   })();
 
-  // Cuando cambia el tema, reseteamos el flag de fallo
-  // para reintentar cargar el nuevo SVG.
+  // Si cambia la ruta, reintentamos cargar el recurso.
   $: if (resolvedSrc) imgFailed = false;
 </script>
 
@@ -99,7 +85,7 @@
     font-family: var(--font-sans);
     font-weight: 600;
     color: var(--accent);
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--main-hover);
     border-radius: var(--radius-md);
     text-transform: uppercase;
   }

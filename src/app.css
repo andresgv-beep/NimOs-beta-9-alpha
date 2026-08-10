@@ -18,7 +18,7 @@
 
    TEMAS DISPONIBLES:
      · [data-theme="dark"]  · Oscuro (default)
-     · [data-theme="cream"] · Crema neutro limpio
+     · [data-theme="light"] · Claro neutro limpio
 
    ACCENT COLOR:
      Se controla con --signal-h / --signal-s / --signal-l (HSL)
@@ -237,14 +237,14 @@ html {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   [data-theme="cream"] · TEMA CREMA NEUTRO LIMPIO
+   [data-theme="light"] · TEMA CLARO NEUTRO LIMPIO
    ═══════════════════════════════════════════════════════════════
-   Filosofía: NimOS papel técnico, fondo crema #f5f5f0,
-   paneles ligeramente más claros, tinta gris oscuro.
+   Filosofía: NimOS claro neutro, sin blanco clínico ni dominante crema;
+   paneles ligeramente más claros y tinta gris oscuro.
    Conserva la identidad NimOS (bevel firma, geometría dura)
    pero en versión "blueprint claro".
    ═══════════════════════════════════════════════════════════════ */
-[data-theme="cream"] {
+[data-theme="light"] {
   /* ── Acento · en claro bajamos la luminosidad del signal ───────
      El verde #00ff9f (L=50%) se ve lavado sobre crema. Bajando
      --signal-l a 35% el verde queda #00b268 (legible) y, como es HSL,
@@ -263,18 +263,18 @@ html {
   /* ── Fondos · paleta crema afinada (más contraste card↔fondo) ───
      Antes todo vivía en #f5-#fd (8 puntos) y se fundía en claro.
      Ahora: fondo crema, cards BLANCAS puras, escalera con separación real. */
-  --canvas:         #ecece3;
-  --canvas-soft:    #e4e4da;
-  --panel:          #ffffff;
-  --panel-elev:     #ffffff;
-  --panel-deep:     #e7e7dd;
+  --canvas:         #e9ece9;
+  --canvas-soft:    #dfe3df;
+  --panel:          #f5f7f5;
+  --panel-elev:     #fbfcfb;
+  --panel-deep:     #e3e7e3;
 
   /* ── Texto (4 niveles de jerarquía, tinta) ───────────────── */
-  --ink:            #1a1a1a;
-  --ink-dim:        #44444a;
-  --ink-mute:       #6a6a72;
-  --ink-faint:      #98989e;
-  --ink-trace:      #c8c8c0;
+  --ink:            #202420;
+  --ink-dim:        #454b46;
+  --ink-mute:       #6c746d;
+  --ink-faint:      #969d97;
+  --ink-trace:      #c5cbc6;
 
   /* ── Bordes (ahora oscuros sobre fondo claro) ────────────── */
   /* ── Bordes (más marcados para el filo geométrico NimOS en claro) ── */
@@ -283,7 +283,7 @@ html {
   --line-strong:    rgba(0, 0, 0, 0.32);
 
   /* ── Ventanas (sombra más sutil sobre fondo claro) ──────── */
-  --window-bg:      #fdfdf7;
+  --window-bg:      #f4f6f4;
   --window-border:  rgba(0, 0, 0, 0.16);
   --window-shadow:
     5px 5px 0 rgba(0, 0, 0, 0.08),
@@ -297,7 +297,7 @@ html {
   --side-active-fg: #4a6878;
 
   /* ── Taskbar · translúcida clara · versión crema ──────────── */
-  --taskbar-bg:           rgba(236, 236, 228, 0.82);
+  --taskbar-bg:           rgba(229, 233, 229, 0.90);
   --taskbar-border-top:   rgba(0, 0, 0, 0.08);
   --account-ic-color:     #44444a;  /* icono de cuenta · gris oscuro en claro */
 
@@ -331,7 +331,7 @@ html {
     radial-gradient(ellipse 70% 50% at 50% 110%, rgba(0, 200, 130, 0.03) 0%, transparent 55%),
     /* Vignette sutil */
     radial-gradient(ellipse 100% 100% at 50% 50%, transparent 50%, rgba(0, 0, 0, 0.05) 100%),
-    /* Base crema */
+    /* Base clara neutra */
     var(--canvas);
 
   /* ── Scrollbar ───────────────────────────────────────────── */
@@ -351,7 +351,7 @@ html {
    ═══════════════════════════════════════════════════════════════ */
 :root,
 [data-theme="dark"],
-[data-theme="cream"] {
+[data-theme="light"] {
   /* Fondos legacy → semánticos */
   --bg:          var(--canvas);
   --bg-0:        var(--canvas);
@@ -478,7 +478,7 @@ html {
   --bg-inner:          #1a1c1a;
 }
 
-[data-theme="cream"] {
+[data-theme="light"] {
   /* En tema crema el azul-gris se invierte a algo más oscuro */
   --ui-select:         #4a6878;
   --ui-select-bg:      rgba(74, 104, 120, 0.12);
@@ -492,11 +492,11 @@ html {
   --nim-folder:        #d97706;
 
   /* Fondos del mockup · versión clara equivalente */
-  --bg-window:         #ffffff;
-  --bg-main:           #efefeb;
-  --bg-side:           #e7e7dd;
-  --bg-card:           #ffffff;
-  --bg-inner:          #e4e4da;
+  --bg-window:         #f4f6f4;
+  --bg-main:           #edf0ed;
+  --bg-side:           #e3e7e3;
+  --bg-card:           #f8f9f8;
+  --bg-inner:          #dfe3df;
 }
 
 /* ═══════════════════════════════════════════════════════════════

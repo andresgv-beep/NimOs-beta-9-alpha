@@ -361,11 +361,11 @@
   }
   .win-controls .wc-ctl span { display: block; transform: translateY(-1px); }
   .win-controls .wc-ctl:hover {
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--main-hover);
     color: var(--ink, #f0f3f7);
   }
   .win-controls .wc-ctl.close:hover { background: #c94c57; color: #fff; }
-  .win-controls .wc-ctl:active { background: rgba(255, 255, 255, 0.11); }
+  .win-controls .wc-ctl:active { background: var(--side-active-bg); }
 
   /* Estado inactivo · ventana atenuada */
   .window.inactive { opacity: 0.96; border-color: var(--line, #343834); }

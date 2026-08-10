@@ -5,11 +5,11 @@ import { isMobileDevice } from './viewport.js';
 /**
  * NimOS Beta 8.1 theme store
  * ─────────────────────────
- * Soporta multi-tema (oscuro / crema) + accent color customizable.
+ * Soporta multi-tema (oscuro / claro) + accent color customizable.
  *
  * Funcionamiento:
  *   1. El usuario elige tema en Settings → applyToDOM aplica
- *      `data-theme="dark"` o `data-theme="cream"` al <html>
+ *      `data-theme="dark"` o `data-theme="light"` al <html>
  *   2. Las variables CSS semánticas (--canvas, --panel, --ink...)
  *      cambian automáticamente al cambiar el atributo data-theme
  *   3. El accent color se aplica como HSL (--signal-h/s/l) para
@@ -31,11 +31,11 @@ const ACCENT_COLORS = {
   red:      '#ff5a5a',
 };
 
-const THEMES = ['dark', 'cream'];
+const THEMES = ['dark', 'light'];
 
 const DEFAULTS = {
   // ─── Tema ───
-  theme: 'dark', // 'dark' | 'cream'
+  theme: 'dark', // 'dark' | 'light'
 
   // ─── Accent color ───
   accentColor: 'blue',
@@ -100,7 +100,10 @@ function normalizeLegacyAppearance(raw = {}) {
     String(value.customAccentColor || '').toLowerCase()
   );
 
-  if (value.theme !== 'dark') {
+  if (value.theme === 'cream') {
+    value.theme = 'light';
+    migrations.theme = 'light';
+  } else if (!THEMES.includes(value.theme)) {
     value.theme = 'dark';
     migrations.theme = 'dark';
   }
@@ -212,12 +215,12 @@ function applyToDOM(p) {
   // Modo nuevo · HSL para que app.css derive variantes
   const hsl = hexToHsl(accentHex);
   if (hsl) {
-    // En tema claro (cream) el acento a plena luminosidad se ve lavado
+    // En tema claro el acento a plena luminosidad se ve lavado
     // sobre fondo crema. Lo oscurecemos para que sea legible. Tope en 38%:
     // un acento ya oscuro se respeta, uno claro (verde L=50%) baja a ~35-38%.
     // Se aplica aquí (inline) porque el inline del acento gana a app.css.
     let lum = hsl.l;
-    if (theme === 'cream' && lum > 38) {
+    if (theme === 'light' && lum > 38) {
       lum = 38;
     }
     root.style.setProperty('--signal-h', hsl.h.toString());
@@ -357,7 +360,7 @@ export function setPrefImmediate(key, value) {
 }
 
 /**
- * Helper: cambiar el tema. Acepta 'dark' | 'cream'.
+ * Helper: cambiar el tema. Acepta 'dark' | 'light'.
  */
 export function setTheme(theme) {
   if (THEMES.includes(theme)) {
@@ -366,11 +369,11 @@ export function setTheme(theme) {
 }
 
 /**
- * Helper: toggle entre dark y cream.
+ * Helper: toggle entre dark y light.
  */
 export function toggleTheme() {
   prefs.update(p => {
-    const next = p.theme === 'dark' ? 'cream' : 'dark';
+    const next = p.theme === 'dark' ? 'light' : 'dark';
     const updated = { ...p, theme: next };
     applyToDOM(updated);
     localStorage.setItem('nimos-prefs', JSON.stringify(updated));

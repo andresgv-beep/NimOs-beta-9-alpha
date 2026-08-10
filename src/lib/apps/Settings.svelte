@@ -238,7 +238,7 @@
       <!-- ────── TEMA DEL SISTEMA ────── -->
       <div class="section-label">Apariencia</div>
       <div class="theme-row">
-          <div class="theme-card active" on:click={() => selectTheme('dark')} on:keydown={(e) => e.key === 'Enter' && selectTheme('dark')} role="button" tabindex="0">
+          <div class="theme-card" class:active={currentTheme === 'dark'} on:click={() => selectTheme('dark')} on:keydown={(e) => e.key === 'Enter' && selectTheme('dark')} role="button" tabindex="0">
             <div class="tp-frame dark">
               <div class="tp-window">
                 <div class="tp-tb">
@@ -268,7 +268,41 @@
             </div>
             <div class="theme-card-label">
               <span><b>NimOS Dark</b><small>Predeterminado</small></span>
-              <span class="check">✓</span>
+              {#if currentTheme === 'dark'}<span class="check">✓</span>{/if}
+            </div>
+          </div>
+
+          <div class="theme-card" class:active={currentTheme === 'light'} on:click={() => selectTheme('light')} on:keydown={(e) => e.key === 'Enter' && selectTheme('light')} role="button" tabindex="0">
+            <div class="tp-frame light">
+              <div class="tp-window">
+                <div class="tp-tb">
+                  <span class="tp-app-mark"></span>
+                  <span class="tp-title">Storage</span>
+                  <span class="tp-controls">
+                    <span>−</span><span>□</span><span class="close">×</span>
+                  </span>
+                </div>
+                <div class="tp-body">
+                  <div class="tp-sidebar">
+                    <span class="active"></span><span></span><span></span><span></span>
+                  </div>
+                  <div class="tp-main">
+                    <div class="tp-card-row">
+                      <div class="tp-card"><span>Capacidad</span><b>58%</b></div>
+                      <div class="tp-card"><span>Estado</span><b class="status">Correcto</b></div>
+                    </div>
+                    <div class="tp-table"><span></span><span></span><span></span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="tp-taskbar">
+                <span class="tp-start"></span><span class="tp-running"></span>
+                <span class="clock">13:06</span>
+              </div>
+            </div>
+            <div class="theme-card-label">
+              <span><b>NimOS Claro</b><small>Superficies neutras</small></span>
+              {#if currentTheme === 'light'}<span class="check">✓</span>{/if}
             </div>
           </div>
       </div>
@@ -457,7 +491,10 @@
 
   /* ═══ THEME CARDS · preview del sistema ═══ */
   .theme-row {
-    max-width: 520px;
+    max-width: 760px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
   .theme-card {
     border: 1px solid var(--line);
@@ -478,13 +515,23 @@
     overflow: hidden;
   }
   .tp-frame.dark {
-    --tp-canvas: #10141c;
-    --tp-panel: #171c26;
-    --tp-panel-elev: #1d2430;
-    --tp-ink: #edf2fa;
-    --tp-ink-mute: #8490a3;
+    --tp-canvas: #171817;
+    --tp-panel: #222422;
+    --tp-panel-elev: #292c29;
+    --tp-ink: #f2f2f1;
+    --tp-ink-mute: #969b97;
     --tp-line: rgba(255,255,255,0.08);
     --tp-line-bright: rgba(255,255,255,0.14);
+    background: var(--tp-canvas);
+  }
+  .tp-frame.light {
+    --tp-canvas: #e7e8e4;
+    --tp-panel: #f6f6f2;
+    --tp-panel-elev: #ffffff;
+    --tp-ink: #262925;
+    --tp-ink-mute: #747a74;
+    --tp-line: rgba(25, 30, 26, 0.13);
+    --tp-line-bright: rgba(25, 30, 26, 0.22);
     background: var(--tp-canvas);
   }
 
@@ -627,6 +674,9 @@
     color: white;
     font-size: 11px;
     font-weight: 700;
+  }
+  @media (max-width: 760px) {
+    .theme-row { grid-template-columns: 1fr; }
   }
 
   /* ═══ COLOR DE ACENTO ═══ */

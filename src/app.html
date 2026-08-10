@@ -42,7 +42,12 @@
 					if (!isMobile) {
 						var raw = localStorage.getItem('nimos-prefs');
 						if (raw) {
-							var ui = JSON.parse(raw).uiScale;
+							var cachedPrefs = JSON.parse(raw);
+							var cachedTheme = cachedPrefs.theme === 'cream' ? 'light' : cachedPrefs.theme;
+							if (cachedTheme === 'dark' || cachedTheme === 'light') {
+								document.documentElement.setAttribute('data-theme', cachedTheme);
+							}
+							var ui = cachedPrefs.uiScale;
 							if (typeof ui === 'number' && isFinite(ui)) scale = ui / 100;
 						}
 					}

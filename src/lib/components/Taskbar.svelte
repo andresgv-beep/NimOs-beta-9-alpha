@@ -318,7 +318,7 @@
     position: relative;
   }
   .tb-logo-btn:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--main-hover);
     border-radius: 4px;
   }
   /* Cuando el launcher está abierto · sin marco verde, sin línea, solo el logo brilla más */
@@ -354,7 +354,7 @@
     padding: 0;
   }
   .tb-app:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--main-hover);
     border-radius: 4px;
   }
   /* AppIcon ya define width/height vía size="sm" (36px).
@@ -419,7 +419,7 @@
     transition: background 0.12s, color 0.12s;
   }
   .tb-tray:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--main-hover);
     color: var(--ink);
   }
   .tb-tray.active {
@@ -491,14 +491,14 @@
     background: transparent;
     border: none;
     border-left: 1px solid var(--border, #1f1f1f);
-    /* Blanco en dark, gris oscuro en cream (definido más abajo por tema) */
+    /* Blanco en dark, gris oscuro en light (definido por tema) */
     color: var(--account-ic-color, #f2f2f5);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
     margin-left: var(--sp-1);
   }
   .tb-account:hover {
-    background: var(--hover-surface, rgba(255, 255, 255, 0.06));
+    background: var(--main-hover);
     color: var(--account-ic-hover, var(--ink, #f2f2f5));
   }
   .account-ic {

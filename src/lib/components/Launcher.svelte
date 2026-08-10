@@ -264,7 +264,7 @@
     flex-direction: column;
     align-items: center;
     padding: 7vh 4vw 4vh;
-    background: rgba(12, 15, 19, 0.96);
+    background: color-mix(in srgb, var(--canvas) 96%, transparent);
     font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
     animation: lx-in 0.22s cubic-bezier(0.2, 0, 0, 1.1);
   }
@@ -289,14 +289,14 @@
     align-items: center;
     gap: 10px;
     padding: 0 16px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--panel);
+    border: 1px solid var(--line);
     border-radius: 6px;
     transition: border-color 0.15s, background 0.15s;
   }
   .lx-search:focus-within {
     border-color: rgba(91, 143, 249, 0.55);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--panel-elev);
   }
   .lx-search-ic { color: var(--ink-faint, #7a7a82); flex-shrink: 0; }
   .lx-search:focus-within .lx-search-ic { color: var(--signal, #5b8ff9); }
@@ -343,7 +343,7 @@
     font-family: inherit;
     transition: background 0.12s;
   }
-  .app-tile:hover { background: rgba(255, 255, 255, 0.06); }
+  .app-tile:hover { background: var(--main-hover); }
   .app-tile:hover .app-tile-ico { transform: scale(1.06); }
   .app-tile:focus-visible {
     outline: none;
@@ -405,10 +405,10 @@
     padding: 0;
     border: none;
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.22);
+    background: var(--ink-trace);
     transition: background 0.15s, width 0.2s;
   }
-  .lx-dot:hover { background: rgba(255, 255, 255, 0.4); }
+  .lx-dot:hover { background: var(--ink-mute); }
   .lx-dot.active {
     width: 22px;
     border-radius: 4px;
@@ -494,8 +494,8 @@
     border-radius: 6px;
     cursor: pointer;
     color: var(--ink-mute, #9a9aa3);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--panel);
+    border: 1px solid var(--line);
     transition: all 0.12s;
   }
   .lx-close:hover {
