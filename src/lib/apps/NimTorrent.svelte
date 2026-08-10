@@ -19,6 +19,7 @@
   let shares = [];
   let selectedShare = '';
   let storage = { ready: false, message: 'Comprobando almacenamiento…' };
+  let storageChecked = false;
 
   let addOpen = false;
   let addError = '';
@@ -93,6 +94,7 @@
 
   async function refresh() {
     await Promise.all([loadTorrents(), loadStats(), loadShares(), loadStorage()]);
+    storageChecked = true;
   }
 
   async function post(action, body) {
@@ -174,36 +176,40 @@
 </script>
 
 <AppShell appId="nimtorrent" title="NimTorrent" headerIcon="↓" {sections} bind:active bodyPadding={false}>
-  <svelte:fragment slot="page-header">
-    <b>Descargas</b><span class="page-description">{torrents.length} en total</span>
-  </svelte:fragment>
-
   <div class="toolbar" slot="toolbar">
     <button class="secondary" on:click={pauseAll} disabled={!torrents.some(torrent => !torrent.paused)}>Pausar todas</button>
     <button class="primary" on:click={openAdd} disabled={!canAdd}>Añadir torrent</button>
   </div>
 
-  <main class:with-warning={!canAdd} class:with-detail={Boolean(selected)}>
-    {#if !canAdd}
-      <div class="storage-warning">
-        <div><strong>Descargas bloqueadas por seguridad</strong><span>{storage.ready ? 'Crea una carpeta compartida con permiso de escritura para elegirla como destino.' : storage.message}</span></div>
-        <span class="safe-label">El disco del sistema no se utilizará</span>
+  <main class:inactive={!canAdd} class:with-detail={canAdd && Boolean(selected)}>
+    {#if !storageChecked}
+      <div class="storage-state" aria-live="polite">
+        <span class="storage-icon">↓</span>
+        <strong>Preparando NimTorrent</strong>
       </div>
-    {/if}
-    <TorrentList
-      torrents={filtered}
-      {selectedHash}
-      {loading}
-      {error}
-      on:select={(event) => selectedHash = event.detail}
-    />
-    {#if selected}
-      <TorrentDetail
-        torrent={selected}
-        busy={busy.has(selected.hash)}
-        on:toggle={(event) => togglePause(event.detail)}
-        on:remove={(event) => removeTorrent(event.detail)}
+    {:else if !canAdd}
+      <div class="storage-state">
+        <span class="storage-icon">▰</span>
+        <strong>Almacenamiento no disponible</strong>
+        <span>{storage.ready ? 'Activa un pool y una carpeta compartida con permiso de escritura.' : storage.message}</span>
+        <small>NimTorrent permanecerá inactivo y no utilizará el disco del sistema.</small>
+      </div>
+    {:else}
+      <TorrentList
+        torrents={filtered}
+        {selectedHash}
+        {loading}
+        {error}
+        on:select={(event) => selectedHash = event.detail}
       />
+      {#if selected}
+        <TorrentDetail
+          torrent={selected}
+          busy={busy.has(selected.hash)}
+          on:toggle={(event) => togglePause(event.detail)}
+          on:remove={(event) => removeTorrent(event.detail)}
+        />
+      {/if}
     {/if}
   </main>
 
@@ -229,7 +235,6 @@
   :global(.torrent-nav-dot.active) { background: var(--signal); }
   :global(.torrent-nav-dot.seeding) { background: var(--info, #55b7f3); }
   :global(.torrent-nav-dot.error) { background: var(--crit); }
-  .page-description { margin-left: 10px; color: var(--ink-mute); font-size: 12px; font-weight: 400; }
   .toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--line); }
   button { font-family: var(--font-sans); }
   .secondary, .primary { padding: 8px 13px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
@@ -240,15 +245,13 @@
   .secondary:disabled, .primary:disabled { opacity: .4; cursor: default; }
   main { height: 100%; min-height: 0; overflow: hidden; display: grid; grid-template-rows: minmax(230px, 1fr); }
   main.with-detail { grid-template-rows: minmax(230px, 1fr) minmax(210px, .72fr); }
-  main.with-warning { grid-template-rows: auto minmax(230px, 1fr); }
-  main.with-warning.with-detail { grid-template-rows: auto minmax(230px, 1fr) minmax(210px, .72fr); }
-  .storage-warning { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 14px 18px 0; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--line)); border-left: 3px solid var(--warn); border-radius: 7px; background: color-mix(in srgb, var(--warn) 6%, var(--bg-card)); }
-  .storage-warning div { display: grid; gap: 4px; }
-  .storage-warning strong { color: var(--ink); font-size: 12px; }
-  .storage-warning span { color: var(--ink-mute); font-size: 11px; line-height: 1.4; }
-  .safe-label { flex: 0 0 auto; color: var(--warn) !important; }
+  main.inactive { place-items: center; }
+  .storage-state { max-width: 430px; padding: 30px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--ink-mute); text-align: center; }
+  .storage-icon { width: 38px; height: 38px; margin-bottom: 4px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 7px; background: var(--bg-card); color: var(--ink-dim); font-size: 17px; }
+  .storage-state strong { color: var(--ink-dim); font-size: 13px; }
+  .storage-state > span:not(.storage-icon) { font-size: 11px; line-height: 1.5; }
+  .storage-state small { margin-top: 4px; color: var(--ink-mute); font-size: 10px; line-height: 1.5; }
   :global(.app-footer) span { font-size: 10px; color: var(--ink-mute); }
   :global(.app-footer) strong { margin-left: 4px; color: var(--ink-dim); font-weight: 500; font-variant-numeric: tabular-nums; }
   .footer-separator { margin: 0 8px; }
-  @media (max-width: 850px) { .safe-label { display: none; } }
 </style>
