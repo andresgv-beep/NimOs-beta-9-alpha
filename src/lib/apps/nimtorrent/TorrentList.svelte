@@ -44,11 +44,11 @@
 </section>
 
 <style>
-  .list { min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--bg-card); }
+  .list { min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: transparent; }
   .head, .row { display: grid; grid-template-columns: minmax(240px, 2fr) 90px 100px 90px 100px 100px; gap: 14px; align-items: center; }
-  .head { padding: 10px 16px; color: var(--ink-mute); font-size: 11px; border-bottom: 1px solid var(--line); background: var(--bg-window); }
+  .head { padding: 11px 20px; color: var(--ink-mute); font-size: 11px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg-card) 55%, transparent); }
   .body { min-height: 0; overflow: auto; }
-  .row { width: 100%; padding: 13px 16px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink-dim); font: inherit; font-size: 12px; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums; }
+  .row { width: 100%; padding: 13px 20px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink-dim); font: inherit; font-size: 12px; text-align: left; cursor: pointer; font-variant-numeric: tabular-nums; }
   .row:last-child { border-bottom: 0; }
   .row:hover { background: var(--side-hover); }
   .row.selected { background: var(--ui-select-bg); box-shadow: inset 3px 0 var(--signal); }
@@ -65,7 +65,7 @@
   .fill.paused { background: var(--ink-mute); }
   .fill.error { background: var(--crit); }
   .accent { color: var(--signal); }
-  .message { min-height: 170px; display: grid; place-items: center; color: var(--ink-mute); font-size: 13px; }
+  .message { height: 100%; min-height: 170px; display: grid; place-items: center; color: var(--ink-mute); font-size: 13px; }
   .message.error { color: var(--crit); }
   @media (max-width: 1050px) {
     .head, .row { grid-template-columns: minmax(220px, 2fr) 90px 90px 90px; }

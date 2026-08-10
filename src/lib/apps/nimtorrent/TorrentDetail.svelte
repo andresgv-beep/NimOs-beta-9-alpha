@@ -31,13 +31,11 @@
       <div><span>Tiempo restante</span><strong>{formatEta(torrent)}</strong></div>
     </div>
     <div class="hash"><span>Identificador</span><code>{torrent.hash}</code></div>
-  {:else}
-    <div class="empty"><strong>Selecciona una descarga</strong><span>Aquí verás su progreso, destino y controles.</span></div>
   {/if}
 </section>
 
 <style>
-  .detail { min-height: 230px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg-card); overflow: auto; }
+  .detail { min-height: 210px; padding: 18px 20px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--bg-card) 42%, transparent); overflow: auto; }
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
   .heading { min-width: 0; }
   .eyebrow { display: flex; align-items: center; gap: 7px; color: var(--ink-mute); font-size: 11px; margin-bottom: 5px; }
@@ -68,8 +66,5 @@
   small { color: var(--ink-mute); font-size: 10px; font-weight: 400; }
   .hash { display: flex; align-items: center; gap: 14px; margin-top: 14px; min-width: 0; }
   code { color: var(--ink-dim); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .empty { min-height: 190px; display: grid; place-content: center; text-align: center; gap: 5px; }
-  .empty strong { color: var(--ink-dim); font-size: 13px; }
-  .empty span { color: var(--ink-mute); font-size: 11px; }
   @media (max-width: 900px) { .metrics { grid-template-columns: repeat(2, 1fr); } .metrics > div:nth-child(2) { border-right: 0; } .metrics > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
 </style>
