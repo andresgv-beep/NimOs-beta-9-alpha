@@ -13,9 +13,7 @@
    *   · TreeNode v3.1 en slot `sidebar-content` con grupos
    *     Local / Remoto separados por sb-section labels.
    *   · View toggle + Nueva carpeta + Subir + clipboard badge
-   *     viven en `toolbar` (fila propia debajo del page-header),
-   *     no en `titlebar-actions` — así la titlebar queda limpia
-   *     con solo cubo + path + LEDs, igual que Storage/NimHealth.
+   *     viven junto al breadcrumb en una única fila de navegación.
    *   · Breadcrumb del path en `page-header`. Back button al inicio.
    *   · Footer del AppShell muestra path mono + selected count.
    *   · ctx-menu pasa a position:fixed (no necesita root wrapper).
@@ -619,15 +617,8 @@
       <b>Carpetas compartidas</b>
       <span class="ph-desc">{shares.length} {shares.length === 1 ? 'recurso' : 'recursos'}</span>
     {/if}
-  </svelte:fragment>
-
-  <!-- ═══ TOOLBAR · fila propia debajo del header (estilo subbar mockup) ═══
-       Acciones (clipboard + view toggle + nueva carpeta + subir). Ya NO
-       viven en el page-header: ahí colisionaban con los controles de
-       ventana flotantes. Aquí tienen su propia franja. -->
-  <svelte:fragment slot="toolbar">
     {#if currentShare || clipboard}
-      <div class="fm-toolbar">
+      <div class="ph-right fm-header-actions">
         {#if clipboard}
           <div class="clipboard-badge" class:cut={clipboard.op === 'cut'}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:10px;height:10px">
@@ -635,9 +626,7 @@
             </svg>
             {clipboard.op === 'cut' ? 'Cortado' : 'Copiado'}:
             {clipboard.entries.length === 1 ? clipboard.entries[0].file.name : `${clipboard.entries.length} elementos`}
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <span class="cb-clear" on:click={() => clipboard = null}>✕</span>
+            <button class="cb-clear" title="Vaciar portapapeles" aria-label="Vaciar portapapeles" on:click={() => clipboard = null}>✕</button>
           </div>
         {/if}
         {#if currentShare}
@@ -846,21 +835,13 @@
     background: rgba(255,255,255,0.05);
   }
 
-  /* ═══════════════════════════════════════════════════════════
-     TOOLBAR · franja propia debajo del header (estilo subbar mockup)
-     ───────────────────────────────────────────────────────────
-     Antes los botones vivían en .ph-right del page-header y
-     colisionaban con los controles de ventana flotantes. Ahora
-     tienen su propia fila, alineados a la derecha.
-     ═══════════════════════════════════════════════════════════ */
-  .fm-toolbar {
+  /* Acciones integradas en la fila de navegación. */
+  .fm-header-actions {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
     gap: 8px;
-    padding: 8px 24px;
-    border-bottom: 1px solid var(--line, rgba(255,255,255,0.04));
-    flex-wrap: wrap;
+    min-width: 0;
+    flex-shrink: 0;
   }
 
   .clipboard-badge {
@@ -871,10 +852,9 @@
     color: var(--ink-dim, #c8c8cf);
     background: var(--bg-card, #15151a);
     border: 1px solid var(--line, rgba(255,255,255,0.08));
-    max-width: 180px;
+    max-width: 150px;
     overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
     font-family: var(--font-sans);
-    margin-right: auto; /* empuja el badge a la izquierda, botones a la derecha */
   }
   .clipboard-badge.cut {
     color: var(--warn, #fbbf24);
@@ -887,6 +867,9 @@
     font-size: 10px;
     margin-left: 2px;
     flex-shrink: 0;
+    border: 0;
+    background: transparent;
+    padding: 0;
   }
   .cb-clear:hover { color: var(--ink, #f2f2f5); }
 
