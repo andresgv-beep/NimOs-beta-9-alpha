@@ -88,8 +88,8 @@
 
 <style>
   .app-card {
-    background: var(--panel-deep);
-    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 84%, var(--canvas));
+    border: 1px solid color-mix(in srgb, var(--line) 68%, transparent);
     border-radius: 5px;
     padding: 16px;
     display: flex;
@@ -105,7 +105,7 @@
   }
   .app-card:hover {
     border-color: var(--line-bright);
-    background: var(--panel);
+    background: color-mix(in srgb, var(--panel) 88%, var(--panel-elev));
   }
   .app-card:focus-visible {
     outline: 1px solid var(--info);
@@ -127,7 +127,7 @@
     justify-content: center;
     flex-shrink: 0;
     position: relative;
-    background: var(--canvas);
+    background: color-mix(in srgb, var(--panel) 72%, var(--canvas));
     overflow: hidden;
     padding: 5px;
   }

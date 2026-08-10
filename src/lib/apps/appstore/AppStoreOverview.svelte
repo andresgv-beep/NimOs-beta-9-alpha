@@ -442,8 +442,8 @@
     gap: 6px;
     padding: 4px 9px;
     border-radius: var(--radius-sm);
-    background: var(--panel-deep);
-    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 88%, var(--canvas));
+    border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
     width: 220px;
     transition: border-color 0.12s;
   }

@@ -1124,7 +1124,7 @@
     width: 96px;
     height: 96px;
     border-radius: 6px;
-    background: var(--canvas);
+    background: color-mix(in srgb, var(--panel) 78%, var(--canvas));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1180,8 +1180,8 @@
     align-items: center;
     gap: 5px;
     padding: 2px 9px;
-    background: var(--canvas);
-    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 86%, var(--canvas));
+    border: 1px solid color-mix(in srgb, var(--line) 68%, transparent);
     border-radius: 4px;
     font-size: var(--fs-10);
     color: var(--ink-dim);
@@ -1426,8 +1426,8 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--sp-3);
-    background: var(--canvas);
-    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 86%, var(--canvas));
+    border: 1px solid color-mix(in srgb, var(--line) 68%, transparent);
     border-radius: 5px;
     padding: 12px 14px;
     min-height: 48px;
@@ -1458,7 +1458,7 @@
   }
   .service-chip {
     color: var(--ink-dim);
-    background: var(--panel-deep);
+    background: color-mix(in srgb, var(--panel) 82%, var(--canvas));
     padding: 3px 9px;
     border-radius: 4px;
     font-family: var(--font-mono);
@@ -1469,8 +1469,8 @@
   .creds-block {
     display: flex;
     flex-direction: column;
-    background: var(--canvas);
-    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 86%, var(--canvas));
+    border: 1px solid color-mix(in srgb, var(--line) 68%, transparent);
     border-radius: 5px;
     overflow: hidden;
   }
@@ -1480,7 +1480,7 @@
     gap: var(--sp-2);
     padding: 16px 18px;
     font-size: var(--fs-12);
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 68%, transparent);
   }
   .cred-row:last-of-type {
     border-bottom: none;
@@ -1531,7 +1531,7 @@
     color: var(--ink-mute);
     font-size: var(--fs-11);
     padding: 14px 18px;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid color-mix(in srgb, var(--line) 68%, transparent);
   }
   .copy-feedback {
     font-size: var(--fs-11);
