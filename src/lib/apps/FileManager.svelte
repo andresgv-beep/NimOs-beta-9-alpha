@@ -65,9 +65,10 @@
   $: currentShareHasRecycle = !!currentShareObj?.recycleBin;
   let loading = false;
   let selected = new Set();
+  let selectionAnchor = null;
 
   // ── Clipboard ──
-  let clipboard = null; // { file, share, path, op: 'copy'|'cut' }
+  let clipboard = null; // { entries: [{ file, path }], share, op: 'copy'|'cut' }
 
   // ── Context menu ──
   let ctxMenu = null;   // { x, y, file, idx } | null
@@ -98,7 +99,7 @@
       const d = await r.json();
       files = d.files || [];
     } catch { files = []; }
-    selected = new Set();
+    clearSelection();
     loading = false;
   }
 
@@ -169,9 +170,49 @@
       window.open(`/api/files/download?share=${currentShare}&path=${encodeURIComponent(fp)}&token=${getToken()}`, '_blank');
     }
   }
-  function toggleSelect(i, e) {
-    if (e?.ctrlKey || e?.metaKey) { const n = new Set(selected); n.has(i) ? n.delete(i) : n.add(i); selected = n; }
-    else selected = new Set([i]);
+  function fileKey(file) {
+    return file?.name || '';
+  }
+
+  function clearSelection() {
+    selected = new Set();
+    selectionAnchor = null;
+  }
+
+  function toggleSelect(file, e, orderedFiles = sorted) {
+    const key = fileKey(file);
+    if (!key) return;
+
+    if (e?.shiftKey && selectionAnchor) {
+      const anchorIndex = orderedFiles.findIndex((item) => fileKey(item) === selectionAnchor);
+      const currentIndex = orderedFiles.findIndex((item) => fileKey(item) === key);
+      if (anchorIndex !== -1 && currentIndex !== -1) {
+        const range = orderedFiles
+          .slice(Math.min(anchorIndex, currentIndex), Math.max(anchorIndex, currentIndex) + 1)
+          .map(fileKey);
+        selected = (e.ctrlKey || e.metaKey)
+          ? new Set([...selected, ...range])
+          : new Set(range);
+        return;
+      }
+    }
+
+    if (e?.ctrlKey || e?.metaKey) {
+      const next = new Set(selected);
+      next.has(key) ? next.delete(key) : next.add(key);
+      selected = next;
+    } else {
+      selected = new Set([key]);
+    }
+    selectionAnchor = key;
+  }
+
+  function toggleSelectAll() {
+    if (sorted.length > 0 && selected.size === sorted.length) clearSelection();
+    else {
+      selected = new Set(sorted.map(fileKey));
+      selectionAnchor = sorted.length ? fileKey(sorted[0]) : null;
+    }
   }
 
   const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB por chunk
@@ -212,7 +253,11 @@
     e.preventDefault();
     e.stopPropagation();
     ctxTarget = file;
-    if (!selected.has(idx)) selected = new Set([idx]);
+    const key = fileKey(file);
+    if (!selected.has(key)) {
+      selected = new Set([key]);
+      selectionAnchor = key;
+    }
     const p = calcMenuPos(e);
     ctxMenu = { x: p.x, y: p.y, file, idx };
   }
@@ -306,13 +351,21 @@
     else alert(d.error || 'Error al eliminar');
   }
 
+  function selectedEntries(file) {
+    const useSelection = selected.size > 1 && selected.has(fileKey(file));
+    const items = useSelection
+      ? sorted.filter((item) => selected.has(fileKey(item)))
+      : [file];
+    return items.map((item) => ({ file: item, path: filePath(item) }));
+  }
+
   function copyFile(file) {
-    clipboard = { file, share: currentShare, path: filePath(file), op: 'copy' };
+    clipboard = { entries: selectedEntries(file), share: currentShare, op: 'copy' };
     closeCtx();
   }
 
   function cutFile(file) {
-    clipboard = { file, share: currentShare, path: filePath(file), op: 'cut' };
+    clipboard = { entries: selectedEntries(file), share: currentShare, op: 'cut' };
     closeCtx();
   }
 
@@ -320,39 +373,58 @@
     if (!clipboard || !currentShare) return;
     const pending = clipboard;
     closeCtx();
-    const destPath = currentPath === '/'
-      ? `/${pending.file.name}`
-      : `${currentPath}/${pending.file.name}`;
-    try {
-      const res = await fetch('/api/files/paste', {
-        method: 'POST', headers: hdrs(),
-        body: JSON.stringify({
-          srcShare: pending.share,
-          srcPath: pending.path,
-          destShare: currentShare,
-          destPath,
-          action: pending.op
-        })
-      });
-      const d = await res.json();
-      if (d.ok) {
-        if (pending.op === 'cut') clipboard = null;
-        notifySuccess(`${pending.file.name} ${pending.op === 'cut' ? 'movido' : 'copiado'} correctamente`, 'Files');
-        fetchFiles();
-      } else {
-        const msg = d.error || 'Error al pegar';
-        if (d.partial && d.copied) {
-          clipboard = null;
-          notifyError(msg, 'Movimiento incompleto');
-          fetchFiles();
-        } else if (msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('space') || msg.toLowerCase().includes('full')) {
-          notifyError(`Sin espacio: ${pending.file.name}`, 'Carpeta llena');
-        } else {
-          notifyError(msg, 'Files');
-        }
+    const completed = [];
+    const partial = [];
+    const failed = [];
+
+    for (const entry of pending.entries) {
+      const destPath = currentPath === '/'
+        ? `/${entry.file.name}`
+        : `${currentPath}/${entry.file.name}`;
+      try {
+        const res = await fetch('/api/files/paste', {
+          method: 'POST', headers: hdrs(),
+          body: JSON.stringify({
+            srcShare: pending.share,
+            srcPath: entry.path,
+            destShare: currentShare,
+            destPath,
+            action: pending.op
+          })
+        });
+        const data = await res.json();
+        if (data.ok) completed.push(entry);
+        else if (data.partial && data.copied) partial.push({ entry, error: data.error });
+        else failed.push({ entry, error: data.error || 'Error al pegar' });
+      } catch {
+        failed.push({ entry, error: 'Error de conexión al pegar' });
       }
-    } catch {
-      notifyError('Error de conexión al pegar', 'Files');
+    }
+
+    if (pending.op === 'cut') {
+      // Solo conservamos en el portapapeles lo que no llegó a copiarse. Los
+      // parciales ya tienen destino y repetirlos provocaría una colisión.
+      clipboard = failed.length
+        ? { ...pending, entries: failed.map(({ entry }) => entry) }
+        : null;
+    }
+
+    if (completed.length || partial.length) fetchFiles();
+
+    if (failed.length || partial.length) {
+      const details = [
+        failed.length ? `${failed.length} sin ${pending.op === 'cut' ? 'mover' : 'copiar'}` : '',
+        partial.length ? `${partial.length} copiados, pero con el original conservado` : '',
+      ].filter(Boolean).join(' · ');
+      notifyWarning(details, 'Operación incompleta');
+    } else {
+      const count = completed.length;
+      notifySuccess(
+        count === 1
+          ? `${completed[0].file.name} ${pending.op === 'cut' ? 'movido' : 'copiado'} correctamente`
+          : `${count} elementos ${pending.op === 'cut' ? 'movidos' : 'copiados'} correctamente`,
+        'Files'
+      );
     }
   }
 
@@ -388,7 +460,7 @@
   // ── Zip / Unzip ──
   async function zipSelected() {
     closeCtx();
-    const sel = [...selected].map(i => sorted[i]).filter(Boolean);
+    const sel = sorted.filter((file) => selected.has(fileKey(file)));
     if (!sel.length || !currentShare) return;
     const paths = sel.map(f => currentPath === '/' ? `/${f.name}` : `${currentPath}/${f.name}`);
     const name = sel.length === 1 ? sel[0].name + '.zip' : 'archive.zip';
@@ -440,12 +512,28 @@
 
   $: localShares = shares.filter(s => !s.remote);
   $: remoteShares = shares.filter(s => s.remote);
+
+  function handleKeydown(e) {
+    const target = e.target;
+    const editing = target?.matches?.('input, textarea, select, [contenteditable="true"]');
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && currentShare && !editing) {
+      e.preventDefault();
+      selected = new Set(sorted.map(fileKey));
+      selectionAnchor = sorted.length ? fileKey(sorted[0]) : null;
+      return;
+    }
+    if (e.key === 'Escape') {
+      closeCtx();
+      renameModal = null;
+      infoModal = null;
+      newFolderModal = null;
+      clearSelection();
+    }
+    if (e.key === 'Enter' && renameModal) confirmRename();
+  }
 </script>
 
-<svelte:window on:keydown={(e) => {
-  if (e.key === 'Escape') { closeCtx(); renameModal = null; infoModal = null; newFolderModal = null; }
-  if (e.key === 'Enter' && renameModal) confirmRename();
-}} />
+<svelte:window on:keydown={handleKeydown} />
 
 <AppShell
   appId="files"
@@ -545,7 +633,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:10px;height:10px">
               <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
             </svg>
-            {clipboard.op === 'cut' ? 'Cortado' : 'Copiado'}: {clipboard.file.name}
+            {clipboard.op === 'cut' ? 'Cortado' : 'Copiado'}:
+            {clipboard.entries.length === 1 ? clipboard.entries[0].file.name : `${clipboard.entries.length} elementos`}
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <span class="cb-clear" on:click={() => clipboard = null}>✕</span>
@@ -553,6 +642,18 @@
         {/if}
         {#if currentShare}
           <div class="tb-view-group">
+            <button
+              class="tb-plain-btn"
+              class:active={sorted.length > 0 && selected.size === sorted.length}
+              title={sorted.length > 0 && selected.size === sorted.length ? 'Quitar selección' : 'Seleccionar todo'}
+              aria-label={sorted.length > 0 && selected.size === sorted.length ? 'Quitar selección' : 'Seleccionar todo'}
+              on:click={toggleSelectAll}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="m8 12 3 3 5-6"/>
+              </svg>
+            </button>
+            <div class="tb-sep"></div>
             <button class="tb-plain-btn" class:active={viewMode === 'grid'} title="Vista cuadrícula" on:click={() => viewMode = 'grid'}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px">
                 <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -606,7 +707,8 @@
       {currentShare} {localShares} {remoteShares} {selected} {clipboard} {loading} {filePath}
       files={sorted}
       on:navigate={(e) => navigate(e.detail.share, e.detail.path)}
-      on:select={(e) => toggleSelect(e.detail.i, e.detail.e)}
+      on:select={(e) => toggleSelect(e.detail.file, e.detail.e, e.detail.files)}
+      on:clear={clearSelection}
       on:open={(e) => openItem(e.detail)}
       on:context={(e) => onContextMenu(e.detail.e, e.detail.file, e.detail.i)}
       on:bgcontext={(e) => { const p = calcMenuPos(e.detail); ctxMenu = { x: p.x, y: p.y, file: null, idx: -1 }; }}
@@ -616,7 +718,8 @@
       {currentShare} {localShares} {remoteShares} {selected} {clipboard} {loading} {filePath}
       files={sorted}
       on:navigate={(e) => navigate(e.detail.share, e.detail.path)}
-      on:select={(e) => toggleSelect(e.detail.i, e.detail.e)}
+      on:select={(e) => toggleSelect(e.detail.file, e.detail.e, e.detail.files)}
+      on:clear={clearSelection}
       on:open={(e) => openItem(e.detail)}
       on:context={(e) => onContextMenu(e.detail.e, e.detail.file, e.detail.i)}
       on:bgcontext={(e) => { const p = calcMenuPos(e.detail); ctxMenu = { x: p.x, y: p.y, file: null, idx: -1 }; }}

@@ -52,8 +52,9 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 <div class="file-list"
+  on:click={(e) => { if (e.target === e.currentTarget) dispatch('clear'); }}
   on:contextmenu={(e) => { if (!e.target.closest('.fl-row') && clipboard && currentShare) { e.preventDefault(); dispatch('bgcontext', e); } }}>
 
   {#if !currentShare}
@@ -88,10 +89,10 @@
     {#each rows as file, i}
       <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
       <div class="fl-row"
-        class:sel={selected.has(i)}
-        class:cut={clipboard?.op === 'cut' && clipboard?.path === filePath(file)}
+        class:sel={selected.has(file.name)}
+        class:cut={clipboard?.op === 'cut' && clipboard?.entries?.some((entry) => entry.path === filePath(file))}
         data-idx={i}
-        on:click={(e) => dispatch('select', { i, e })}
+        on:click={(e) => dispatch('select', { file, e, files: rows })}
         on:dblclick={() => dispatch('open', file)}
         on:contextmenu={(e) => dispatch('context', { e, file, i })}>
         <span class="fl-icon">{@html fIconHtml(file, true)}</span>
