@@ -151,6 +151,14 @@ html {
   --magenta:        #e873ff;
   --orange:         #ff8c3f;
 
+  /* Datos y estados · fijos, nunca dependen del acento del usuario. */
+  --metric:         #5b8ff9;
+  --metric-alt:     #4db8ff;
+  --metric-dim:     rgba(91, 143, 249, 0.14);
+  --ok:             #3fb984;
+  --ok-dim:         rgba(63, 185, 132, 0.14);
+  --ok-border:      rgba(63, 185, 132, 0.30);
+
   /* ── Escala (compat theme store) ─────────────────────────── */
   --text-scale: 1;
   --ui-scale:   1;
@@ -258,6 +266,13 @@ html {
   --signal-dim:   hsla(var(--signal-h), var(--signal-s), var(--signal-l), 0.15);
   --signal-glow:  hsla(var(--signal-h), var(--signal-s), var(--signal-l), 0.35);
   --signal-soft:  hsla(var(--signal-h), var(--signal-s), var(--signal-l), 0.07);
+
+  --metric:         #256fc4;
+  --metric-alt:     #167dab;
+  --metric-dim:     rgba(37, 111, 196, 0.12);
+  --ok:             #2f7d5e;
+  --ok-dim:         rgba(47, 125, 94, 0.12);
+  --ok-border:      rgba(47, 125, 94, 0.28);
 
   /* ── Fondos (escalera de elevación inversa) ──────────────── */
   /* ── Fondos · paleta crema afinada (más contraste card↔fondo) ───
@@ -386,15 +401,15 @@ html {
   --accent-color:   var(--signal);
 
   /* Colores semánticos legacy (alias) */
-  --c-ok:    var(--signal);
+  --c-ok:    var(--ok);
   --c-warn:  var(--warn);
   --c-crit:  var(--crit);
   --c-info:  var(--info);
-  --c-ok-dim:    var(--signal-dim);
+  --c-ok-dim:    var(--ok-dim);
   --c-warn-dim:  var(--warn-dim);
   --c-crit-dim:  var(--crit-dim);
   --c-info-dim:  var(--info-dim);
-  --c-ok-border:   hsla(var(--signal-h), var(--signal-s), var(--signal-l), 0.30);
+  --c-ok-border:   var(--ok-border);
   --c-warn-border: var(--warn-border);
   --c-crit-border: var(--crit-border);
 
@@ -431,7 +446,7 @@ html {
   --bd-3:        var(--line-bright);
 
   /* Estados (estilo mockup, prefijo st-) */
-  --st-ok:       var(--signal);
+  --st-ok:       var(--ok);
   --st-warn:     var(--warn);
   --st-crit:     var(--crit);
   --st-info:     var(--info);

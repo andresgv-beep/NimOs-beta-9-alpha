@@ -253,8 +253,8 @@
   .pool-line { display: flex; flex-direction: column; gap: 3px; margin-bottom: 5px; }
   .pool-cap { font-size: 12px; color: var(--info); font-family: var(--font-mono); }
   .pool-cap.down { color: var(--crit, #ef4444); }
-  .pool-prf { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--signal); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pool-prf .dot { width: 7px; height: 7px; border-radius: 2px; background: var(--signal); flex-shrink: 0; }
+  .pool-prf { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--ok); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pool-prf .dot { width: 7px; height: 7px; border-radius: 2px; background: var(--ok); flex-shrink: 0; }
   .pool-prf .dot.down { background: var(--crit, #ef4444); }
   .bar { height: 5px; background: var(--bg-inner); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
   .bar:last-child { margin-bottom: 0; }
@@ -274,7 +274,7 @@
   .app-ico.orange { background: linear-gradient(135deg, #ffb04d, #f7913f); }
   .app-ico.pink { background: linear-gradient(135deg, #ff7a9a, #e8487a); }
   .app-ico.teal { background: linear-gradient(135deg, #2ad9c8, #1ba898); }
-  .app-dot { position: absolute; top: -2px; right: -2px; width: 13px; height: 13px; border-radius: 4px; background: var(--signal); border: 2px solid var(--canvas); }
+  .app-dot { position: absolute; top: -2px; right: -2px; width: 13px; height: 13px; border-radius: 4px; background: var(--ok); border: 2px solid var(--canvas); }
   .app-dot.off { background: var(--ink-trace); }
   .app-label { font-size: 11px; color: var(--ink-dim); text-align: center; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .app-skeleton { height: 56px; border-radius: 15px; background: var(--bg-card); opacity: 0.4; }

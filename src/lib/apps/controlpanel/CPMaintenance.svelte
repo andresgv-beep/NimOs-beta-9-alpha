@@ -327,7 +327,7 @@
     width: 11px; height: 11px; border-radius: 3px;
     background: var(--st-crit, #ff5470); flex: 0 0 auto;
   }
-  .m-led.on { background: var(--signal, #5b8ff9); }
+  .m-led.on { background: var(--ok); }
   .m-titlewrap { flex: 1 1 auto; }
   .m-title { color: var(--fg, #e4e4e7); font-size: 14px; }
   .m-desc { color: var(--fg-4, #7a7a82); font-size: 12px; margin-top: 2px; }

@@ -569,11 +569,11 @@
   }
   .ddns-status { display: flex; align-items: center; gap: 7px; font-size: 12px; }
   .st-led { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-  .st-led.ok { background: var(--signal, #5b8ff9); box-shadow: none; }
+  .st-led.ok { background: var(--ok); box-shadow: none; }
   .st-led.warn { background: var(--st-warn, #ffc857); }
   .st-led.crit { background: var(--st-crit, #ff5a5a); }
   .st-led.off { background: var(--ink-trace, #5a5a62); }
-  .st-text.ok { color: var(--signal, #5b8ff9); }
+  .st-text.ok { color: var(--ok); }
   .st-text.warn { color: var(--st-warn, #ffc857); }
   .st-text.crit { color: var(--st-crit, #ff5a5a); }
   .st-text.off { color: var(--ink-trace, #5a5a62); }

@@ -324,7 +324,7 @@
   .meta-k { font-size: 10px; color: var(--fg-5, #5a5a62); font-weight: 600; margin-bottom: 4px; }
   .meta-v { font-size: 13px; color: var(--fg, #f0f0f0); font-weight: 500; }
   .meta-v.mono { font-family: var(--font-sans); font-size: 12px; }
-  .meta-v.mono.on { color: var(--signal, #5b8ff9); }
+  .meta-v.mono.on { color: var(--ok); }
   .meta-v.path { font-family: var(--font-sans); font-size: 11px; color: var(--fg-2, #d0d0d4); word-break: break-all; }
 
   /* Distribución por tipo */

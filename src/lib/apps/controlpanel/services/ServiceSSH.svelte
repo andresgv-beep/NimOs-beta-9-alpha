@@ -68,7 +68,7 @@
   .sp-bar { display: flex; align-items: center; justify-content: space-between; }
   .sp-status { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .sp-led { width: 9px; height: 9px; border-radius: 2.5px; background: var(--fg-5, #5a5a62); }
-  .sp-led.on { background: var(--signal, #5b8ff9); }
+  .sp-led.on { background: var(--ok); }
   .sp-toggle { width: 40px; height: 20px; background: var(--bg-inner, #101015); border: 1px solid var(--bd-2, #20202a); border-radius: 5px; position: relative; cursor: pointer; padding: 0; flex-shrink: 0; }
   .sp-toggle-thumb { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--fg-5, #5a5a62); border-radius: 3px; transition: left 0.15s, background 0.15s; }
   .sp-toggle.on { background: rgba(91,143,249,0.14); border-color: rgba(91,143,249,0.45); }

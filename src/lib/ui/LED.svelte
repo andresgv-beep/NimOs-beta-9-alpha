@@ -5,7 +5,7 @@
    * Uso: <LED /> · <LED variant="warn" /> · <LED variant="crit" size={10} />
    *
    * Variantes:
-   *   - ok (default): verde accent, pulso lento 1.6s
+   *   - ok (default): verde semántico fijo, pulso lento 1.6s
    *   - warn:         ámbar, pulso medio 1.2s
    *   - crit:         rojo, pulso rápido 0.8s
    *   - off:          gris apagado, sin pulso
@@ -35,8 +35,8 @@
     width: var(--led-size, 8px);
     height: var(--led-size, 8px);
     border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 6px var(--accent-glow), 0 0 2px var(--accent);
+    background: var(--ok);
+    box-shadow: 0 0 6px var(--ok-dim), 0 0 2px var(--ok);
     animation: led-pulse 1.6s ease-in-out infinite;
     flex-shrink: 0;
     vertical-align: middle;

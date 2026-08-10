@@ -45,14 +45,14 @@
     variant === 'crit' ? 'var(--crit)' :
     variant === 'info' ? 'var(--info)' :
     variant === 'dim'  ? 'var(--fg-dim)' :
-    'var(--accent)';
+    'var(--metric)';
 
   $: fillColor =
     variant === 'warn' ? 'rgba(255, 184, 0, 0.08)' :
     variant === 'crit' ? 'rgba(255, 90, 90, 0.08)' :
     variant === 'info' ? 'rgba(77, 184, 255, 0.08)' :
     variant === 'dim'  ? 'rgba(136, 136, 136, 0.08)' :
-    'var(--accent-dim)';
+    'var(--metric-dim)';
 </script>
 
 <svg

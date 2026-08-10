@@ -45,17 +45,17 @@
   .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 5px; font-family: var(--font-mono); }
   .badge.warn { background: var(--warn); color: var(--bg-window); }
   .badge.crit { background: var(--crit); color: #fff; }
-  .badge.ok { background: var(--signal); color: var(--bg-window); }
+  .badge.ok { background: var(--ok); color: var(--bg-window); }
 
   .metric { margin-bottom: 11px; }
   .metric:last-child { margin-bottom: 0; }
   .metric-top { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; }
   .metric-k { color: var(--ink-mute); }
   .metric-v { font-family: var(--font-mono); font-weight: 600; color: var(--info); }
-  .metric-v.green { color: var(--signal); }
+  .metric-v.green { color: var(--ok); }
   .metric-v.orange { color: var(--warn); }
   .bar { height: 5px; background: var(--bg-inner); border-radius: 2px; overflow: hidden; }
   .bar-fill { height: 100%; background: var(--info); border-radius: 2px; transition: width 0.4s ease; }
-  .bar-fill.green { background: var(--signal); }
+  .bar-fill.green { background: var(--ok); }
   .bar-fill.orange { background: var(--warn); }
 </style>

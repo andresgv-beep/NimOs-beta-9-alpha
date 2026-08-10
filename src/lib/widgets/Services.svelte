@@ -146,7 +146,7 @@
   .sum b { font-weight: 600; }
   .sum .c { color: var(--crit); }
   .sum .w { color: var(--warn); }
-  .sum .g { color: var(--signal); }
+  .sum .g { color: var(--ok); }
   .sum .sep { color: var(--ink-trace); margin: 0 3px; }
 
   /* columnas en paralelo · la 1ª se llena al tope y luego la 2ª.
@@ -184,7 +184,7 @@
     width: 9px;
     height: 9px;
     border-radius: 3px;
-    background: var(--signal);
+    background: var(--ok);
     box-shadow: none;
   }
   .cube.warn { background: var(--warn); box-shadow: none; }

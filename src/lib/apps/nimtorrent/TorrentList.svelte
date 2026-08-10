@@ -54,17 +54,17 @@
   .row.selected { background: var(--ui-select-bg); box-shadow: inset 3px 0 var(--signal); }
   .identity { min-width: 0; display: flex; align-items: center; gap: 10px; }
   .state { width: 7px; height: 7px; border-radius: 2px; flex: 0 0 auto; background: var(--ink-mute); }
-  .state.downloading, .state.checking { background: var(--signal); }
+  .state.downloading, .state.checking { background: var(--metric); }
   .state.seeding { background: var(--info, #55b7f3); }
   .state.error { background: var(--crit); }
   .name-block { min-width: 0; flex: 1; display: grid; gap: 6px; }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 600; }
   .progress { height: 3px; overflow: hidden; background: var(--line); border-radius: 2px; }
-  .fill { display: block; height: 100%; background: var(--signal); }
+  .fill { display: block; height: 100%; background: var(--metric); }
   .fill.seeding { background: var(--info, #55b7f3); }
   .fill.paused { background: var(--ink-mute); }
   .fill.error { background: var(--crit); }
-  .accent { color: var(--signal); }
+  .accent { color: var(--metric); }
   .message { height: 100%; min-height: 170px; display: grid; place-items: center; color: var(--ink-mute); font-size: 13px; }
   .message.error { color: var(--crit); }
   @media (max-width: 1050px) {

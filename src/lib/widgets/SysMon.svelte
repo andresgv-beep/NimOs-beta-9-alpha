@@ -156,7 +156,7 @@
     color: var(--ink-faint);
     min-height: 11px;
   }
-  .t-sub.ok   { color: var(--signal); }
+  .t-sub.ok   { color: var(--ok); }
   .t-sub.warn { color: var(--warn); }
   .t-sub.crit { color: var(--crit); }
 </style>

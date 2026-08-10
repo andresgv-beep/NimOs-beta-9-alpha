@@ -151,7 +151,7 @@
     letter-spacing: -0.4px;
     font-feature-settings: "tnum";
   }
-  .kpi-value.accent { color: var(--signal); }
+  .kpi-value.accent { color: var(--metric); }
   .kpi-value.warn   { color: var(--warn); }
   .kpi-value.crit   { color: var(--crit); }
   .kpi-value.info   { color: var(--info); }
@@ -168,5 +168,5 @@
     letter-spacing: 0;
   }
   .kpi-delta.up   { color: var(--crit); }
-  .kpi-delta.down { color: var(--signal); }
+  .kpi-delta.down { color: var(--metric); }
 </style>

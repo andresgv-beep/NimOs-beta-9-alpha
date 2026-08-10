@@ -40,7 +40,7 @@
   .heading { min-width: 0; }
   .eyebrow { display: flex; align-items: center; gap: 7px; color: var(--ink-mute); font-size: 11px; margin-bottom: 5px; }
   .dot { width: 7px; height: 7px; border-radius: 2px; background: var(--ink-mute); }
-  .dot.downloading, .dot.checking { background: var(--signal); }
+  .dot.downloading, .dot.checking { background: var(--metric); }
   .dot.seeding { background: var(--info, #55b7f3); }
   .dot.error { background: var(--crit); }
   h2 { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -51,9 +51,9 @@
   button.danger:hover:not(:disabled) { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 45%, transparent); }
   button:disabled { opacity: .45; cursor: default; }
   .progress-head { display: flex; justify-content: space-between; align-items: baseline; margin-top: 20px; font-size: 11px; color: var(--ink-mute); }
-  .progress-head strong { color: var(--signal); font-size: 18px; }
+  .progress-head strong { color: var(--metric); font-size: 18px; }
   .progress { height: 5px; margin-top: 7px; overflow: hidden; border-radius: 3px; background: var(--line); }
-  .fill { display: block; height: 100%; background: var(--signal); }
+  .fill { display: block; height: 100%; background: var(--metric); }
   .fill.seeding { background: var(--info, #55b7f3); }
   .fill.paused { background: var(--ink-mute); }
   .fill.error { background: var(--crit); }
@@ -62,7 +62,7 @@
   .metrics > div:last-child { border: 0; }
   .metrics span, .hash span { color: var(--ink-mute); font-size: 10px; }
   .metrics strong { color: var(--ink); font-size: 13px; font-variant-numeric: tabular-nums; }
-  .metrics strong.accent { color: var(--signal); }
+  .metrics strong.accent { color: var(--metric); }
   small { color: var(--ink-mute); font-size: 10px; font-weight: 400; }
   .hash { display: flex; align-items: center; gap: 14px; margin-top: 14px; min-width: 0; }
   code { color: var(--ink-dim); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

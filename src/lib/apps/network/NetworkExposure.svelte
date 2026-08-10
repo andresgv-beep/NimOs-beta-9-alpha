@@ -392,7 +392,7 @@
     font-size: 9px; color: white;
   }
   .nx-status-step.ok { color: var(--ink-dim); }
-  .nx-status-step.ok .nx-status-dot { background: var(--signal); border-color: var(--signal); }
+  .nx-status-step.ok .nx-status-dot { background: var(--ok); border-color: var(--ok); }
   .nx-strip-hint { margin-left: auto; font-size: 11px; color: var(--fg-4, #7a7a82); }
   .nx-strip-hint.warn { color: var(--st-warn, #ffc857); }
 

@@ -235,8 +235,8 @@
     font-family: var(--font-sans);
     font-size: 8px;
     letter-spacing: 0;
-    color: var(--signal);
-    border: 1px solid var(--signal-dim);
+    color: var(--ok);
+    border: 1px solid var(--ok-border);
     border-radius: var(--radius-sm);
     padding: 1px 5px;
     flex-shrink: 0;
@@ -249,7 +249,7 @@
   .bar {
     height: 6px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--line);
     overflow: hidden;
     margin-bottom: 10px;
   }
@@ -258,7 +258,7 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--signal);
+    background: var(--metric);
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .bar i.hot  { background: var(--warn); }
@@ -317,7 +317,7 @@
   .c-shield { display: flex; align-items: center; justify-content: center; }
   .c-shield svg { width: 16px; height: 16px; }
   .big .c-shield svg { width: 22px; height: 22px; }
-  .c-shield.ok   { color: var(--signal); }
+  .c-shield.ok   { color: var(--ok); }
   .c-shield.warn { color: var(--warn); }
   .c-shield.crit { color: var(--crit); }
 

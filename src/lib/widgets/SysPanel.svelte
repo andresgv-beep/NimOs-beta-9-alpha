@@ -45,7 +45,7 @@
     return pct == null ? 'var(--ink-trace)'
       : pct >= 90 ? 'var(--crit)'
       : pct >= 80 ? 'var(--warn)'
-      : 'var(--signal)';
+      : 'var(--metric)';
   }
 
   // ── Estado térmico · umbrales Raspberry Pi (throttle ~80 °C) ──
@@ -67,7 +67,7 @@
       <div class="ring" style="width:{SIZE}px;height:{SIZE}px">
         <svg width={SIZE} height={SIZE}>
           <circle cx={SIZE / 2} cy={SIZE / 2} r={R}
-            fill="none" stroke="rgba(255,255,255,.08)" stroke-width={THICK} />
+            fill="none" stroke="var(--line)" stroke-width={THICK} />
           <circle cx={SIZE / 2} cy={SIZE / 2} r={R}
             fill="none" stroke={color(cpu?.percent)} stroke-width={THICK}
             stroke-linecap="round" stroke-dasharray={CIRC}
@@ -91,7 +91,7 @@
       <div class="ring" style="width:{SIZE}px;height:{SIZE}px">
         <svg width={SIZE} height={SIZE}>
           <circle cx={SIZE / 2} cy={SIZE / 2} r={R}
-            fill="none" stroke="rgba(255,255,255,.08)" stroke-width={THICK} />
+            fill="none" stroke="var(--line)" stroke-width={THICK} />
           <circle cx={SIZE / 2} cy={SIZE / 2} r={R}
             fill="none" stroke={color(mem?.percent)} stroke-width={THICK}
             stroke-linecap="round" stroke-dasharray={CIRC}
@@ -274,7 +274,7 @@
     color: var(--ink-faint);
     min-height: 12px;
   }
-  .m-sub.ok   { color: var(--signal); }
+  .m-sub.ok   { color: var(--ok); }
   .m-sub.warn { color: var(--warn); }
   .m-sub.crit { color: var(--crit); }
 

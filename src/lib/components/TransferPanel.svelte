@@ -381,7 +381,7 @@
     font-weight: 700;
   }
   .dir.up    { color: var(--info); }
-  .dir.down  { color: var(--signal); }
+  .dir.down  { color: var(--metric); }
   .dir.ok    { color: #3fb984; }
   .dir.err   { color: var(--crit); }
   .dir.pause { color: var(--warn); }
@@ -467,7 +467,7 @@
     flex-shrink: 0;
   }
   .speed.up   { color: var(--info); }
-  .speed.down { color: var(--signal); }
+  .speed.down { color: var(--metric); }
   .tstamp { color: var(--fg-faint); }
   .err-msg { color: var(--crit); opacity: 0.85; }
 </style>

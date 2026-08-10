@@ -241,7 +241,7 @@
     align-items: center;
     gap: 14px;
   }
-  .tf-status.enabled { border-left: 2px solid var(--signal, #5b8ff9); }
+  .tf-status.enabled { border-left: 2px solid var(--ok); }
   .tf-status-icon {
     width: 38px;
     height: 38px;

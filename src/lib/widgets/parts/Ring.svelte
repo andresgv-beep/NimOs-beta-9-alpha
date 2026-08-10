@@ -7,7 +7,7 @@
    * Sin datos propios, sin stores — recibe todo por props.
    *
    * Umbrales de color (mismos en todos los roscos del sistema):
-   *   < 80 → --signal · ≥ 80 → --warn · ≥ 90 → --crit
+   *   < 80 → --metric · ≥ 80 → --warn · ≥ 90 → --crit
    *
    * pct null → estado skeleton ("—", rosco vacío).
    */
@@ -22,13 +22,13 @@
   $: color = pct == null ? 'var(--ink-trace)'
     : pct >= 90 ? 'var(--crit)'
     : pct >= 80 ? 'var(--warn)'
-    : 'var(--signal)';
+    : 'var(--metric)';
 </script>
 
 <div class="ring" style="width:{size}px;height:{size}px">
   <svg width={size} height={size}>
     <circle cx={size / 2} cy={size / 2} {r}
-      fill="none" stroke="rgba(255,255,255,.08)" stroke-width={thick} />
+      fill="none" stroke="var(--line)" stroke-width={thick} />
     <circle cx={size / 2} cy={size / 2} {r}
       fill="none" stroke={color} stroke-width={thick} stroke-linecap="round"
       stroke-dasharray={circ} stroke-dashoffset={offset} class="arc" />

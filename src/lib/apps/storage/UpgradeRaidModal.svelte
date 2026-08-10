@@ -382,7 +382,7 @@
     flex-shrink: 0;
   }
   .impact-row .v { font-size: 12px; color: var(--ink); text-align: right; }
-  .impact-row .v.ok { color: var(--signal); }
+  .impact-row .v.ok { color: var(--ok); }
 
   /* Selección de disco */
   .field-block { display: flex; flex-direction: column; gap: 8px; }
@@ -498,7 +498,7 @@
     font-size: 18px;
     font-weight: 700;
   }
-  .ok-result .result-icon { color: var(--signal); }
+  .ok-result .result-icon { color: var(--ok); }
   .err-result .result-icon { color: #ff5a5a; }
   .result-text { font-size: 12px; line-height: 1.5; color: var(--ink); }
 

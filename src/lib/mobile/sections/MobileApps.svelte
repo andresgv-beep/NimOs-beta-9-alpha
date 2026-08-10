@@ -158,7 +158,7 @@
   .app-row-name { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .app-row-state { font-size: 11px; font-family: var(--font-mono); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
   .app-row-state .dot { width: 7px; height: 7px; border-radius: 2px; }
-  .state-on { color: var(--signal); } .state-on .dot { background: var(--signal); }
+  .state-on { color: var(--ok); } .state-on .dot { background: var(--ok); }
   .state-off { color: var(--ink-faint); } .state-off .dot { background: var(--ink-trace); }
 
   .toggle { width: 44px; height: 25px; border-radius: 6px; position: relative; flex-shrink: 0; border: none; cursor: pointer; transition: background 0.15s; }

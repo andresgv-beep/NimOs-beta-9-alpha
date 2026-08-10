@@ -18,21 +18,23 @@
   // ───── Navegación ─────
   let activeView = 'tema';
 
+  const navIcon = body => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+
   // Sidebar sections (agrupadas como espera AppShell)
   const sections = [
     {
       label: 'Preferencias',
       items: [
-        { id: 'tema',     label: 'Tema' },
-        { id: 'fondo',    label: 'Fondo' },
-        { id: 'taskbar',  label: 'Taskbar' },
-        { id: 'escala',   label: 'Escala' },
+        { id: 'tema', label: 'Tema', icon: navIcon('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>') },
+        { id: 'fondo', label: 'Fondo', icon: navIcon('<rect x="3" y="4" width="18" height="16" rx="1.5"/><circle cx="8" cy="9" r="1.5"/><path d="M4 17l5-5 3 3 2-2 6 5"/>') },
+        { id: 'taskbar', label: 'Taskbar', icon: navIcon('<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 15h18M7 17.5h.01M10 17.5h.01"/>') },
+        { id: 'escala', label: 'Escala', icon: navIcon('<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/><path d="M3 8l5-5M21 8l-5-5M3 16l5 5M21 16l-5 5"/>') },
       ],
     },
     {
       label: 'Sistema',
       items: [
-        { id: 'about',    label: 'Acerca de' },
+        { id: 'about', label: 'Acerca de', icon: navIcon('<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>') },
       ],
     },
   ];

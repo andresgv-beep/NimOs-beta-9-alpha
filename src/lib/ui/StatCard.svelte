@@ -121,7 +121,7 @@
   }
   /* OK: texto neutro, solo el dot va en verde */
   .t-ok   { color: var(--ink-mute); }
-  .t-ok .sc-dot { background: var(--signal); }
+  .t-ok .sc-dot { background: var(--ok); }
   .t-info { color: var(--info); }
   .t-warn { color: var(--warn); }
   .t-crit { color: var(--crit); }

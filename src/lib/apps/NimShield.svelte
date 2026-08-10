@@ -126,7 +126,7 @@
   .engine-toggle { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: rgba(91,143,249,0.07); border: 1px solid rgba(91,143,249,0.22); border-radius: 4px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
   .engine-toggle.off { background: rgba(255, 90, 90, 0.04); border-color: rgba(255, 90, 90, 0.18); }
   .engine-lbl { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--fg-2, #d0d0d4); font-weight: 500; }
-  .engine-led { width: 7px; height: 7px; border-radius: 1.5px; background: var(--signal, #5b8ff9); box-shadow: none; animation: pulse 2.5s ease-in-out infinite; }
+  .engine-led { width: 7px; height: 7px; border-radius: 1.5px; background: var(--ok); box-shadow: none; animation: pulse 2.5s ease-in-out infinite; }
   .engine-led.off { background: var(--st-crit, #ff5a5a); box-shadow: 0 0 5px rgba(255, 90, 90, 0.4); animation: none; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
   .toggle-switch { width: 28px; height: 16px; background: var(--signal, #5b8ff9); border-radius: 3px; position: relative; transition: background 0.15s; flex-shrink: 0; }

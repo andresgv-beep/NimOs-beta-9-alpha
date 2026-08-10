@@ -44,7 +44,7 @@
   .fill {
     position: absolute;
     left: 0; top: 0; bottom: 0;
-    background: var(--accent);
+    background: var(--metric);
     transition: width 0.3s ease-out;
   }
   .fill.info { background: var(--info); }

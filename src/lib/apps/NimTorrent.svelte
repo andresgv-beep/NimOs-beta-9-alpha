@@ -232,7 +232,7 @@
 
 <style>
   :global(.torrent-nav-dot) { width: 7px; height: 7px; border-radius: 2px; display: inline-block; background: var(--ink-mute); }
-  :global(.torrent-nav-dot.active) { background: var(--signal); }
+  :global(.torrent-nav-dot.active) { background: var(--metric); }
   :global(.torrent-nav-dot.seeding) { background: var(--info, #55b7f3); }
   :global(.torrent-nav-dot.error) { background: var(--crit); }
   .toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--line); }

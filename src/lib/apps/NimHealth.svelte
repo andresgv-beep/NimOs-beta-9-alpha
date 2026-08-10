@@ -742,7 +742,7 @@
     font-size: 10px;
   }
   .reason-dot {
-    color: var(--accent);
+    color: var(--metric);
     font-weight: bold;
     cursor: help;
     user-select: none;

@@ -409,7 +409,7 @@
   .cpp-user-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
   .cpp-user-name { color: var(--ink); font-size: 12px; font-weight: 600; }
   .cpp-user-state { color: var(--ink-mute); font-size: 11px; }
-  .cpp-user-row.on .cpp-user-state { color: var(--signal); }
+  .cpp-user-row.on .cpp-user-state { color: var(--ok); }
   .cpp-switch { width: 32px; height: 18px; padding: 2px; border-radius: 9px; background: var(--line-bright); transition: background 0.15s ease; }
   .cpp-switch span { display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--ink-mute); transition: transform 0.15s ease, background 0.15s ease; }
   .cpp-user-row.on .cpp-switch { background: rgba(91, 143, 249, 0.28); }

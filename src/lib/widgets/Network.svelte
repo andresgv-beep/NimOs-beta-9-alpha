@@ -174,7 +174,7 @@
   .arrow { font-size: 11px; }
   .num { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
   .unit { font-size: 9px; color: var(--ink-faint); }
-  .dl .arrow, .dl .num { color: var(--signal); }
+  .dl .arrow, .dl .num { color: var(--metric); }
   .ul .arrow, .ul .num { color: var(--nim-remote); }
 
   .spark {
@@ -183,8 +183,8 @@
     min-height: 28px;
     width: 100%;
   }
-  .dl .line { fill: none; stroke: var(--signal); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
-  .dl .area { fill: var(--signal); opacity: 0.10; }
+  .dl .line { fill: none; stroke: var(--metric); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  .dl .area { fill: var(--metric); opacity: 0.10; }
   .ul .line { fill: none; stroke: var(--nim-remote); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
   .ul .area { fill: var(--nim-remote); opacity: 0.10; }
 

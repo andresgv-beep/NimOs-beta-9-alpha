@@ -154,7 +154,7 @@
     display: flex;
     gap: 8px;
   }
-  .agg .d { color: var(--signal); }
+  .agg .d { color: var(--metric); }
   .agg .u { color: var(--nim-remote); }
 
   .list {
@@ -177,7 +177,7 @@
   .bar {
     height: 4px;
     border-radius: 4px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--line);
     overflow: hidden;
   }
   .bar i {
@@ -193,7 +193,7 @@
     background: var(--warn);
   }
   .bar i.done {
-    background: var(--signal);
+    background: var(--ok);
   }
   .bar i.err {
     background: var(--crit);
@@ -208,8 +208,8 @@
     margin-top: 4px;
     gap: 8px;
   }
-  .meta .eta { color: var(--signal); font-weight: 600; }
-  .meta .ok { color: var(--signal); }
+  .meta .eta { color: var(--metric); font-weight: 600; }
+  .meta .ok { color: var(--ok); }
   .meta .seed { color: var(--nim-remote); }
 
   .more {

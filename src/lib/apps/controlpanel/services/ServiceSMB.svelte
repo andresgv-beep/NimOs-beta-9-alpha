@@ -216,7 +216,7 @@
   .sp-bar { display: flex; align-items: center; justify-content: space-between; }
   .sp-status { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-3, #9c9ca4); font-family: var(--font-sans); }
   .sp-led { width: 9px; height: 9px; border-radius: 2.5px; background: var(--fg-5, #5a5a62); }
-  .sp-led.on { background: var(--signal, #5b8ff9); }
+  .sp-led.on { background: var(--ok); }
   .sp-toggle {
     width: 40px; height: 20px;
     background: var(--bg-inner, #101015);

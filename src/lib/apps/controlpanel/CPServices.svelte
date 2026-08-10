@@ -111,7 +111,7 @@
     border-radius: 2px;
     background: var(--fg-5, #5a5a62);
   }
-  .svc-tab-led.on { background: var(--signal, #5b8ff9); }
+  .svc-tab-led.on { background: var(--ok); }
   .svc-tab-led.unknown { background: var(--bd-3, #2a2a32); }
 
   .svc-content { min-height: 200px; }

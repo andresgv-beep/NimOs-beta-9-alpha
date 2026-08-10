@@ -527,7 +527,7 @@
   .field-input:focus{border-color:var(--ui-select, #7a9eb1);background:#0d0d11}
   .field-input::placeholder{color:var(--fg-5)}
   .field-hint{font-size:10px;color:var(--fg-5);font-family:var(--font-sans);margin-top:2px}
-  .field-hint.ok{color:var(--signal, #5b8ff9)}
+  .field-hint.ok{color:var(--ok)}
   .field-hint.warn{color:var(--st-warn)}
   .pw-strength{display:flex;gap:3px;margin-top:6px}
   .pw-bar{flex:1;height:3px;border-radius:1px;background:var(--bd-3)}
@@ -597,8 +597,8 @@
   .summary-row + .summary-row{border-top:1px solid var(--bd)}
   .summary-lbl{color:var(--fg-4);letter-spacing:0.3px}
   .summary-val{color:var(--fg-2)}
-  .summary-val.ok{color:var(--signal, #5b8ff9);display:flex;align-items:center;gap:5px}
-  .summary-val.ok::before{content:'';width:5px;height:5px;background:var(--signal, #5b8ff9);border-radius:1.5px}
+  .summary-val.ok{color:var(--ok);display:flex;align-items:center;gap:5px}
+  .summary-val.ok::before{content:'';width:5px;height:5px;background:var(--ok);border-radius:1.5px}
 
   @media (max-width:480px){
     .qr-section{flex-direction:column;align-items:center}

@@ -28,18 +28,20 @@
 
   let active = 'users';
 
+  const navIcon = body => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+
   const sections = [
     {
       label: 'Sistema',
       items: [
-        { id: 'users',       label: 'Usuarios' },
-        { id: 'shares',      label: 'Carpetas compartidas' },
-        { id: 'templinks',   label: 'Enlaces compartidos' },
-        { id: 'services',    label: 'Servicios' },
-        { id: 'permissions', label: 'Permisos de apps' },
-        { id: 'portal',      label: 'Portal · 2FA' },
-        { id: 'updates',     label: 'Actualizaciones' },
-        { id: 'maintenance', label: 'Limpieza y mantenimiento' },
+        { id: 'users', label: 'Usuarios', icon: navIcon('<circle cx="12" cy="8" r="3"/><path d="M6 19c.6-3.2 2.6-5 6-5s5.4 1.8 6 5"/>') },
+        { id: 'shares', label: 'Carpetas compartidas', icon: navIcon('<path d="M3.5 6.5h6l2 2H20.5v9H3.5z"/><path d="M3.5 9h17"/>') },
+        { id: 'templinks', label: 'Enlaces compartidos', icon: navIcon('<path d="M9.5 14.5l5-5"/><path d="M7.5 16.5l-1 1a3.5 3.5 0 0 1-5-5l3-3a3.5 3.5 0 0 1 5 0"/><path d="M14.5 7.5l1-1a3.5 3.5 0 0 1 5 5l-3 3a3.5 3.5 0 0 1-5 0"/>') },
+        { id: 'services', label: 'Servicios', icon: navIcon('<rect x="4" y="4" width="16" height="6" rx="1"/><rect x="4" y="14" width="16" height="6" rx="1"/><path d="M8 7h.01M8 17h.01M12 7h5M12 17h5"/>') },
+        { id: 'permissions', label: 'Permisos de apps', icon: navIcon('<path d="M12 3l7 3v5c0 4.3-2.8 7.7-7 10-4.2-2.3-7-5.7-7-10V6z"/><path d="M9 12l2 2 4-4"/>') },
+        { id: 'portal', label: 'Portal · 2FA', icon: navIcon('<circle cx="8" cy="12" r="3"/><path d="M11 12h9M17 12v3M14 12v2"/>') },
+        { id: 'updates', label: 'Actualizaciones', icon: navIcon('<path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 19h14"/>') },
+        { id: 'maintenance', label: 'Limpieza y mantenimiento', icon: navIcon('<path d="M14 4l6 6-8.5 8.5a3 3 0 0 1-4.2 0l-1.8-1.8a3 3 0 0 1 0-4.2z"/><path d="M12 6l6 6M4 21h9"/>') },
       ],
     },
   ];
