@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -138,6 +139,12 @@ func removeAllIn(root *os.Root, rel string) error {
 
 // copyFileIn copia un fichero regular srcRel→dstRel, ambos dentro del root.
 func copyFileIn(root *os.Root, srcRel, dstRel string, perm os.FileMode) error {
+	info, err := root.Lstat(srcRel)
+	if err != nil {
+		return err
+	}
+	expectedSize := info.Size()
+
 	in, err := root.Open(srcRel)
 	if err != nil {
 		return err
@@ -148,11 +155,15 @@ func copyFileIn(root *os.Root, srcRel, dstRel string, perm os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	_, copyErr := io.Copy(out, in)
+	written, copyErr := io.Copy(out, in)
 	closeErr := out.Close()
 	if copyErr != nil {
 		root.Remove(dstRel)
 		return copyErr
+	}
+	if written != expectedSize {
+		root.Remove(dstRel)
+		return fmt.Errorf("incomplete copy: wrote %d of %d bytes", written, expectedSize)
 	}
 	return closeErr
 }
@@ -236,11 +247,15 @@ func crossRootCopyTree(srcRoot *os.Root, srcRel string, dstRoot *os.Root, dstRel
 	if err != nil {
 		return err
 	}
-	_, copyErr := io.Copy(out, in)
+	written, copyErr := io.Copy(out, in)
 	closeErr := out.Close()
 	if copyErr != nil {
 		dstRoot.Remove(dstRel)
 		return copyErr
+	}
+	if written != info.Size() {
+		dstRoot.Remove(dstRel)
+		return fmt.Errorf("incomplete copy: wrote %d of %d bytes", written, info.Size())
 	}
 	return closeErr
 }

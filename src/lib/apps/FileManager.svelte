@@ -318,30 +318,35 @@
 
   async function pasteFile() {
     if (!clipboard || !currentShare) return;
+    const pending = clipboard;
     closeCtx();
     const destPath = currentPath === '/'
-      ? `/${clipboard.file.name}`
-      : `${currentPath}/${clipboard.file.name}`;
+      ? `/${pending.file.name}`
+      : `${currentPath}/${pending.file.name}`;
     try {
       const res = await fetch('/api/files/paste', {
         method: 'POST', headers: hdrs(),
         body: JSON.stringify({
-          srcShare: clipboard.share,
-          srcPath: clipboard.path,
+          srcShare: pending.share,
+          srcPath: pending.path,
           destShare: currentShare,
           destPath,
-          action: clipboard.op
+          action: pending.op
         })
       });
       const d = await res.json();
       if (d.ok) {
-        if (clipboard.op === 'cut') clipboard = null;
-        notifySuccess(`${clipboard?.file?.name || 'Archivo'} ${clipboard?.op === 'cut' ? 'movido' : 'copiado'} correctamente`, 'Files');
+        if (pending.op === 'cut') clipboard = null;
+        notifySuccess(`${pending.file.name} ${pending.op === 'cut' ? 'movido' : 'copiado'} correctamente`, 'Files');
         fetchFiles();
       } else {
         const msg = d.error || 'Error al pegar';
-        if (msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('space') || msg.toLowerCase().includes('full')) {
-          notifyError(`Sin espacio: ${clipboard.file.name}`, 'Carpeta llena');
+        if (d.partial && d.copied) {
+          clipboard = null;
+          notifyError(msg, 'Movimiento incompleto');
+          fetchFiles();
+        } else if (msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('space') || msg.toLowerCase().includes('full')) {
+          notifyError(`Sin espacio: ${pending.file.name}`, 'Carpeta llena');
         } else {
           notifyError(msg, 'Files');
         }
