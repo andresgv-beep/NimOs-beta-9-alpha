@@ -11,7 +11,7 @@
    *   - Sin border, sin bisel · solo box-shadow 1px como borde
    *   - Sombra ambiental 0 12px 40px (no técnica/dura)
    *   - Estado activo · ventana al 100%
-   *   - Estado inactivo · atenuación sutil (opacity 0.92)
+   *   - Estado inactivo · borde sutil, sin alterar el contenido
    *
    * Lógica preservada (sin cambios):
    *   - Drag desde drag-zone invisible en titlebar
@@ -368,7 +368,7 @@
   .win-controls .wc-ctl:active { background: var(--side-active-bg); }
 
   /* Estado inactivo · ventana atenuada */
-  .window.inactive { opacity: 0.96; border-color: var(--line, #343834); }
+  .window.inactive { opacity: 1; border-color: var(--line, #343834); }
   .window.inactive .window-titlebar { background: var(--canvas-soft); }
 
   /* Ventana maximizada · sin border-radius, ocupa todo.

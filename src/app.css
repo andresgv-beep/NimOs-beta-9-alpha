@@ -253,26 +253,31 @@ html {
    pero en versión "blueprint claro".
    ═══════════════════════════════════════════════════════════════ */
 [data-theme="light"] {
-  /* ── Acento · en claro bajamos la luminosidad del signal ───────
-     El verde #00ff9f (L=50%) se ve lavado sobre crema. Bajando
-     --signal-l a 35% el verde queda #00b268 (legible) y, como es HSL,
-     CUALQUIER acento que elija el usuario se oscurece igual en claro.
-     La personalización del color de acento se mantiene intacta.
-     Redefinimos --signal y derivados explícitamente para garantizar
-     el recálculo (no depender de la cascada de :root). */
-  --signal-l: 35%;
-  --signal:       hsl(var(--signal-h), var(--signal-s), var(--signal-l));
-  --signal-hover: hsl(var(--signal-h), var(--signal-s), calc(var(--signal-l) + 6%));
-  --signal-dim:   hsla(var(--signal-h), var(--signal-s), var(--signal-l), 0.15);
-  --signal-glow:  hsla(var(--signal-h), var(--signal-s), var(--signal-l), 0.35);
-  --signal-soft:  hsla(var(--signal-h), var(--signal-s), var(--signal-l), 0.07);
+  /* El acento conserva el color elegido por el usuario. Antes se forzaba
+     globalmente a L=35%, lo que apagaba botones, gráficas y selecciones en
+     todas las ventanas. Los estados fijos usan versiones saturadas con
+     contraste suficiente sobre claro, sin recurrir a opacity. */
+  --metric:         #176fd1;
+  --metric-alt:     #087eae;
+  --metric-dim:     rgba(23, 111, 209, 0.12);
+  --ok:             #0b8658;
+  --ok-dim:         rgba(11, 134, 88, 0.12);
+  --ok-border:      rgba(11, 134, 88, 0.30);
 
-  --metric:         #256fc4;
-  --metric-alt:     #167dab;
-  --metric-dim:     rgba(37, 111, 196, 0.12);
-  --ok:             #2f7d5e;
-  --ok-dim:         rgba(47, 125, 94, 0.12);
-  --ok-border:      rgba(47, 125, 94, 0.28);
+  --warn:           #a96500;
+  --warn-glow:      rgba(169, 101, 0, 0.28);
+  --warn-dim:       rgba(169, 101, 0, 0.12);
+  --warn-border:    rgba(169, 101, 0, 0.30);
+
+  --crit:           #c83f52;
+  --crit-glow:      rgba(200, 63, 82, 0.28);
+  --crit-dim:       rgba(200, 63, 82, 0.12);
+  --crit-border:    rgba(200, 63, 82, 0.30);
+
+  --info:           #087eae;
+  --info-glow:      rgba(8, 126, 174, 0.28);
+  --info-dim:       rgba(8, 126, 174, 0.12);
+  --info-border:    rgba(8, 126, 174, 0.30);
 
   /* ── Fondos (escalera de elevación inversa) ──────────────── */
   /* ── Fondos · paleta crema afinada (más contraste card↔fondo) ───

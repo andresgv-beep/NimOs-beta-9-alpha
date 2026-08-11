@@ -215,17 +215,12 @@ function applyToDOM(p) {
   // Modo nuevo · HSL para que app.css derive variantes
   const hsl = hexToHsl(accentHex);
   if (hsl) {
-    // En tema claro el acento a plena luminosidad se ve lavado
-    // sobre fondo crema. Lo oscurecemos para que sea legible. Tope en 38%:
-    // un acento ya oscuro se respeta, uno claro (verde L=50%) baja a ~35-38%.
-    // Se aplica aquí (inline) porque el inline del acento gana a app.css.
-    let lum = hsl.l;
-    if (theme === 'light' && lum > 38) {
-      lum = 38;
-    }
+    // El tema no altera el color elegido: oscurecerlo globalmente en claro
+    // hacía que toda la interfaz con acento pareciese cubierta por una capa
+    // opaca. El contraste de estados se resuelve con tokens semánticos.
     root.style.setProperty('--signal-h', hsl.h.toString());
     root.style.setProperty('--signal-s', hsl.s + '%');
-    root.style.setProperty('--signal-l', lum + '%');
+    root.style.setProperty('--signal-l', hsl.l + '%');
   }
 
   // Modo legacy · compat con código viejo (cuando no usa HSL)
