@@ -6,19 +6,10 @@
    * una share. Se monta en el sidebar de FileManager dentro
    * del slot `sidebar-content` del AppShell v3.1.
    *
-   * CAMBIOS v3.2:
-   *   · Eliminado el SVG folder genérico (Beta 6/7).
-   *   · Eliminado también el dot de origen (era redundante).
-   *   · Sustituido por un único cubo 10×10 con border-radius 2px
-   *     — firma NimOS · pareja micro del `.ink-cube` blanco del
-   *     titlebar.
-   *   · Color del cubo: naranja `--nim-folder` para shares
-   *     locales, azul `--nim-remote` para remotas. El cubo
-   *     marca origen por sí mismo en cualquier depth.
-   *   · Microinteracción: cuando el activeShare/activePath
-   *     cae dentro de este subárbol (`isActive || shouldBeOpen`),
-   *     el cubo rota 45° con glow del color de origen.
-   *     Cuadrado quieto = no estás aquí. Rombo = estás dentro.
+   * CAMBIOS v3.3:
+   *   · Eliminados los cubos de color: parecían indicadores de estado.
+   *   · El despliegue usa un chevron neutro que gira al abrir la rama
+   *     y desaparece cuando el nodo no contiene subcarpetas.
    *
    * CAMBIOS v3.1 (preservados):
    *   · Estética alineada al patrón `.sb-item` del AppShell.
@@ -77,20 +68,14 @@
 
   function handleClick() { onNavigate(share, path); }
 
-  /* El cubo es ahora el control de expand/colapso (ya no hay chevron).
-     Click en el cubo → alterna expand sin navegar. Click en el resto
-     de la fila → navega. */
-  async function onCubeClick(e) {
+  // El chevron despliega la rama sin navegar; el resto de la fila navega.
+  async function onToggleClick(e) {
     e.stopPropagation();
     expanded = !expanded;
     if (expanded && children === null) await loadChildren();
   }
 
   $: isActive = activeShare === share && activePath === path;
-  /* v3.2: el cubo gira (rombo) SOLO cuando el nodo está realmente
-     expandido Y tiene subcarpetas que se están mostrando. Estar en el
-     trail de navegación auto-expande (abajo), pero el giro refleja el
-     estado real del árbol, no el foco — así no gira en vacío. */
   $: inTrail = isActive || shouldBeOpen;
   $: isOpenLike = expanded && children !== null && children.length > 0;
 </script>
@@ -109,18 +94,22 @@
   role="button"
   tabindex="0"
 >
-  <!-- Cubo · firma NimOS · ES el control de expand/colapso (ya no hay
-       flecha). Rota a 45° cuando está abierto o en el trail de navegación.
-       Color refleja origen: naranja local / azul remote. -->
+  <!-- Chevron neutro: indica jerarquía sin parecer un estado. -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <span
-    class="tn-cube"
+    class="tn-toggle"
     class:open={isOpenLike}
     class:leaf={children !== null && children.length === 0}
-    on:click={onCubeClick}
-    aria-hidden="true"
-  ><span class="tn-square"></span></span>
+    on:click={onToggleClick}
+    role="button"
+    tabindex="-1"
+    aria-label={expanded ? 'Contraer carpeta' : 'Expandir carpeta'}
+  >
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="7 4 13 10 7 16"/>
+    </svg>
+  </span>
 
   <span class="tn-name">{name}</span>
 </div>
@@ -167,15 +156,8 @@
     color: var(--side-active-fg, #7a9eb1);
   }
 
-  /* ─── Cubo · firma NimOS · ES el toggle de expand/colapso ───
-     Contenedor .tn-cube: caja flex de 14×14 que centra el cuadrado
-     visible (.tn-square) y aporta el área de click. El cuadrado interno
-     es 10×10 con border-radius 2px. Color por origen:
-       · Local  → --nim-folder (naranja)  · Remote → --nim-remote (azul)
-     Cuadrado quieto = carpeta cerrada · rombo con glow = abierta.
-     Sin position:absolute ni margin negativo → alinea con el texto.
-  */
-  .tn-cube {
+  /* Toggle neutro del árbol: sin color semántico ni glow. */
+  .tn-toggle {
     width: 14px;
     height: 14px;
     flex-shrink: 0;
@@ -183,40 +165,24 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    color: var(--ink-faint, #73737c);
+    transition: color 0.12s, opacity 0.12s;
   }
-  .tn-square {
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    background: var(--nim-folder, #ff9c5a);
-    transition:
-      transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-      box-shadow 0.2s ease,
-      opacity 0.15s;
+  .tn-toggle svg {
+    width: 11px;
+    height: 11px;
+    transition: transform 0.16s ease;
   }
-  .tree-item.remote .tn-square {
-    background: var(--nim-remote, #4db8ff);
+  .tn-toggle.open svg {
+    transform: rotate(90deg);
   }
-  /* Expandido con hijos → rombo con glow */
-  .tn-cube.open .tn-square {
-    transform: rotate(45deg);
-    box-shadow: 0 0 5px rgba(255, 156, 90, 0.45);
+  .tn-toggle:not(.leaf):hover {
+    color: var(--ink, #f2f2f5);
   }
-  .tree-item.remote .tn-cube.open .tn-square {
-    box-shadow: 0 0 5px rgba(77, 184, 255, 0.45);
-  }
-  /* Carpeta sin hijos → cubo apagado, no actúa como toggle */
-  .tn-cube.leaf {
+  .tn-toggle.leaf {
     cursor: default;
-  }
-  .tn-cube.leaf .tn-square {
-    opacity: 0.5;
-  }
-  .tn-cube:not(.leaf):hover .tn-square {
-    box-shadow: 0 0 6px rgba(255, 156, 90, 0.5);
-  }
-  .tree-item.remote .tn-cube:not(.leaf):hover .tn-square {
-    box-shadow: 0 0 6px rgba(77, 184, 255, 0.5);
+    opacity: 0;
+    pointer-events: none;
   }
 
   /* ─── Nombre ─── */
@@ -228,17 +194,6 @@
     text-overflow: ellipsis;
   }
 
-  /* ─── Estado inactivo de la ventana ───
-     Cuando la ventana no tiene foco, atenuar el cubo y su glow
-     para que case con el resto del chrome inactivo (ink-cube, LEDs).
-  */
-  :global(.window.inactive) .tn-square {
-    opacity: 0.55;
-  }
-  :global(.window.inactive) .tn-cube.open .tn-square {
-    box-shadow: 0 0 2px rgba(255, 156, 90, 0.2);
-  }
-  :global(.window.inactive) .tree-item.remote .tn-cube.open .tn-square {
-    box-shadow: 0 0 2px rgba(77, 184, 255, 0.2);
-  }
+  :global(.window.inactive) .tn-toggle { opacity: 0.55; }
+  :global(.window.inactive) .tn-toggle.leaf { opacity: 0; }
 </style>
