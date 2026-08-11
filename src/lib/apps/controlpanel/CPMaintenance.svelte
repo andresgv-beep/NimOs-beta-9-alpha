@@ -399,8 +399,8 @@
     align-items: center;
     font-size: 11px;
   }
-  .evt-row + .evt-row { border-top: 1px solid #1a1a20; }
-  .evt-row:hover { background: rgba(255,255,255,0.015); }
+  .evt-row + .evt-row { border-top: 1px solid var(--line); }
+  .evt-row:hover { background: var(--main-hover); }
 
   .evt-led {
     width: 9px; height: 9px;

@@ -264,10 +264,10 @@ html {
   --ok-dim:         rgba(11, 134, 88, 0.12);
   --ok-border:      rgba(11, 134, 88, 0.30);
 
-  --warn:           #a96500;
-  --warn-glow:      rgba(169, 101, 0, 0.28);
-  --warn-dim:       rgba(169, 101, 0, 0.12);
-  --warn-border:    rgba(169, 101, 0, 0.30);
+  --warn:           #c2410c;
+  --warn-glow:      rgba(194, 65, 12, 0.28);
+  --warn-dim:       rgba(194, 65, 12, 0.12);
+  --warn-border:    rgba(194, 65, 12, 0.30);
 
   --crit:           #c83f52;
   --crit-glow:      rgba(200, 63, 82, 0.28);
@@ -291,10 +291,10 @@ html {
 
   /* ── Texto (4 niveles de jerarquía, tinta) ───────────────── */
   --ink:            #202420;
-  --ink-dim:        #454b46;
-  --ink-mute:       #6c746d;
-  --ink-faint:      #969d97;
-  --ink-trace:      #c5cbc6;
+  --ink-dim:        #414943;
+  --ink-mute:       #545e57;
+  --ink-faint:      #626d65;
+  --ink-trace:      #707b73;
 
   /* ── Bordes (ahora oscuros sobre fondo claro) ────────────── */
   /* ── Bordes (más marcados para el filo geométrico NimOS en claro) ── */
