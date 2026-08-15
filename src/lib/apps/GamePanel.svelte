@@ -35,7 +35,7 @@
   let rconBusy = false;
   let rconOutEl;
 
-  const QUICK_CMDS = ['list', 'time set day', 'weather clear', 'save-all'];
+  $: quickCommands = Array.isArray(info?.quick_commands) ? info.quick_commands : [];
 
   async function loadInfo() {
     loading = true;
@@ -239,7 +239,7 @@
               type="text"
               bind:value={rconInput}
               on:keydown={onInputKey}
-              placeholder="escribe un comando (list, day, gamemode...)"
+              placeholder="escribe un comando RCON..."
               disabled={rconBusy}
             />
             <button class="gp-send" on:click={() => sendRcon()} disabled={rconBusy} aria-label="Enviar comando">
@@ -249,11 +249,18 @@
         </div>
 
         <!-- Comandos rápidos -->
-        <div class="gp-quick">
-          {#each QUICK_CMDS as qc}
-            <button class="gp-qbtn" on:click={() => sendRcon(qc)} disabled={rconBusy}>{qc}</button>
-          {/each}
-        </div>
+        {#if quickCommands.length > 0}
+          <div class="gp-quick">
+            {#each quickCommands as qc}
+              <button
+                class="gp-qbtn"
+                on:click={() => sendRcon(qc.command)}
+                disabled={rconBusy}
+                title={qc.command}
+              >{qc.label}</button>
+            {/each}
+          </div>
+        {/if}
       {/if}
 
     {/if}

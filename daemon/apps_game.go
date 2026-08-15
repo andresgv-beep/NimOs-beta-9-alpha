@@ -25,16 +25,24 @@ import (
 
 // GameInfo es la vista que consume el Modal de Juego del frontend.
 type GameInfo struct {
-	AppID           string `json:"app_id"`
-	Name            string `json:"name"`
-	Port            int    `json:"port"`                       // puerto del juego (host)
-	Protocol        string `json:"protocol"`                   // "tcp" | "udp"
-	LocalAddress    string `json:"local_address"`              // ej. "192.168.1.131:25565"
-	ExternalAddress string `json:"external_address,omitempty"` // ej. "nimbarraca.duckdns.org:25565" (vacío si no hay dominio)
-	FilesPath       string `json:"files_path"`                 // ruta absoluta de la carpeta del server
-	FilesShare      string `json:"files_share,omitempty"`      // share que CONTIENE esa carpeta (vacío si ninguno)
-	FilesRelPath    string `json:"files_rel_path,omitempty"`   // ruta relativa dentro del share (ej. "/minecraft-java")
-	RconEnabled     bool   `json:"rcon_enabled"`               // si la app soporta consola RCON
+	AppID           string             `json:"app_id"`
+	Name            string             `json:"name"`
+	Port            int                `json:"port"`                       // puerto del juego (host)
+	Protocol        string             `json:"protocol"`                   // "tcp" | "udp"
+	LocalAddress    string             `json:"local_address"`              // ej. "192.168.1.131:25565"
+	ExternalAddress string             `json:"external_address,omitempty"` // ej. "nimbarraca.duckdns.org:25565" (vacío si no hay dominio)
+	FilesPath       string             `json:"files_path"`                 // ruta absoluta de la carpeta del server
+	FilesShare      string             `json:"files_share,omitempty"`      // share que CONTIENE esa carpeta (vacío si ninguno)
+	FilesRelPath    string             `json:"files_rel_path,omitempty"`   // ruta relativa dentro del share (ej. "/minecraft-java")
+	RconEnabled     bool               `json:"rcon_enabled"`               // si la app soporta consola RCON
+	QuickCommands   []GameQuickCommand `json:"quick_commands"`             // accesos RCON declarados por cada juego
+}
+
+// GameQuickCommand es un acceso directo de la consola RCON. Label es el texto
+// visible y Command el valor exacto que se envía al servidor.
+type GameQuickCommand struct {
+	Label   string `json:"label"`
+	Command string `json:"command"`
 }
 
 // composeGameAddress compone una dirección de conexión "host:puerto".
@@ -148,6 +156,7 @@ func handleGameInfo(w http.ResponseWriter, r *http.Request) {
 		FilesShare:      filesShare,
 		FilesRelPath:    filesRel,
 		RconEnabled:     gameHasRcon(app),
+		QuickCommands:   gameQuickCommandsFromConfig(app.Config, app.ID),
 	}
 	jsonOk(w, info)
 }

@@ -319,6 +319,51 @@ func gameConfigFromConfig(configJSON string) (rconPasswordEnv string, rconPort i
 	return
 }
 
+// gameQuickCommandsFromConfig extrae y valida los accesos RCON declarados en
+// game.quickCommands. Las instalaciones antiguas de Minecraft conservan sus
+// botones históricos; otras apps sin declaración no reciben comandos ajenos.
+func gameQuickCommandsFromConfig(configJSON, appID string) []GameQuickCommand {
+	var conf map[string]interface{}
+	if configJSON != "" && json.Unmarshal([]byte(configJSON), &conf) == nil {
+		if game, ok := conf["game"].(map[string]interface{}); ok {
+			if raw, ok := game["quickCommands"].([]interface{}); ok {
+				commands := make([]GameQuickCommand, 0, len(raw))
+				for _, item := range raw {
+					entry, ok := item.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					label, _ := entry["label"].(string)
+					command, _ := entry["command"].(string)
+					label = strings.TrimSpace(label)
+					command = strings.TrimSpace(command)
+					if label != "" && command != "" {
+						commands = append(commands, GameQuickCommand{Label: label, Command: command})
+					}
+				}
+				return commands
+			}
+		}
+	}
+	if appID == "minecraft-java" {
+		return []GameQuickCommand{
+			{Label: "Jugadores", Command: "list"},
+			{Label: "Hacer de día", Command: "time set day"},
+			{Label: "Despejar clima", Command: "weather clear"},
+			{Label: "Guardar mundo", Command: "save-all"},
+		}
+	}
+	if appID == "project-zomboid" {
+		return []GameQuickCommand{
+			{Label: "Jugadores", Command: "players"},
+			{Label: "Guardar mundo", Command: "save"},
+			{Label: "Ver opciones", Command: "showoptions"},
+			{Label: "Ayuda", Command: "help"},
+		}
+	}
+	return []GameQuickCommand{}
+}
+
 // landingPathFromConfig extrae el landing_path del JSON config de una app
 // instalada. Tolerante: si el config está vacío o no tiene la clave, devuelve "".
 //
