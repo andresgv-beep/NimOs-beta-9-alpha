@@ -154,9 +154,9 @@
   <div class="sp-lan">
     Acceso desde la red local:
     {#if status.localAddress}
-      <b>\\{status.localAddress}</b> · puerto {status.port || 445}
+      <b>\\{status.localAddress}</b>
     {:else}
-      <span>IP local no disponible</span> · puerto {status.port || 445}
+      <span>IP local no disponible</span>
     {/if}
   </div>
 
