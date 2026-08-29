@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	pathpkg "path"
@@ -24,7 +25,26 @@ var (
 	smbCommand          = runSafe
 	smbShareRoute       = regexp.MustCompile(`^/api/smb/share/([a-zA-Z0-9_-]+)$`)
 	smbWorkgroupPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,14}$`)
+	smbLocalAddress     = detectSMBLocalAddress
 )
+
+// detectSMBLocalAddress returns the IPv4 used by the host's default route.
+// This avoids exposing the public DDNS hostname (or a Docker bridge address)
+// as a supposedly local SMB address in the control panel.
+func detectSMBLocalAddress() string {
+	conn, err := net.Dial("udp4", "1.1.1.1:80")
+	if err == nil {
+		defer conn.Close()
+		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
+			ip := addr.IP.To4()
+			if ip != nil && !ip.IsLoopback() {
+				return ip.String()
+			}
+		}
+	}
+	// Offline systems still get the first active non-loopback IPv4.
+	return detectLocalIP()
+}
 
 type SMBConfig struct {
 	Workgroup  string `json:"workgroup"`
@@ -361,11 +381,12 @@ func handleSmbRoutes(w http.ResponseWriter, r *http.Request) {
 		runningOut, _ := smbCommand("systemctl", "is-active", "smbd")
 		version, _ := smbCommand("smbd", "--version")
 		jsonOk(w, map[string]interface{}{
-			"installed": installed,
-			"running":   strings.TrimSpace(runningOut) == "active",
-			"version":   version,
-			"config":    readSMBConfig(),
-			"port":      445,
+			"installed":    installed,
+			"running":      strings.TrimSpace(runningOut) == "active",
+			"version":      version,
+			"config":       readSMBConfig(),
+			"port":         445,
+			"localAddress": smbLocalAddress(),
 		})
 		return
 	}

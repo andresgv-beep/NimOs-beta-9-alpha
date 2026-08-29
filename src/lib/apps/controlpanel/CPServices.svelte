@@ -64,7 +64,7 @@
   <!-- Página del servicio activo -->
   <div class="svc-content">
     {#if active === 'smb'}
-      <ServiceSMB {host} />
+      <ServiceSMB />
     {:else if active === 'ssh'}
       <ServiceSSH {host} />
     {:else if active === 'ftp'}

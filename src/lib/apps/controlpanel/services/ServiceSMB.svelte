@@ -6,7 +6,7 @@
    * exposición de carpetas en la LAN y contraseña SMB por usuario.
    *
    * API:
-   *   GET  /api/smb/status  → { installed, running, version, config, port }
+   *   GET  /api/smb/status  → { installed, running, version, config, port, localAddress }
    *   POST /api/smb/config  { workgroup, serverString, ... }
    *   POST /api/smb/apply | start | stop | restart
    *   POST /api/smb/set-password { username, password }
@@ -19,9 +19,7 @@
   import { onMount } from 'svelte';
   import { hdrs } from '$lib/stores/auth.js';
 
-  export let host = '';
-
-  let status = { installed: true, running: false, version: '', port: 445, loading: true };
+  let status = { installed: true, running: false, version: '', port: 445, localAddress: '', loading: true };
   let config = { workgroup: 'WORKGROUP', serverString: 'NimOS NAS' };
   let shares = [];
   let busy = false;
@@ -154,7 +152,12 @@
 
   <!-- Acceso LAN -->
   <div class="sp-lan">
-    Acceso desde la red local: <b>\\{host || 'tu-nas'}</b> · puerto {status.port || 445}
+    Acceso desde la red local:
+    {#if status.localAddress}
+      <b>\\{status.localAddress}</b> · puerto {status.port || 445}
+    {:else}
+      <span>IP local no disponible</span> · puerto {status.port || 445}
+    {/if}
   </div>
 
   <!-- Carpetas expuestas -->
