@@ -183,6 +183,10 @@ func renderSMBConfig(existing string, config SMBConfig, shares []DBShare) (strin
 		smbManagedGlobalBegin,
 		"   workgroup = " + config.Workgroup,
 		"   server string = " + config.ServerName,
+		// NimOS manages the Samba passdb explicitly with smbpasswd. Enabling
+		// Unix password sync would require a distro-specific passwd program and
+		// makes testparm reject the historical NimOS config on Debian 13.
+		"   unix password sync = no",
 		smbManagedGlobalEnd,
 	}, "\n")
 	result := insertSMBGlobalBlock(strings.TrimSpace(base), globalBlock)

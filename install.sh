@@ -417,7 +417,8 @@ setup_samba() {
    logging = file
    panic action = /usr/share/samba/panic-action %d
    obey pam restrictions = yes
-   unix password sync = yes
+   # Las contraseñas SMB son independientes y NimOS las gestiona con smbpasswd.
+   unix password sync = no
    map to guest = bad user
    usershare allow guests = no
    min protocol = SMB2

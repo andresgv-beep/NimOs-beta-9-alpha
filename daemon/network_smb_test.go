@@ -41,6 +41,7 @@ func TestRenderSMBConfigPreservesExternalConfig(t *testing.T) {
 		"path = /srv/external",
 		"workgroup = STUDIO",
 		"server string = NimOS Projects",
+		"unix password sync = no",
 		"[projects]",
 		"valid users = @nimos-share-projects alice bob",
 		"write list = @nimos-share-projects alice",
@@ -52,6 +53,25 @@ func TestRenderSMBConfigPreservesExternalConfig(t *testing.T) {
 	}
 	if strings.Contains(got, "[private]") || strings.Contains(got, " eve") {
 		t.Fatalf("share deshabilitado o usuario none filtrados incorrectamente:\n%s", got)
+	}
+}
+
+func TestRenderSMBConfigOverridesLegacyUnixPasswordSync(t *testing.T) {
+	// This is the exact invalid combination shipped by old NimOS installers:
+	// sync=yes without a passwd program. The managed value is deliberately
+	// appended at the end of [global], so Samba's effective value is "no".
+	existing := `[global]
+   unix password sync = yes
+   server role = standalone server
+`
+	got, err := renderSMBConfig(existing, defaultSMBConfig(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := strings.Index(got, "unix password sync = yes")
+	managed := strings.LastIndex(got, "unix password sync = no")
+	if legacy < 0 || managed <= legacy {
+		t.Fatalf("el override administrado debe quedar después del valor legacy:\n%s", got)
 	}
 }
 
