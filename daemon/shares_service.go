@@ -296,6 +296,14 @@ func UpdateShare(ctx context.Context, target string, input UpdateShareInput) err
 		applyAppPermissionDiff(target, share.AppPermissions, input.AppPermissions)
 	}
 
+	// An exposed share embeds its user allow/write lists in smb.conf. Keep that
+	// derived configuration synchronized whenever permissions change.
+	if share.SMBEnabled && input.Permissions != nil {
+		if err := applySMBConfiguration(); err != nil {
+			return fmt.Errorf("permisos guardados, pero no se pudo recargar SMB: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -443,7 +451,16 @@ func DeleteShare(ctx context.Context, target string) error {
 	}
 
 	// Step 3 — Eliminar de SQLite
-	dbSharesDelete(target)
+	if err := dbSharesDelete(target); err != nil {
+		return err
+	}
+	if share.SMBEnabled {
+		// The data and DB row are already gone. A failed Samba reconciliation is
+		// logged rather than resurrecting a deleted share or its data.
+		if err := applySMBConfiguration(); err != nil {
+			logMsg("WARNING: share %s deleted but SMB config could not be refreshed: %v", target, err)
+		}
+	}
 	return nil
 }
 

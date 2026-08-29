@@ -113,6 +113,7 @@ func createTables() error {
 		volume       TEXT NOT NULL,
 		pool         TEXT NOT NULL,
 		recycle_bin  INTEGER DEFAULT 1,
+		smb_enabled  INTEGER NOT NULL DEFAULT 0,
 		created_by   TEXT NOT NULL,
 		created_at   TEXT NOT NULL
 	);
@@ -320,8 +321,55 @@ func runSchemaMigrations() {
 		}
 	}
 
-	// Future migrations go here:
-	// if version < 4 { ... db.Exec("PRAGMA user_version = 4") }
+	// Refresh after v1-v3. In particular, never advance to v4 if the
+	// transactional v3 migration failed and deliberately left user_version=2.
+	db.QueryRow("PRAGMA user_version").Scan(&version)
+	if version >= 3 && version < 4 {
+		if err := migrateToV4(); err != nil {
+			logMsg("schema: ERROR migrating to v4: %v", err)
+		} else {
+			db.Exec("PRAGMA user_version = 4")
+			logMsg("schema: migrated to version 4 (persistent SMB share exposure)")
+		}
+	}
+}
+
+// migrateToV4 adds the opt-in SMB exposure flag to shares. Fresh databases
+// already contain the column in the base schema, so the migration must be
+// explicitly idempotent instead of relying on a duplicate-column error.
+func migrateToV4() error {
+	rows, err := db.Query(`PRAGMA table_info(shares)`)
+	if err != nil {
+		return fmt.Errorf("inspect shares: %w", err)
+	}
+	defer rows.Close()
+
+	hasSMB := false
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull, pk int
+		var defaultValue interface{}
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultValue, &pk); err != nil {
+			return fmt.Errorf("scan shares schema: %w", err)
+		}
+		if name == "smb_enabled" {
+			hasSMB = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read shares schema: %w", err)
+	}
+	if err := rows.Close(); err != nil {
+		return fmt.Errorf("close shares schema: %w", err)
+	}
+	if hasSMB {
+		return nil
+	}
+	if _, err := db.Exec(`ALTER TABLE shares ADD COLUMN smb_enabled INTEGER NOT NULL DEFAULT 0`); err != nil {
+		return fmt.Errorf("add shares.smb_enabled: %w", err)
+	}
+	return nil
 }
 
 // migrateToV3 ejecuta la migración v3 en una transacción.

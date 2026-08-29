@@ -89,6 +89,7 @@ type DBShare struct {
 	Volume         string
 	Pool           string
 	RecycleBin     bool
+	SMBEnabled     bool
 	CreatedBy      string
 	CreatedAt      string
 	Permissions    map[string]string
@@ -119,6 +120,7 @@ func (s DBShare) ToMap() map[string]interface{} {
 		"volume":         s.Volume,
 		"pool":           s.Pool,
 		"recycleBin":     s.RecycleBin,
+		"smb":            s.SMBEnabled,
 		"createdBy":      s.CreatedBy,
 		"created":        s.CreatedAt,
 		"permissions":    s.Permissions,

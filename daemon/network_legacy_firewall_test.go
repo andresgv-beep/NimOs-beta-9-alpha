@@ -8,7 +8,7 @@ func TestLegacyServicePorts(t *testing.T) {
 	cases := map[string][]string{
 		"ftp": {"21/tcp", "55000:55999/tcp"},
 		"nfs": {"2049/tcp"},
-		"smb": {"445/tcp"},
+		"smb": {"445/tcp", "137/udp", "138/udp"},
 	}
 	for service, want := range cases {
 		spec, ok := legacyServicePorts[service]

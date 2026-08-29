@@ -11,7 +11,7 @@
 //   · FTP    → network_legacy_ftp    (futuro: network_ftp_*.go v4)
 //   · NFS    → network_legacy_nfs    (futuro: network_nfs_*.go v4)
 //   · WebDAV → network_legacy_webdav (futuro: network_webdav_*.go v4)
-//   · SMB    → network_legacy_smb    (futuro: network_smb_*.go v4)
+//   · SMB    → migrado a network_smb.go (config validada + reconciliación)
 //
 // NO añadir features aquí. Si necesitas tocar un servicio, migra primero.
 
@@ -19,7 +19,6 @@ package main
 
 import (
 	"net/http"
-	"regexp"
 	"strings"
 )
 
@@ -103,116 +102,6 @@ func handleNfsRoutes(w http.ResponseWriter, r *http.Request) {
 	default:
 		jsonError(w, 404, "Not found")
 	}
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SMB / Samba
-// ─────────────────────────────────────────────────────────────────────────────
-
-func handleSmbRoutes(w http.ResponseWriter, r *http.Request) {
-	session := requireAdmin(w, r)
-	if session == nil {
-		return
-	}
-	urlPath := r.URL.Path
-	method := r.Method
-
-	if urlPath == "/api/smb/status" && method == "GET" {
-		_, installed := runShellStatic("which smbd 2>/dev/null || test -x /usr/sbin/smbd && echo yes")
-		running1, _ := runSafe("systemctl", "is-active", "smbd")
-		running := strings.TrimSpace(running1) == "active"
-		version, _ := runSafe("smbd", "--version")
-		config := readJSONConfig(smbConfigFile, map[string]interface{}{"workgroup": "WORKGROUP", "serverString": "NimOS NAS"})
-		jsonOk(w, map[string]interface{}{"installed": installed, "running": running, "version": version, "config": config, "port": 445})
-		return
-	}
-
-	if urlPath == "/api/smb/config" && method == "POST" {
-		if session.Role != "admin" {
-			jsonError(w, 403, "Admin required")
-			return
-		}
-		body, _ := readBody(r)
-		current := readJSONConfig(smbConfigFile, map[string]interface{}{})
-		for k, v := range body {
-			current[k] = v
-		}
-		writeJSONConfig(smbConfigFile, current)
-		jsonOk(w, map[string]interface{}{"ok": true, "config": current})
-		return
-	}
-
-	if urlPath == "/api/smb/start" && method == "POST" {
-		if session.Role != "admin" {
-			jsonError(w, 403, "Admin required")
-			return
-		}
-		runShellStatic("sudo systemctl enable smbd nmbd 2>/dev/null; sudo systemctl start smbd nmbd 2>/dev/null")
-		openServicePorts("smb")
-		jsonOk(w, map[string]interface{}{"ok": true})
-		return
-	}
-
-	if urlPath == "/api/smb/stop" && method == "POST" {
-		if session.Role != "admin" {
-			jsonError(w, 403, "Admin required")
-			return
-		}
-		runShellStatic("sudo systemctl stop smbd nmbd 2>/dev/null; sudo systemctl disable smbd nmbd 2>/dev/null")
-		closeServicePorts("smb")
-		jsonOk(w, map[string]interface{}{"ok": true})
-		return
-	}
-
-	if urlPath == "/api/smb/restart" && method == "POST" {
-		if session.Role != "admin" {
-			jsonError(w, 403, "Admin required")
-			return
-		}
-		runSafe("sudo", "systemctl", "restart", "smbd", "nmbd")
-		jsonOk(w, map[string]interface{}{"ok": true})
-		return
-	}
-
-	if urlPath == "/api/smb/apply" && method == "POST" {
-		if session.Role != "admin" {
-			jsonError(w, 403, "Admin required")
-			return
-		}
-		runSafe("sudo", "smbcontrol", "all", "reload-config")
-		jsonOk(w, map[string]interface{}{"ok": true})
-		return
-	}
-
-	if urlPath == "/api/smb/set-password" && method == "POST" {
-		if session.Role != "admin" {
-			jsonError(w, 403, "Admin required")
-			return
-		}
-		body, _ := readBody(r)
-		username := bodyStr(body, "username")
-		password := bodyStr(body, "password")
-		if username == "" || password == "" {
-			jsonError(w, 400, "Username and password required")
-			return
-		}
-		handleOp(Request{Op: "user.set_smb_password", Username: username, Password: password})
-		jsonOk(w, map[string]interface{}{"ok": true})
-		return
-	}
-
-	// PUT /api/smb/share/:name
-	reSmbShare := regexp.MustCompile(`^/api/smb/share/([a-zA-Z0-9_-]+)$`)
-	if m := reSmbShare.FindStringSubmatch(urlPath); m != nil && method == "PUT" {
-		if session.Role != "admin" {
-			jsonError(w, 403, "Admin required")
-			return
-		}
-		jsonOk(w, map[string]interface{}{"ok": true, "name": m[1]})
-		return
-	}
-
-	jsonError(w, 404, "Not found")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

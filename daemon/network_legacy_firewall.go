@@ -27,7 +27,9 @@ type servicePortSpec struct {
 var legacyServicePorts = map[string]servicePortSpec{
 	"ftp": {name: "FTP", specs: []string{"21/tcp", "55000:55999/tcp"}},
 	"nfs": {name: "NFS", specs: []string{"2049/tcp"}},
-	"smb": {name: "SMB", specs: []string{"445/tcp"}},
+	// 445/tcp is SMB2/3. 137-138/udp belong to nmbd and make the optional
+	// legacy hostname discovery we start alongside smbd actually reachable.
+	"smb": {name: "SMB", specs: []string{"445/tcp", "137/udp", "138/udp"}},
 }
 
 // ufwIsActive informa si ufw está instalado y activo. Si no, no hay nada que

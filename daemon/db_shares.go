@@ -8,7 +8,7 @@ import (
 // dbSharesListRaw returns typed share structs from the DB.
 // This is the primary query — other functions build on top of it.
 func dbSharesListRaw() ([]DBShare, error) {
-	rows, err := db.Query(`SELECT name, display_name, description, path, volume, pool, recycle_bin, created_by, created_at FROM shares ORDER BY created_at`)
+	rows, err := db.Query(`SELECT name, display_name, description, path, volume, pool, recycle_bin, smb_enabled, created_by, created_at FROM shares ORDER BY created_at`)
 	if err != nil {
 		return nil, err
 	}
@@ -17,12 +17,17 @@ func dbSharesListRaw() ([]DBShare, error) {
 	type shareRow struct {
 		DBShare
 		recycleBinInt int
+		smbEnabledInt int
 	}
 	var shareRows []shareRow
 	for rows.Next() {
 		var s shareRow
-		rows.Scan(&s.Name, &s.DisplayName, &s.Description, &s.Path, &s.Volume, &s.Pool, &s.recycleBinInt, &s.CreatedBy, &s.CreatedAt)
+		if err := rows.Scan(&s.Name, &s.DisplayName, &s.Description, &s.Path, &s.Volume, &s.Pool, &s.recycleBinInt, &s.smbEnabledInt, &s.CreatedBy, &s.CreatedAt); err != nil {
+			rows.Close()
+			return nil, err
+		}
 		s.RecycleBin = s.recycleBinInt == 1
+		s.SMBEnabled = s.smbEnabledInt == 1
 		shareRows = append(shareRows, s)
 	}
 	rows.Close()
@@ -111,6 +116,25 @@ func dbSharesUpdate(name string, u ShareUpdate) error {
 func dbSharesDelete(name string) error {
 	_, err := db.Exec(`DELETE FROM shares WHERE name = ?`, name)
 	return dirtyIfOK(err)
+}
+
+func dbShareSetSMBEnabled(name string, enabled bool) error {
+	value := 0
+	if enabled {
+		value = 1
+	}
+	result, err := db.Exec(`UPDATE shares SET smb_enabled = ? WHERE name = ?`, value, name)
+	if err != nil {
+		return err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("share not found: %s", name)
+	}
+	return dirtyIfOK(nil)
 }
 
 func dbShareSetPermission(shareName, username, permission string) error {

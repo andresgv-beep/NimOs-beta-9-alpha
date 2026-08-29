@@ -11,11 +11,10 @@
    *   POST /api/smb/apply | start | stop | restart
    *   POST /api/smb/set-password { username, password }
    *   GET  /api/shares      → carpetas (con flag .smb)
-   *   PUT  /api/smb/share/:name  ← NOTA: el backend aún NO materializa esto
+   *   PUT  /api/smb/share/:name  { smb: boolean }
    *
-   * ⚠ La exposición de carpetas se muestra y guarda el flag, pero el daemon
-   *   todavía no genera los bloques en smb.conf (endpoint vacío). Marcado
-   *   en la UI como "pendiente de aplicar en backend".
+   * El backend persiste la exposición, genera únicamente el bloque administrado
+   * por NimOS y valida con testparm antes de recargar Samba.
    */
   import { onMount } from 'svelte';
   import { hdrs } from '$lib/stores/auth.js';
@@ -65,7 +64,10 @@
   async function restart() {
     if (busy) return;
     busy = true; msg = '';
-    try { await fetch('/api/smb/restart', { method: 'POST', headers: hdrs() }); } catch {}
+    try {
+      const r = await fetch('/api/smb/restart', { method: 'POST', headers: hdrs() });
+      if (!r.ok) { const e = await r.json().catch(() => ({})); msg = e.error || 'No se pudo reiniciar Samba'; msgError = true; }
+    } catch { msg = 'Error de red'; msgError = true; }
     setTimeout(load, 600);
     busy = false;
   }
@@ -80,7 +82,6 @@
         body: JSON.stringify(config),
       });
       if (r1.ok) {
-        await fetch('/api/smb/apply', { method: 'POST', headers: hdrs() });
         msg = 'Configuración guardada y aplicada';
         msgError = false;
       } else {
@@ -92,17 +93,29 @@
     savingCfg = false;
   }
 
-  // Exposición de carpeta (optimista · backend pendiente)
+  // Exposición de carpeta con rollback visual si el backend no puede aplicarla.
   async function toggleExpose(share) {
-    share.smb = !share.smb;
+    const previous = !!share.smb;
+    share.smb = !previous;
     shares = shares;
     try {
-      await fetch('/api/smb/share/' + encodeURIComponent(share.name), {
+      const r = await fetch('/api/smb/share/' + encodeURIComponent(share.name), {
         method: 'PUT',
         headers: { ...hdrs(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ smb: share.smb }),
       });
-    } catch {}
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        throw new Error(e.error || 'No se pudo aplicar la carpeta en Samba');
+      }
+      msg = share.smb ? `${share.name} está disponible por SMB` : `${share.name} ya no se publica por SMB`;
+      msgError = false;
+    } catch (e) {
+      share.smb = previous;
+      shares = shares;
+      msg = e?.message || 'Error de red';
+      msgError = true;
+    }
   }
 
   async function setPassword() {
@@ -148,7 +161,7 @@
   <div class="sp-sect">
     <div class="sp-st">Carpetas expuestas en la red</div>
     <div class="sp-hint">Elige qué carpetas compartidas son accesibles por SMB en tu red local.</div>
-    <div class="sp-note">⚠ La aplicación efectiva en el servidor SMB está pendiente en el backend; el ajuste se guarda pero aún no regenera la config de Samba.</div>
+    <div class="sp-note">Los cambios se validan antes de recargar Samba. Si una configuración falla, NimOS conserva la anterior.</div>
     {#if shares.length === 0}
       <div class="sp-empty">No hay carpetas compartidas. Crea alguna en «Compartidas».</div>
     {:else}
