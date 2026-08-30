@@ -189,7 +189,12 @@ func handleOp(req Request) Response {
 		if _, ok := runSafe("getent", "group", group); !ok {
 			return Response{Error: fmt.Sprintf("group %s does not exist", group)}
 		}
-		runSafe("usermod", "-aG", group, req.Username)
+		if _, ok := runSafe("id", req.Username); !ok {
+			return Response{Error: fmt.Sprintf("user %s does not exist", req.Username)}
+		}
+		if out, ok := runSafe("usermod", "-aG", group, req.Username); !ok {
+			return Response{Error: fmt.Sprintf("cannot add %s to %s: %s", req.Username, group, strings.TrimSpace(out))}
+		}
 		if sharePath, err := getSharePath(req.ShareName); err == nil {
 			runSafe("setfacl", "-x", "u:"+req.Username, sharePath)
 			runSafe("setfacl", "-d", "-x", "u:"+req.Username, sharePath)

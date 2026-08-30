@@ -190,8 +190,21 @@ func createOrAdoptShare(ctx context.Context, input CreateShareInput, applyFsPerm
 		return nil, err
 	}
 
-	// Permiso rw para el creador
-	dbShareSetPermission(safeName, input.CreatedBy, "rw")
+	// Permiso rw para el creador: persistirlo no basta. Samba puede incluir al
+	// usuario en valid users/write list, pero el kernel seguira denegando el
+	// acceso si no pertenece al grupo Unix de la share. Este era el fallo de
+	// las shares recien creadas tras formatear/reimportar un pool.
+	if err := dbShareSetPermission(safeName, input.CreatedBy, "rw"); err != nil {
+		return nil, fmt.Errorf("share creada, pero no se pudo guardar el permiso del creador: %w", err)
+	}
+	permResult := handleOp(Request{
+		Op:        "share.add_user_rw",
+		ShareName: safeName,
+		Username:  input.CreatedBy,
+	})
+	if !permResult.Ok {
+		return nil, fmt.Errorf("share creada, pero no se pudo aplicar el permiso del creador: %s", permResult.Error)
+	}
 
 	return &CreateShareResult{
 		Name: safeName,
