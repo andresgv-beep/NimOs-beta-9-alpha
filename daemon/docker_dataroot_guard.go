@@ -20,7 +20,12 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 )
+
+// El desmontaje activa esta barrera durante la ventana entre parar Docker y
+// desmontar el pool. Evita que un tick concurrente de NimHealth lo levante.
+var dockerAutoStartSuppressed atomic.Bool
 
 // DockerDataRootStatus describe si es seguro tener Docker corriendo.
 type DockerDataRootStatus struct {
@@ -131,6 +136,19 @@ var ensureDockerStartedIfSafe = func() bool {
 	status := checkDockerDataRoot()
 	if !status.Safe {
 		return false // sigue sin ser seguro; no arrancar
+	}
+	if dockerAutoStartSuppressed.Load() {
+		logMsg("docker_guard: auto-arranque suspendido durante operacion de almacenamiento")
+		return false
+	}
+	if !dockerAutoStartAllowed() {
+		// La intencion manual es autoritativa. Si otro activador (por ejemplo
+		// docker.socket) lo levanto, volver a detener el conjunto completo.
+		if dockerDaemonReady() {
+			logMsg("docker_guard: Docker esta activo pero el usuario pidio detenerlo — parando")
+			runSafe("systemctl", "stop", "docker.socket", "docker", "containerd")
+		}
+		return false
 	}
 	if dockerDaemonReady() {
 		return true // ya está corriendo y responde

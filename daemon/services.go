@@ -198,6 +198,32 @@ func dbServiceUpdateStatus(instanceID, status, health string) error {
 	return err
 }
 
+func dbServiceSetDesiredStatus(instanceID, desiredStatus string) error {
+	if desiredStatus != "running" && desiredStatus != "stopped" {
+		return fmt.Errorf("invalid desired service status %q", desiredStatus)
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := db.Exec(`UPDATE service_instances SET desired_status = ?, updated_at = ? WHERE id = ?`,
+		desiredStatus, now, instanceID)
+	return err
+}
+
+// dockerAutoStartAllowed indica si NimHealth puede recuperar Docker. Una
+// parada explicita del usuario siempre gana al auto-arranque de seguridad.
+func dockerAutoStartAllowed() bool {
+	var manuallyStopped int
+	err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM service_instances si
+		JOIN app_registry ar ON ar.id = si.app_id
+		WHERE ar.managed_by = 'docker' AND si.desired_status = 'stopped'`).Scan(&manuallyStopped)
+	if err != nil {
+		logMsg("docker_guard: no se pudo leer desired_status: %v", err)
+		return false
+	}
+	return manuallyStopped == 0
+}
+
 func dbServiceDelete(instanceID string) error {
 	_, err := db.Exec(`DELETE FROM service_instances WHERE id = ?`, instanceID)
 	// dependencies cascade automatically
@@ -343,6 +369,12 @@ func serviceStop(instanceID string) error {
 	var managedBy string
 	db.QueryRow(`SELECT managed_by FROM app_registry WHERE id = ?`, instance.AppID).Scan(&managedBy)
 
+	// Persistir primero la intencion. NimHealth debe respetarla incluso si el
+	// daemon se reinicia justo despues de emitir el systemctl stop.
+	if err := dbServiceSetDesiredStatus(instanceID, "stopped"); err != nil {
+		return fmt.Errorf("persist stop intent for %s: %v", instanceID, err)
+	}
+
 	// Estado intermedio honesto · el observer confirmará la transición real
 	// en su próximo tick (≤30s). NO escribimos 'stopped' al final asumiendo
 	// éxito · el systemctl stop puede fallar silenciosamente o el proceso
@@ -405,6 +437,10 @@ func serviceStart(instanceID string) error {
 		return fmt.Errorf("pool %s is being destroyed — cannot start services", instance.PoolName)
 	}
 	storageMu.Unlock()
+
+	if err := dbServiceSetDesiredStatus(instanceID, "running"); err != nil {
+		return fmt.Errorf("persist start intent for %s: %v", instanceID, err)
+	}
 
 	// Verify pool exists and is mounted
 	if !isPathOnMountedPool(nimosPoolsDir + "/" + instance.PoolName) {

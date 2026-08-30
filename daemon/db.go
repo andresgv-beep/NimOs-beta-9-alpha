@@ -332,6 +332,57 @@ func runSchemaMigrations() {
 			logMsg("schema: migrated to version 4 (persistent SMB share exposure)")
 		}
 	}
+
+	// v5 separa la intencion del usuario del estado observado. Antes, una
+	// parada manual dejaba Docker en "stopped", pero NimHealth lo interpretaba
+	// como una averia recuperable y lo arrancaba de nuevo en el siguiente ciclo.
+	db.QueryRow("PRAGMA user_version").Scan(&version)
+	if version >= 4 && version < 5 {
+		if err := migrateToV5(); err != nil {
+			logMsg("schema: ERROR migrating to v5: %v", err)
+		} else {
+			db.Exec("PRAGMA user_version = 5")
+			logMsg("schema: migrated to version 5 (persistent service desired state)")
+		}
+	}
+}
+
+// migrateToV5 guarda por separado si el usuario quiere un servicio arrancado
+// o detenido. `status` sigue siendo exclusivamente el estado real observado.
+func migrateToV5() error {
+	rows, err := db.Query(`PRAGMA table_info(service_instances)`)
+	if err != nil {
+		return fmt.Errorf("inspect service_instances: %w", err)
+	}
+	defer rows.Close()
+
+	hasDesiredStatus := false
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull, pk int
+		var defaultValue interface{}
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultValue, &pk); err != nil {
+			return fmt.Errorf("scan service_instances schema: %w", err)
+		}
+		if name == "desired_status" {
+			hasDesiredStatus = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read service_instances schema: %w", err)
+	}
+	if err := rows.Close(); err != nil {
+		return fmt.Errorf("close service_instances schema: %w", err)
+	}
+	if hasDesiredStatus {
+		return nil
+	}
+	_, err = db.Exec(`ALTER TABLE service_instances ADD COLUMN desired_status TEXT NOT NULL DEFAULT 'running' CHECK (desired_status IN ('running','stopped'))`)
+	if err != nil {
+		return fmt.Errorf("add service_instances.desired_status: %w", err)
+	}
+	return nil
 }
 
 // migrateToV4 adds the opt-in SMB exposure flag to shares. Fresh databases

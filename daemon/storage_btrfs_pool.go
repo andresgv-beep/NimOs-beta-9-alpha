@@ -66,6 +66,24 @@ func destroyPoolBtrfs(poolName string) map[string]interface{} {
 
 	logMsg("Destroying BTRFS pool '%s' (mount: %s)", poolName, mountPoint)
 
+	// Si Docker guarda su data-root en este pool, hay que pararlo antes de
+	// comprobar submounts o FDs abiertos. La barrera impide que NimHealth lo
+	// rearranque a mitad de la operacion.
+	dockerRelease, dockerErr := quiesceDockerForPool(mountPoint, opts)
+	if dockerErr != nil {
+		return dockerErr
+	}
+	torrentRelease, torrentErr := quiesceNimTorrent(opts)
+	if torrentErr != nil {
+		dockerRelease(true)
+		return torrentErr
+	}
+	destroyCompleted := false
+	defer func() {
+		dockerRelease(!destroyCompleted)
+		torrentRelease(!destroyCompleted)
+	}()
+
 	// 1. Pre-check: ¿hay filesystems montados ENCIMA del pool?
 	// Storage solo mira el estado real del filesystem, no consulta otros
 	// módulos. Si hay submounts (overlays Docker, binds...) abortamos antes
@@ -129,6 +147,7 @@ func destroyPoolBtrfs(poolName string) map[string]interface{} {
 
 	// Clean up service registry for this pool
 	dbServiceDeleteByPool(poolName)
+	destroyCompleted = true
 
 	return map[string]interface{}{"ok": true}
 }
@@ -165,6 +184,21 @@ func exportPoolBtrfs(poolName string) map[string]interface{} {
 	opts := CmdOptions{Timeout: 30 * time.Second}
 
 	logMsg("Exporting BTRFS pool '%s' — data preserved", poolName)
+
+	dockerRelease, dockerErr := quiesceDockerForPool(mountPoint, opts)
+	if dockerErr != nil {
+		return dockerErr
+	}
+	torrentRelease, torrentErr := quiesceNimTorrent(opts)
+	if torrentErr != nil {
+		dockerRelease(true)
+		return torrentErr
+	}
+	exportCompleted := false
+	defer func() {
+		dockerRelease(!exportCompleted)
+		torrentRelease(!exportCompleted)
+	}()
 
 	// 1. Pre-check: ¿hay filesystems montados ENCIMA del pool?
 	// Storage no consulta a Docker ni a servicios (cada módulo es responsable
@@ -209,11 +243,111 @@ func exportPoolBtrfs(poolName string) map[string]interface{} {
 	// pero el filesystem sigue en disco. Pasará a ser orphan_filesystem
 	// en el próximo snapshot.
 	notifyStorageChanged()
+	exportCompleted = true
 
 	return map[string]interface{}{"ok": true}
 }
 
 // ─── Helpers internos ────────────────────────────────────────────────────────
+
+// quiesceDockerForPool libera de forma coordinada el pool que contiene el
+// data-root de Docker. Devuelve una funcion que quita la barrera; si su
+// argumento es true, restaura Docker tras un fallo siempre que antes estuviera
+// activo y el usuario no hubiese pedido detenerlo.
+func quiesceDockerForPool(mountPoint string, opts CmdOptions) (func(bool), map[string]interface{}) {
+	noop := func(bool) {}
+	if mountPoint == "" {
+		return noop, nil
+	}
+	status := checkDockerDataRoot()
+	if status.PoolMount == "" || strings.TrimRight(status.PoolMount, "/") != strings.TrimRight(mountPoint, "/") {
+		return noop, nil
+	}
+
+	wasRunning := false
+	if active, _ := runCmd("systemctl", []string{"is-active", "docker"}, CmdOptions{Timeout: 5 * time.Second}); strings.TrimSpace(active.Stdout) == "active" {
+		wasRunning = true
+	}
+
+	dockerAutoStartSuppressed.Store(true)
+	if _, err := runCmd("systemctl", []string{"stop", "docker.socket", "docker", "containerd"}, opts); err != nil {
+		dockerAutoStartSuppressed.Store(false)
+		return noop, map[string]interface{}{
+			"error":   "docker_stop_failed",
+			"message": "No se pudo detener Docker y containerd antes de desmontar el pool.",
+			"detail":  err.Error(),
+		}
+	}
+
+	for _, unit := range []string{"docker.socket", "docker", "containerd"} {
+		res, _ := runCmd("systemctl", []string{"is-active", unit}, CmdOptions{Timeout: 5 * time.Second})
+		state := strings.TrimSpace(res.Stdout)
+		if state == "active" || state == "activating" || state == "deactivating" {
+			dockerAutoStartSuppressed.Store(false)
+			return noop, map[string]interface{}{
+				"error":   "docker_stop_failed",
+				"message": "Docker no termino de detenerse antes de desmontar el pool.",
+				"detail":  fmt.Sprintf("%s sigue en estado %s", unit, state),
+			}
+		}
+	}
+
+	released := false
+	release := func(restart bool) {
+		if released {
+			return
+		}
+		released = true
+		dockerAutoStartSuppressed.Store(false)
+		if restart && wasRunning && dockerAutoStartAllowed() && isPoolMounted(mountPoint) {
+			logMsg("storage: restaurando Docker tras fallo de desmontaje de %s", mountPoint)
+			runSafe("systemctl", "start", "containerd", "docker")
+		}
+	}
+	return release, nil
+}
+
+// quiesceNimTorrent elimina el bind mount privado que systemd crea mediante
+// ReadWritePaths=/nimos/pools. Ese montaje vive en otro mount namespace, no
+// aparece en fuser/lsof del host y mantiene cualquier pool ocupado aunque no
+// haya una descarga activa.
+func quiesceNimTorrent(opts CmdOptions) (func(bool), map[string]interface{}) {
+	noop := func(bool) {}
+	active, _ := runCmd("systemctl", []string{"is-active", "nimos-torrentd"}, CmdOptions{Timeout: 5 * time.Second})
+	wasRunning := strings.TrimSpace(active.Stdout) == "active"
+	if !wasRunning {
+		return noop, nil
+	}
+
+	if _, err := runCmd("systemctl", []string{"stop", "nimos-torrentd"}, opts); err != nil {
+		return noop, map[string]interface{}{
+			"error":   "torrent_stop_failed",
+			"message": "No se pudo detener NimTorrent antes de desmontar el pool.",
+			"detail":  err.Error(),
+		}
+	}
+	state, _ := runCmd("systemctl", []string{"is-active", "nimos-torrentd"}, CmdOptions{Timeout: 5 * time.Second})
+	if got := strings.TrimSpace(state.Stdout); got == "active" || got == "activating" || got == "deactivating" {
+		return noop, map[string]interface{}{
+			"error":   "torrent_stop_failed",
+			"message": "NimTorrent no termino de detenerse antes de desmontar el pool.",
+			"detail":  fmt.Sprintf("nimos-torrentd sigue en estado %s", got),
+		}
+	}
+
+	released := false
+	release := func(restart bool) {
+		if released {
+			return
+		}
+		released = true
+		if restart && wasRunning {
+			logMsg("storage: restaurando NimTorrent tras fallo de desmontaje")
+			runSafe("systemctl", "start", "nimos-torrentd")
+		}
+	}
+	return release, nil
+}
 
 // poolHasSubmounts comprueba si hay filesystems montados POR ENCIMA del
 // mountpoint del pool (overlays de Docker, bind mounts, etc.).
