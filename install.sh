@@ -417,7 +417,7 @@ setup_samba() {
    logging = file
    panic action = /usr/share/samba/panic-action %d
    obey pam restrictions = yes
-   # Las contraseñas SMB son independientes y NimOS las gestiona con smbpasswd.
+   # Samba mantiene su propio passdb, pero NimOS aplica aquí la misma credencial.
    unix password sync = no
    map to guest = bad user
    usershare allow guests = no

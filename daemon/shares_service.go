@@ -77,6 +77,8 @@ type CreateShareInput struct {
 	PoolName    string
 	QuotaBytes  int64
 	CreatedBy   string
+	RecycleBin  bool
+	Permissions map[string]string
 }
 
 // CreateShareResult lo que devolvemos al cliente tras crear.
@@ -113,7 +115,7 @@ func validateShareName(name string) (safeName string, err error) {
 //  5. Aplica quota qgroup (si > 0)
 //  6. Llama a handleOp share.create (permisos filesystem)
 //  7. setfacl para usuario nimos (apps internas)
-//  8. Registra en SQLite con permisos rw para creator
+//  8. Registra en SQLite y aplica los permisos explícitos de cada usuario
 //
 // Errores devueltos son user-friendly (van directos a la UI).
 // CreateShare crea una share nueva (aplica permisos de filesystem por defecto).
@@ -189,6 +191,11 @@ func createOrAdoptShare(ctx context.Context, input CreateShareInput, applyFsPerm
 		logMsg("ERROR dbSharesCreate '%s': %s", safeName, err)
 		return nil, err
 	}
+	if input.RecycleBin {
+		if err := dbSharesUpdate(safeName, ShareUpdate{RecycleBin: boolPtr(true)}); err != nil {
+			return nil, fmt.Errorf("share creada, pero no se pudo activar la papelera: %w", err)
+		}
+	}
 
 	// Permiso rw para el creador: persistirlo no basta. Samba puede incluir al
 	// usuario en valid users/write list, pero el kernel seguira denegando el
@@ -204,6 +211,11 @@ func createOrAdoptShare(ctx context.Context, input CreateShareInput, applyFsPerm
 	})
 	if !permResult.Ok {
 		return nil, fmt.Errorf("share creada, pero no se pudo aplicar el permiso del creador: %s", permResult.Error)
+	}
+	if input.Permissions != nil {
+		if err := applyPermissionDiff(safeName, map[string]string{input.CreatedBy: "rw"}, input.Permissions); err != nil {
+			return nil, fmt.Errorf("share creada, pero no se pudieron aplicar sus permisos: %w", err)
+		}
 	}
 
 	return &CreateShareResult{
@@ -301,7 +313,9 @@ func UpdateShare(ctx context.Context, target string, input UpdateShareInput) err
 
 	// Step 3 — Permisos de usuario
 	if input.Permissions != nil {
-		applyPermissionDiff(target, share.Permissions, input.Permissions)
+		if err := applyPermissionDiff(target, share.Permissions, input.Permissions); err != nil {
+			return err
+		}
 	}
 
 	// Step 4 — Permisos de app
@@ -367,7 +381,7 @@ func updateBtrfsQuota(ctx context.Context, share *DBShare, target string, quotaB
 //	· Si newPerm == "ro":  handleOp share.add_user_ro
 //
 // Y siempre persiste en SQLite con dbShareSetPermission.
-func applyPermissionDiff(target string, oldPerms, newPerms map[string]string) {
+func applyPermissionDiff(target string, oldPerms, newPerms map[string]string) error {
 	if oldPerms == nil {
 		oldPerms = map[string]string{}
 	}
@@ -391,17 +405,25 @@ func applyPermissionDiff(target string, oldPerms, newPerms map[string]string) {
 			continue
 		}
 
+		var result Response
 		switch newPerm {
 		case "none":
-			handleOp(Request{Op: "share.remove_user", ShareName: target, Username: username})
+			result = handleOp(Request{Op: "share.remove_user", ShareName: target, Username: username})
 		case "rw":
-			handleOp(Request{Op: "share.add_user_rw", ShareName: target, Username: username})
+			result = handleOp(Request{Op: "share.add_user_rw", ShareName: target, Username: username})
 		case "ro":
-			handleOp(Request{Op: "share.add_user_ro", ShareName: target, Username: username})
+			result = handleOp(Request{Op: "share.add_user_ro", ShareName: target, Username: username})
+		default:
+			return fmt.Errorf("permiso inválido para %s: %s", username, newPerm)
 		}
-
-		dbShareSetPermission(target, username, newPerm)
+		if !result.Ok {
+			return fmt.Errorf("no se pudo aplicar %s a %s: %s", newPerm, username, result.Error)
+		}
+		if err := dbShareSetPermission(target, username, newPerm); err != nil {
+			return fmt.Errorf("permiso aplicado a %s, pero no se pudo guardar: %w", username, err)
+		}
 	}
+	return nil
 }
 
 // applyAppPermissionDiff coordina cambios en permisos de apps:

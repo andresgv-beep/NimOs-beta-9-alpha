@@ -190,6 +190,7 @@
   <!-- Permisos -->
   <div class="se-block">
     <div class="se-block-title">Permisos de usuarios</div>
+    <div class="se-hint">El rol de NimOS no concede acceso a los archivos. Usa las credenciales de NimOS para entrar por SMB.</div>
     <div class="se-perm-list">
       {#if users.length === 0}
         <div class="se-hint">No hay usuarios para asignar.</div>
@@ -201,15 +202,11 @@
             <div class="se-perm-name">{u.username}</div>
             <div class="se-perm-role">{u.role || 'usuario'}</div>
           </div>
-          {#if u.role === 'admin'}
-            <span class="se-owner-tag">acceso total</span>
-          {:else}
-            <div class="se-seg">
-              <button type="button" class="se-seg-btn none" class:sel={(perms[u.username] || 'none') === 'none'} on:click={() => setPerm(u.username, 'none')}>sin acceso</button>
-              <button type="button" class="se-seg-btn ro" class:sel={perms[u.username] === 'ro'} on:click={() => setPerm(u.username, 'ro')}>ro</button>
-              <button type="button" class="se-seg-btn rw" class:sel={perms[u.username] === 'rw'} on:click={() => setPerm(u.username, 'rw')}>rw</button>
-            </div>
-          {/if}
+          <div class="se-seg">
+            <button type="button" class="se-seg-btn none" class:sel={(perms[u.username] || 'none') === 'none'} on:click={() => setPerm(u.username, 'none')}>sin acceso</button>
+            <button type="button" class="se-seg-btn ro" class:sel={perms[u.username] === 'ro'} on:click={() => setPerm(u.username, 'ro')}>ro</button>
+            <button type="button" class="se-seg-btn rw" class:sel={perms[u.username] === 'rw'} on:click={() => setPerm(u.username, 'rw')}>rw</button>
+          </div>
         </div>
       {/each}
     </div>
@@ -329,12 +326,6 @@
   .se-perm-user { flex: 1; min-width: 0; }
   .se-perm-name { font-size: 13px; color: var(--fg-2, #d0d0d4); }
   .se-perm-role { font-size: 10px; color: var(--fg-4, #7a7a82); margin-top: 1px; }
-  .se-owner-tag {
-    font-family: var(--font-sans);
-    font-size: 9px; color: var(--signal, #5b8ff9);
-    background: rgba(91,143,249,0.12); border: 1px solid rgba(91,143,249,0.28);
-    padding: 3px 8px; border-radius: 3px;
-  }
   .se-seg { display: flex; gap: 2px; background: var(--bg-card, #15151a); border-radius: 5px; padding: 2px; }
   .se-seg-btn {
     padding: 4px 9px; border: none; background: transparent; border-radius: 3px;

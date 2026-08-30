@@ -166,8 +166,19 @@ func sharesCreateHTTP(w http.ResponseWriter, r *http.Request) {
 		PoolName:    bodyStr(body, "pool"),
 		CreatedBy:   session.Username,
 	}
+	if rb, ok := body["recycleBin"].(bool); ok {
+		input.RecycleBin = rb
+	}
 	if qb, ok := body["quotaBytes"].(float64); ok {
 		input.QuotaBytes = int64(qb)
+	}
+	if permsRaw, ok := body["permissions"].(map[string]interface{}); ok {
+		input.Permissions = make(map[string]string, len(permsRaw))
+		for username, rawPermission := range permsRaw {
+			if permission, ok := rawPermission.(string); ok {
+				input.Permissions[username] = permission
+			}
+		}
 	}
 
 	result, err := CreateShare(r.Context(), input)

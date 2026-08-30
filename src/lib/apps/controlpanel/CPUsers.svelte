@@ -94,7 +94,7 @@
   <!-- Resumen -->
   <div class="cpu-stats">
     <StatCard label="Usuarios" value={usersList.length} variant="ok" tag="cuentas" />
-    <StatCard label="Administradores" value={adminCount} variant="info" tag="con acceso total" tagVariant="info" />
+    <StatCard label="Administradores" value={adminCount} variant="info" tag="del panel" tagVariant="info" />
   </div>
 
   <!-- La lista permanece visible mientras el editor se abre como diálogo. -->
@@ -152,8 +152,8 @@
     <div class="cpu-form">
       <p class="cpu-form-intro">
         {editingUser.isNew
-          ? 'Crea una cuenta y decide el nivel de acceso que tendrá en NimOS.'
-          : 'Actualiza el acceso de esta cuenta. Deja la contraseña vacía para conservar la actual.'}
+          ? 'Crea una cuenta para NimOS y SMB. Después podrás darle acceso a cada carpeta compartida.'
+          : 'Actualiza esta cuenta. La contraseña se aplica también a SMB; déjala vacía para conservar la actual.'}
       </p>
 
       <div class="cpu-field">
@@ -187,11 +187,11 @@
         <div class="cpu-roles">
           <button class="cpu-role" class:active={editingUser.role === 'user'} on:click={() => editingUser.role = 'user'}>
             <span class="cpu-role-name">Usuario</span>
-            <span class="cpu-role-desc">Acceso estándar</span>
+            <span class="cpu-role-desc">Acceso estándar al panel</span>
           </button>
           <button class="cpu-role" class:active={editingUser.role === 'admin'} on:click={() => editingUser.role = 'admin'}>
             <span class="cpu-role-name">Administrador</span>
-            <span class="cpu-role-desc">Acceso completo</span>
+            <span class="cpu-role-desc">Administra NimOS; las carpetas se autorizan aparte</span>
           </button>
         </div>
       </div>

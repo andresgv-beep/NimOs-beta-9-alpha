@@ -8,17 +8,11 @@
    * Reutiliza WizardFrame del Design System (backdrop, stepper, footer, ESC).
    *
    * API:
-   *   POST  /api/shares            { name, pool, description, quotaBytes }
-   *   PUT   /api/shares/{name}     { recycleBin, permissions }  (post-creación)
+   *   POST  /api/shares            { name, pool, description, quotaBytes, recycleBin, permissions }
    *   GET   /api/users             (lista de usuarios para permisos)
-   *
-   * NOTA: el backend de creación sólo acepta name/pool/description/quotaBytes.
-   * Protocolos (SMB/NFS/FTP) y papelera/distribución aún NO tienen cableado de
-   * creación; se muestran en la UI pero su activación real será el paso natural
-   * tras integrar esta UI (se aplican vía PUT donde el backend lo soporte).
    */
   import { createEventDispatcher, onMount } from 'svelte';
-  import { hdrs } from '$lib/stores/auth.js';
+  import { hdrs, user } from '$lib/stores/auth.js';
   import WizardFrame from '$lib/ui/WizardFrame.svelte';
 
   export let open = false;
@@ -82,6 +76,10 @@
       if (r.ok) {
         const data = await r.json();
         users = (Array.isArray(data) ? data : data.users || []).filter(Boolean);
+        const creator = $user?.username;
+        if (creator && !(creator in form.perms)) {
+          form.perms = { ...form.perms, [creator]: 'rw' };
+        }
       }
     } catch { /* sin usuarios, el paso permisos queda vacío salvo creador */ }
   }
@@ -145,7 +143,10 @@
     saving = true;
     errorMsg = '';
     try {
-      // 1) Crear el share (campos que el backend acepta en creación)
+      const permObj = {};
+      for (const u of users) permObj[u.username] = form.perms[u.username] || 'none';
+
+      // Crear la carpeta y sus permisos como una única operación de usuario.
       const createRes = await fetch('/api/shares', {
         method: 'POST',
         headers: { ...hdrs(), 'Content-Type': 'application/json' },
@@ -154,24 +155,13 @@
           pool: form.pool,
           description: form.description,
           quotaBytes,
+          recycleBin: form.recycleBin,
+          permissions: permObj,
         }),
       });
       if (!createRes.ok) {
         const e = await createRes.json().catch(() => ({}));
         throw new Error(e.error || 'No se pudo crear la carpeta');
-      }
-
-      // 2) Aplicar permisos vía PUT (sólo si hay alguno asignado)
-      const assigned = Object.entries(form.perms)
-        .filter(([, p]) => p === 'ro' || p === 'rw');
-      if (assigned.length > 0) {
-        const permObj = {};
-        for (const [u, p] of assigned) permObj[u] = p;
-        await fetch(`/api/shares/${encodeURIComponent(form.name)}`, {
-          method: 'PUT',
-          headers: { ...hdrs(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ permissions: permObj, recycleBin: form.recycleBin }),
-        }).catch(() => { /* permisos best-effort; el share ya existe */ });
       }
 
       dispatch('created', { name: form.name });
@@ -277,7 +267,7 @@
   {#if step === 2}
     <div class="sw-sub">Asigna quién puede acceder y con qué permiso</div>
     <div class="sw-perm-intro">
-      El creador tiene acceso completo automáticamente. Asigna permisos al resto:
+      El rol de NimOS no concede acceso a los archivos. Elige el permiso de cada cuenta:
       <b class="ro">RO</b> solo lectura · <b class="rw">RW</b> lectura y escritura.
     </div>
 
@@ -292,15 +282,11 @@
             <div class="sw-perm-name">{u.username}</div>
             <div class="sw-perm-role">{u.role || 'usuario'}</div>
           </div>
-          {#if u.role === 'admin'}
-            <span class="sw-perm-owner-tag">acceso total</span>
-          {:else}
-            <div class="sw-perm-seg">
-              <button type="button" class="sw-seg-btn none" class:sel={(form.perms[u.username] || 'none') === 'none'} on:click={() => setPerm(u.username, 'none')}>sin acceso</button>
-              <button type="button" class="sw-seg-btn ro" class:sel={form.perms[u.username] === 'ro'} on:click={() => setPerm(u.username, 'ro')}>ro</button>
-              <button type="button" class="sw-seg-btn rw" class:sel={form.perms[u.username] === 'rw'} on:click={() => setPerm(u.username, 'rw')}>rw</button>
-            </div>
-          {/if}
+          <div class="sw-perm-seg">
+            <button type="button" class="sw-seg-btn none" class:sel={(form.perms[u.username] || 'none') === 'none'} on:click={() => setPerm(u.username, 'none')}>sin acceso</button>
+            <button type="button" class="sw-seg-btn ro" class:sel={form.perms[u.username] === 'ro'} on:click={() => setPerm(u.username, 'ro')}>ro</button>
+            <button type="button" class="sw-seg-btn rw" class:sel={form.perms[u.username] === 'rw'} on:click={() => setPerm(u.username, 'rw')}>rw</button>
+          </div>
         </div>
       {/each}
     </div>
@@ -538,16 +524,6 @@
   .sw-perm-user { flex: 1; min-width: 0; }
   .sw-perm-name { font-size: 13px; color: var(--fg-2, #d0d0d4); }
   .sw-perm-role { font-size: 10px; color: var(--fg-4, #7a7a82); margin-top: 1px; }
-  .sw-perm-owner-tag {
-    font-family: var(--font-sans);
-    font-size: 9px;
-    color: var(--signal, #5b8ff9);
-    background: rgba(91,143,249,0.12);
-    border: 1px solid rgba(91,143,249,0.28);
-    padding: 3px 8px;
-    border-radius: 3px;
-    letter-spacing: 0;
-  }
   .sw-perm-seg {
     display: flex;
     gap: 2px;

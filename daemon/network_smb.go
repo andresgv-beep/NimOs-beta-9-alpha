@@ -448,15 +448,20 @@ func handleSmbRoutes(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, http.StatusBadRequest, "JSON inválido")
 			return
 		}
-		username := bodyStr(body, "username")
+		username := strings.ToLower(strings.TrimSpace(bodyStr(body, "username")))
 		password := bodyStr(body, "password")
 		if username == "" || password == "" {
 			jsonError(w, http.StatusBadRequest, "Username and password required")
 			return
 		}
-		response := handleOp(Request{Op: "user.set_smb_password", Username: username, Password: password})
-		if !response.Ok {
-			jsonError(w, http.StatusInternalServerError, response.Error)
+		if msg := validatePasswordStrength(password); msg != "" {
+			jsonError(w, http.StatusBadRequest, msg)
+			return
+		}
+		// Legacy endpoint kept for API compatibility. It now updates the NimOS
+		// and Samba credential together instead of allowing them to diverge.
+		if err := setUserPasswordAndSMB(username, password); err != nil {
+			jsonError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		jsonOk(w, map[string]interface{}{"ok": true})

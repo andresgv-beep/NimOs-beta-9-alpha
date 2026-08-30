@@ -182,20 +182,10 @@ func authSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashed, err := hashPassword(password)
-	if err != nil {
-		jsonError(w, 500, "Failed to hash password")
-		return
-	}
-
-	if err := dbUsersCreate(username, hashed, "admin", "System administrator"); err != nil {
+	if err := createUserWithSMB(username, password, "admin", "System administrator"); err != nil {
 		jsonError(w, 500, err.Error())
 		return
 	}
-
-	// Create Linux user + Samba password via daemon ops
-	handleOp(Request{Op: "user.create", Username: username})
-	handleOp(Request{Op: "user.set_smb_password", Username: username, Password: password})
 
 	// Create default volume directory
 	os.MkdirAll(filepath.Join(nimosRoot, "volumes", "volume1"), 0755)
@@ -426,18 +416,10 @@ func authChangePassword(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	hashed, err := hashPassword(newPassword)
-	if err != nil {
-		jsonError(w, 500, "Failed to hash password")
+	if err := setUserPasswordAndSMB(editUser, newPassword); err != nil {
+		jsonError(w, 500, err.Error())
 		return
 	}
-	dbUsersUpdate(editUser, UserUpdate{Password: strPtr(hashed)})
-
-	// Invalidate all sessions for this user
-	dbSessionsDeleteByUsername(editUser)
-
-	// Update Samba password
-	handleOp(Request{Op: "user.set_smb_password", Username: editUser, Password: newPassword})
 
 	jsonOk(w, map[string]interface{}{"ok": true})
 }

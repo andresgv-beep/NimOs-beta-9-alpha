@@ -9,7 +9,6 @@
    *   GET  /api/smb/status  → { installed, running, version, config, port, localAddress }
    *   POST /api/smb/config  { workgroup, serverString, ... }
    *   POST /api/smb/apply | start | stop | restart
-   *   POST /api/smb/set-password { username, password }
    *   GET  /api/shares      → carpetas (con flag .smb)
    *   PUT  /api/smb/share/:name  { smb: boolean }
    *
@@ -26,11 +25,6 @@
   let savingCfg = false;
   let msg = '';
   let msgError = false;
-
-  // contraseña
-  let pwUser = '';
-  let pwPass = '';
-  let pwBusy = false;
 
   async function load() {
     try {
@@ -116,21 +110,6 @@
     }
   }
 
-  async function setPassword() {
-    if (!pwUser || !pwPass || pwBusy) return;
-    pwBusy = true; msg = '';
-    try {
-      const r = await fetch('/api/smb/set-password', {
-        method: 'POST',
-        headers: { ...hdrs(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: pwUser, password: pwPass }),
-      });
-      if (r.ok) { msg = `Contraseña SMB actualizada para ${pwUser}`; msgError = false; pwUser = ''; pwPass = ''; }
-      else { const e = await r.json().catch(() => ({})); msg = e.error || 'Error'; msgError = true; }
-    } catch { msg = 'Error de red'; msgError = true; }
-    pwBusy = false;
-  }
-
   onMount(load);
 </script>
 
@@ -211,17 +190,13 @@
     </div>
   </div>
 
-  <!-- Contraseña -->
+  <!-- Identidad y permisos -->
   <div class="sp-sect">
-    <div class="sp-st">Contraseña SMB de usuario</div>
-    <div class="sp-actions">
-      <input class="sp-input grow" type="text" placeholder="usuario" bind:value={pwUser} autocomplete="off" />
-      <input class="sp-input grow" type="password" placeholder="nueva contraseña" bind:value={pwPass} autocomplete="new-password" />
-      <button class="sp-btn primary" on:click={setPassword} disabled={pwBusy || !pwUser || !pwPass}>
-        {pwBusy ? 'Guardando…' : 'Aplicar'}
-      </button>
+    <div class="sp-st">Usuarios y acceso</div>
+    <div class="sp-note">
+      Las credenciales SMB son las mismas que las de NimOS. Crea usuarios o cambia su contraseña en
+      «Usuarios» y asigna el acceso a cada carpeta desde «Compartidas».
     </div>
-    <div class="sp-hint">Samba usa contraseñas propias por usuario, separadas de la del sistema.</div>
   </div>
 </div>
 
@@ -357,8 +332,6 @@
     outline: none;
   }
   .sp-input:focus { border-color: rgba(91,143,249,0.5); }
-  .sp-input.grow { flex: 1; min-width: 120px; }
-
   .sp-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .sp-btn {
     padding: 8px 14px;

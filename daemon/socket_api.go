@@ -41,12 +41,6 @@ type Share struct {
 	AppPermissions []map[string]interface{} `json:"appPermissions"`
 }
 
-// User represents a user in users.json
-type User struct {
-	Username string `json:"username"`
-	Role     string `json:"role"`
-}
-
 func readShares() ([]Share, error) {
 	data, err := os.ReadFile(sharesFile)
 	if err != nil {
@@ -57,18 +51,6 @@ func readShares() ([]Share, error) {
 		return nil, err
 	}
 	return shares, nil
-}
-
-func readUsers() ([]User, error) {
-	data, err := os.ReadFile(usersFile)
-	if err != nil {
-		return nil, err
-	}
-	var users []User
-	if err := json.Unmarshal(data, &users); err != nil {
-		return nil, err
-	}
-	return users, nil
 }
 
 func getSharePath(shareName string) (string, error) {
@@ -155,15 +137,6 @@ func handleOp(req Request) Response {
 		// Add service user
 		if _, ok := runSafe("id", serviceUser); ok {
 			runSafe("usermod", "-aG", group, serviceUser)
-		}
-
-		// Add admin users
-		if users, err := readUsers(); err == nil {
-			for _, u := range users {
-				if u.Role == "admin" && validUsername.MatchString(u.Username) {
-					runSafe("usermod", "-aG", group, u.Username)
-				}
-			}
 		}
 
 		logMsg("share.create: %s at %s (group: %s)", req.ShareName, sharePath, group)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -27,6 +28,63 @@ func validatePasswordStrength(password string) string {
 		return "Password must contain at least one number"
 	}
 	return ""
+}
+
+// createUserWithSMB creates one NimOS identity and its Linux/Samba mirrors.
+// A user must never be reported as created when one of those mirrors failed.
+func createUserWithSMB(username, password, role, description string) error {
+	hashed, err := hashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password")
+	}
+	if err := dbUsersCreate(username, hashed, role, description); err != nil {
+		return err
+	}
+
+	createResult := handleOp(Request{Op: "user.create", Username: username})
+	if !createResult.Ok {
+		_ = dbUsersDelete(username)
+		return fmt.Errorf("failed to create system user: %s", createResult.Error)
+	}
+	passwordResult := handleOp(Request{Op: "user.set_smb_password", Username: username, Password: password})
+	if !passwordResult.Ok {
+		_ = dbUsersDelete(username)
+		if !createResult.Existed {
+			handleOp(Request{Op: "user.delete", Username: username})
+		}
+		return fmt.Errorf("failed to create SMB credentials: %s", passwordResult.Error)
+	}
+	return nil
+}
+
+// setUserPasswordAndSMB keeps the NimOS and SMB passwords as one credential.
+// If Samba rejects the change, restore the previous NimOS hash so the two
+// authentication paths cannot silently diverge.
+func setUserPasswordAndSMB(username, password string) error {
+	if msg := validatePasswordStrength(password); msg != "" {
+		return fmt.Errorf("%s", msg)
+	}
+	current, err := dbUsersGetRaw(username)
+	if err != nil {
+		return err
+	}
+	hashed, err := hashPassword(password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password")
+	}
+	if err := dbUsersUpdate(username, UserUpdate{Password: strPtr(hashed)}); err != nil {
+		return err
+	}
+
+	result := handleOp(Request{Op: "user.set_smb_password", Username: username, Password: password})
+	if !result.Ok {
+		if rollbackErr := dbUsersUpdate(username, UserUpdate{Password: strPtr(current.Password)}); rollbackErr != nil {
+			return fmt.Errorf("failed to update SMB password (%s) and to restore NimOS credentials (%v)", result.Error, rollbackErr)
+		}
+		return fmt.Errorf("failed to update SMB password: %s", result.Error)
+	}
+	dbSessionsDeleteByUsername(username)
+	return nil
 }
 
 func handleUsersRoutes(w http.ResponseWriter, r *http.Request) {
@@ -107,16 +165,15 @@ func usersCreate(w http.ResponseWriter, r *http.Request) {
 	if role == "" {
 		role = "user"
 	}
-
-	hashed, _ := hashPassword(password)
-	if err := dbUsersCreate(username, hashed, role, description); err != nil {
-		jsonError(w, 500, err.Error())
+	if role != "user" && role != "admin" {
+		jsonError(w, 400, "Role must be user or admin")
 		return
 	}
 
-	// Sync Linux + Samba
-	handleOp(Request{Op: "user.create", Username: username})
-	handleOp(Request{Op: "user.set_smb_password", Username: username, Password: password})
+	if err := createUserWithSMB(username, password, role, description); err != nil {
+		jsonError(w, 500, err.Error())
+		return
+	}
 
 	jsonOk(w, map[string]interface{}{"ok": true, "username": username})
 }
@@ -157,18 +214,23 @@ func usersUpdate(w http.ResponseWriter, r *http.Request, target string) {
 	body, _ := readBody(r)
 	var u UserUpdate
 	hasUpdates := false
+	role := bodyStr(body, "role")
+	if role != "" && role != "user" && role != "admin" {
+		jsonError(w, 400, "Role must be user or admin")
+		return
+	}
 
 	if pw := bodyStr(body, "password"); pw != "" {
 		if msg := validatePasswordStrength(pw); msg != "" {
 			jsonError(w, 400, msg)
 			return
 		}
-		hashed, _ := hashPassword(pw)
-		u.Password = strPtr(hashed)
-		hasUpdates = true
-		handleOp(Request{Op: "user.set_smb_password", Username: target, Password: pw})
+		if err := setUserPasswordAndSMB(target, pw); err != nil {
+			jsonError(w, 500, err.Error())
+			return
+		}
 	}
-	if role := bodyStr(body, "role"); role != "" {
+	if role != "" {
 		u.Role = strPtr(role)
 		hasUpdates = true
 	}
