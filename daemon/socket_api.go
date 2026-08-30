@@ -146,8 +146,11 @@ func handleOp(req Request) Response {
 		}
 
 		runSafe("chown", "root:"+group, sharePath)
-		runSafe("chmod", "2770", sharePath)
+		runSafe("setfacl", "-m", "g::rwx", sharePath)
+		runSafe("setfacl", "-d", "-m", "g::rwx", sharePath)
 		runSafe("setfacl", "-d", "-m", "g:"+group+":rwx", sharePath)
+		// setfacl may clear SGID; chmod must remain the final permission step.
+		runSafe("chmod", "2770", sharePath)
 
 		// Add service user
 		if _, ok := runSafe("id", serviceUser); ok {
@@ -530,8 +533,11 @@ func reconcile() Response {
 				logMsg("  reconcile: skipping permissions for %s (disk full, %d bytes free)", share.Name, avail)
 			} else {
 				runSafe("chown", "root:"+group, share.Path)
-				runSafe("chmod", "2770", share.Path)
+				runSafe("setfacl", "-m", "g::rwx", share.Path)
+				runSafe("setfacl", "-d", "-m", "g::rwx", share.Path)
 				runSafe("setfacl", "-d", "-m", "g:"+group+":rwx", share.Path)
+				// setfacl may clear SGID; chmod must remain the final permission step.
+				runSafe("chmod", "2770", share.Path)
 			}
 		}
 
