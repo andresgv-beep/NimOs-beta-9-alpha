@@ -8,7 +8,10 @@
 
 package main
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // parentDeviceOf — núcleo del fix del boot disk guard
@@ -130,5 +133,89 @@ func TestAllDigits(t *testing.T) {
 		if got != c.expected {
 			t.Errorf("allDigits(%q) = %v, want %v", c.input, got, c.expected)
 		}
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// metadataProfileFor — la metadata nunca con menos redundancia que el pool
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestMetadataProfileFor(t *testing.T) {
+	cases := []struct {
+		data    Profile
+		devices int
+		want    string
+	}{
+		// El bug: convertir a single con varios discos dejaba metadata single.
+		{ProfileSingle, 2, "raid1"},
+		{ProfileSingle, 5, "raid1"},
+		{ProfileSingle, 1, "dup"},
+		{ProfileRaid1, 2, "raid1"},
+		{ProfileRaid1c3, 3, "raid1c3"},
+		{ProfileRaid10, 4, "raid10"},
+	}
+	for _, c := range cases {
+		if got := metadataProfileFor(c.data, c.devices); got != c.want {
+			t.Errorf("metadataProfileFor(%s, %d) = %q, want %q", c.data, c.devices, got, c.want)
+		}
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// parseBtrfsDeviceStatsOutput — claves = nombres de CollectDiagnostics
+// ─────────────────────────────────────────────────────────────────────────────
+
+func statsBlock(dev string, write, read, corruption int) string {
+	return fmt.Sprintf("[%[1]s].write_io_errs    %[2]d\n[%[1]s].read_io_errs     %[3]d\n"+
+		"[%[1]s].flush_io_errs    0\n[%[1]s].corruption_errs  %[4]d\n[%[1]s].generation_errs  0\n",
+		dev, write, read, corruption)
+}
+
+func TestParseBtrfsDeviceStatsOutput_KeysMatchDiagnostics(t *testing.T) {
+	cases := []struct {
+		name string
+		out  string
+		want map[string]DiskStatus
+	}{
+		{
+			// El bug: nvme0n1 → "nvme0n", y CollectDiagnostics busca "nvme0n1".
+			"nvme", statsBlock("/dev/nvme0n1", 0, 0, 3) + statsBlock("/dev/nvme1n1", 0, 2, 0),
+			map[string]DiskStatus{
+				"nvme0n1": {ChecksumErrors: 3},
+				"nvme1n1": {ReadErrors: 2},
+			},
+		},
+		{
+			"sata", statsBlock("/dev/sda", 1, 0, 0) + statsBlock("/dev/sdb", 0, 0, 0),
+			map[string]DiskStatus{"sda": {WriteErrors: 1}, "sdb": {}},
+		},
+		{
+			// loop49 y loop50 colapsaban en "loop": el segundo pisaba al primero.
+			"loop", statsBlock("/dev/loop49", 0, 0, 1) + statsBlock("/dev/loop50", 0, 0, 0),
+			map[string]DiskStatus{"loop49": {ChecksumErrors: 1}, "loop50": {}},
+		},
+		{
+			"dm", statsBlock("/dev/dm-0", 0, 0, 5) + statsBlock("/dev/dm-1", 0, 0, 0),
+			map[string]DiskStatus{"dm-0": {ChecksumErrors: 5}, "dm-1": {}},
+		},
+		{
+			// Dos particiones del mismo disco: se suman, no se pisan.
+			"particiones", statsBlock("/dev/sdc1", 0, 0, 2) + statsBlock("/dev/sdc2", 0, 0, 1) +
+				statsBlock("/dev/nvme2n1p3", 4, 0, 0),
+			map[string]DiskStatus{"sdc": {ChecksumErrors: 3}, "nvme2n1": {WriteErrors: 4}},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := parseBtrfsDeviceStatsOutput(c.out)
+			if len(got) != len(c.want) {
+				t.Fatalf("claves: got %v, want %v", got, c.want)
+			}
+			for k, w := range c.want {
+				if g, ok := got[k]; !ok || g != w {
+					t.Errorf("%s: got %+v (presente=%v), want %+v", k, g, ok, w)
+				}
+			}
+		})
 	}
 }

@@ -47,31 +47,28 @@ var getDockerConfigGo = func() map[string]interface{} {
 	return conf
 }
 
-func saveDockerConfigGo(config map[string]interface{}) {
+// Var para inyectarlo en tests (escribe en /var/lib/nimos).
+var saveDockerConfigGo = func(config map[string]interface{}) {
 	data, _ := json.MarshalIndent(config, "", "  ")
 	os.WriteFile(dockerConfigFile, data, 0644)
 }
 
 // getDockerPath returns the docker data path on the pool.
-// Priority: docker.json path → primary pool → first pool → error
+// Priority: docker.json path → mismo pool por ID (rename) → error.
+// Sin path guardado (instalación nueva): primary pool → first pool → error.
 // NEVER returns /var/lib/docker — data must live on a pool.
 func getDockerPath() (string, error) {
-	// 1. Try docker.json config — PERO solo si el pool está REALMENTE montado.
+	// 1. docker.json — PERO solo si el pool está REALMENTE montado.
 	//    Confiar en el path guardado sin verificar el montaje es lo que hacía
 	//    que, tras un rename a medias o un pool desmontado, Docker escribiera
 	//    en un directorio vacío sobre el disco de sistema en vez de en el pool.
 	//    (Regla 16: la config no es autoridad; el estado de montaje sí.)
 	conf := getDockerConfigGo()
 	if p, _ := conf["path"].(string); p != "" && strings.HasPrefix(p, "/nimos/pools/") {
-		poolMount := filepath.Dir(p) // /nimos/pools/data9/docker → /nimos/pools/data9
-		if isPoolMounted(poolMount) {
-			return p, nil
-		}
-		logMsg("getDockerPath: docker.json apunta a %s pero %s NO está montado; buscando un pool montado", p, poolMount)
-		// No retornamos: caemos a la selección por pools montados de abajo.
+		return resolveConfiguredDockerPath(conf, p)
 	}
 
-	// 2. Try to find from storage pools (Beta 8.1: usa service v2)
+	// 2. Instalación nueva: elegir pool (Beta 8.1: usa service v2)
 	if storageService == nil {
 		return "", fmt.Errorf("storage service not initialized")
 	}
@@ -88,6 +85,7 @@ func getDockerPath() (string, error) {
 		if p.IsPrimary && p.MountPoint != "" && isPoolMounted(p.MountPoint) {
 			dockerPath := filepath.Join(p.MountPoint, "docker")
 			conf["path"] = dockerPath
+			conf["poolId"] = p.ID
 			saveDockerConfigGo(conf)
 			return dockerPath, nil
 		}
@@ -98,12 +96,58 @@ func getDockerPath() (string, error) {
 		if p.MountPoint != "" && isPoolMounted(p.MountPoint) {
 			dockerPath := filepath.Join(p.MountPoint, "docker")
 			conf["path"] = dockerPath
+			conf["poolId"] = p.ID
 			saveDockerConfigGo(conf)
 			return dockerPath, nil
 		}
 	}
 
 	return "", fmt.Errorf("no hay ningún pool montado donde ubicar el data-root de Docker")
+}
+
+// resolveConfiguredDockerPath resuelve el data-root cuando docker.json ya tiene
+// uno. Docker queda ATADO a su pool: si ese pool no está montado, se falla en
+// vez de saltar a otro. Saltar arrancaba las apps vacías sobre otro pool y
+// además reescribía docker.json, así que al volver el pool original NimOS
+// seguía en el nuevo: los datos parecían perdidos aunque siguieran intactos.
+//
+// La identidad del pool es su ID (estable), no su ruta: tras un rename el ID
+// encuentra el nuevo mount point y docker.json se corrige.
+func resolveConfiguredDockerPath(conf map[string]interface{}, path string) (string, error) {
+	poolMount := filepath.Dir(path) // /nimos/pools/data9/docker → /nimos/pools/data9
+	poolID, _ := conf["poolId"].(string)
+
+	if isPoolMounted(poolMount) {
+		// docker.json antiguo sin poolId: anotarlo ahora que sabemos cuál es,
+		// para que un rename futuro se pueda seguir.
+		if poolID == "" && storageService != nil {
+			if pools, err := storageService.ListPools(context.Background()); err == nil {
+				for _, p := range pools {
+					if p.MountPoint == poolMount {
+						conf["poolId"] = p.ID
+						saveDockerConfigGo(conf)
+						break
+					}
+				}
+			}
+		}
+		return path, nil
+	}
+
+	// Mismo pool con otro mount point → fue renombrado.
+	if poolID != "" && storageService != nil {
+		if p, err := storageService.GetPool(context.Background(), poolID); err == nil && p != nil &&
+			p.MountPoint != "" && p.MountPoint != poolMount && isPoolMounted(p.MountPoint) {
+			newPath := filepath.Join(p.MountPoint, "docker")
+			logMsg("getDockerPath: el pool de Docker se renombró (%s → %s); actualizando docker.json", poolMount, p.MountPoint)
+			conf["path"] = newPath
+			saveDockerConfigGo(conf)
+			return newPath, nil
+		}
+	}
+
+	logMsg("getDockerPath: el pool de Docker (%s) NO está montado; Docker no se mueve a otro pool", poolMount)
+	return "", fmt.Errorf("el pool de Docker (%s) no está montado; las apps no arrancan hasta que vuelva para no separarlas de sus datos", poolMount)
 }
 
 func isDockerInstalledGo() bool {

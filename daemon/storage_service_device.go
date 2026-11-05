@@ -500,7 +500,7 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 	// (el replace del KERNEL seguía), la op quedaba failed, el revert dejaba
 	// el pool en degraded,ro con el replace aún corriendo, y el swap old→new
 	// jamás se persistía. Patrón ConvertProfile: context.Background().
-	poolID, mountPoint, poolName := pool.ID, pool.MountPoint, pool.Name
+	poolID, mountPoint, poolName, poolProfile := pool.ID, pool.MountPoint, pool.Name, pool.Profile
 	oldDevID, newDevID := oldDev.ID, newDev.ID
 	go func() {
 		bgCtx := context.Background()
@@ -547,6 +547,16 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 			return
 		}
 
+		// El replace reconstruye los chunks que existían, pero lo escrito
+		// mientras el pool estuvo en degraded,rw quedó en single. Sin esto el
+		// pool quedaba "reparado" con parte de datos y metadata en un solo
+		// disco. Un fallo aquí no deshace el swap (el disco YA está
+		// reemplazado en el kernel): se avisa con honestidad, abajo.
+		redundancyErr := s.btrfs.RestoreRedundancy(bgCtx, mountPoint, poolProfile)
+		if redundancyErr != nil {
+			logMsg("ReplaceDevice: replace OK en %s pero no se pudo restaurar la redundancia de los chunks creados en degradado: %v", mountPoint, redundancyErr)
+		}
+
 		// Redundancia restaurada (el replace con -B ya terminó). Lanzamos un
 		// scrub para VERIFICAR que la copia reconstruida es íntegra (detecta/
 		// corrige bit-rot silencioso contra la otra copia). No bloqueante:
@@ -572,6 +582,11 @@ func (s *StorageService) ReplaceDevice(ctx context.Context, req ReplaceDeviceReq
 			return
 		}
 		logMsg("ReplaceDevice async: pool %s — %s sustituido por %s", poolID, oldDevID, newDevID)
+		if redundancyErr != nil {
+			notifError(fmt.Sprintf("Disco reemplazado en %s, pero sin redundancia completa", poolName),
+				fmt.Sprintf("El disco nuevo ya está en el pool, pero parte de los datos escritos en modo degradado sigue en un solo disco: %v. Revisa Almacenamiento antes de que falle otro disco.", redundancyErr))
+			return
+		}
 		notifSuccess(fmt.Sprintf("Disco reemplazado en %s", poolName),
 			"La reconstrucción ha terminado y se ha lanzado una verificación (scrub). El pool vuelve a tener redundancia completa.")
 	}()

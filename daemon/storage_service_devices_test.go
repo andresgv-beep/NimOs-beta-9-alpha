@@ -616,3 +616,60 @@ func TestStorageServiceLayoutOpsAreMutuallyExclusive(t *testing.T) {
 	})
 	assertErrorCode(t, err, ErrCodeOperationInProgress)
 }
+
+// Tras el replace hay que reconvertir los chunks que el kernel creó en single
+// mientras el pool estuvo en degraded,rw (cazado con loopback real: el pool
+// quedaba "reparado" con Data/Metadata/System en single).
+func TestStorageServiceReplaceDeviceRestoresRedundancy(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		restoreErr error
+	}{
+		{"restaura", nil},
+		{"falla la restauración", fmt.Errorf("balance: no space left")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			service, mock, cleanup := setupTestService(t)
+			defer cleanup()
+			ctx := context.Background()
+
+			poolID, deviceIDs := createTestPool(t, service, ctx, "data", ProfileRaid1, 2)
+			tx, _ := service.db.BeginTx(ctx, nil)
+			service.repo.UpsertDevice(ctx, tx, &Device{
+				ID: "new-1", Serial: "NEW-1",
+				ByIDPath: "/dev/disk/by-id/new-1", CurrentPath: "/dev/sdn",
+				SizeBytes: 2e12,
+			})
+			tx.Commit()
+			mock.Reset()
+			mock.RestoreRedundancyFn = func(context.Context, string, Profile) error { return tc.restoreErr }
+
+			origScrub := startScrubOnPool
+			defer func() { startScrubOnPool = origScrub }()
+			startScrubOnPool = func(mp, name string) error { return nil }
+
+			op, err := service.ReplaceDevice(ctx, ReplaceDeviceRequest{
+				PoolID: poolID, OldDeviceID: deviceIDs[0], NewDeviceID: "new-1",
+			})
+			if err != nil {
+				t.Fatalf("ReplaceDevice: %v", err)
+			}
+			final := waitForOperation(t, service, ctx, op.ID, 3*time.Second)
+
+			if len(mock.RestoreRedundancyCalls) != 1 || mock.RestoreRedundancyCalls[0].NewProfile != ProfileRaid1 {
+				t.Fatalf("RestoreRedundancy: got %+v, want 1 llamada con raid1", mock.RestoreRedundancyCalls)
+			}
+			// El disco YA está reemplazado en el kernel: un fallo al
+			// restaurar no puede dejar la BD con el disco viejo.
+			if final.Status != OpStatusCompleted {
+				t.Errorf("op.Status: got %q, want completed", final.Status)
+			}
+			pool, _ := service.GetPool(ctx, poolID)
+			for _, d := range pool.Devices {
+				if d.ID == deviceIDs[0] {
+					t.Errorf("el disco viejo sigue en el pool")
+				}
+			}
+		})
+	}
+}

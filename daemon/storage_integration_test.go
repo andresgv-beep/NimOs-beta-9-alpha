@@ -88,6 +88,26 @@ func createLoopbackDisks(t *testing.T, n int, sizeMB int) ([]*loopbackDisk, func
 	return disks, cleanup
 }
 
+// waitIntegrationOp espera a que una Operation async (add/remove/replace/
+// convert) salga de in_progress y la devuelve.
+func waitIntegrationOp(t *testing.T, service *StorageService, id string, timeout time.Duration) *Operation {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for {
+		op, err := service.repo.GetOperation(context.Background(), id)
+		if err != nil {
+			t.Fatalf("GetOperation: %v", err)
+		}
+		if op.Status != OpStatusInProgress {
+			return op
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("operation %s sigue in_progress tras %s", id, timeout)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
 // requireBtrfs salta el test si el kernel no soporta BTRFS o si no
 // tenemos los binarios necesarios.
 func requireBtrfs(t *testing.T) {
@@ -351,6 +371,8 @@ func TestStorageIntegrationAddRemoveDevice(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AddDevice: %v", err)
 	}
+	// AddDevice es async (AUDIT F9/A1): devuelve la op in_progress.
+	op2 = waitIntegrationOp(t, service, op2.ID, 2*time.Minute)
 	if op2.Status != OpStatusCompleted {
 		errMsg := ""
 		if op2.Error != nil {
@@ -379,6 +401,7 @@ func TestStorageIntegrationAddRemoveDevice(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RemoveDevice: %v", err)
 	}
+	op3 = waitIntegrationOp(t, service, op3.ID, 2*time.Minute)
 	if op3.Status != OpStatusCompleted {
 		errMsg := ""
 		if op3.Error != nil {

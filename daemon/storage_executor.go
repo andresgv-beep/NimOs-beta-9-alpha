@@ -112,6 +112,12 @@ type BtrfsExecutor interface {
 	// btrfs balance start con el filtro de profile. Operación pesada.
 	ConvertProfile(ctx context.Context, mountPoint string, newProfile Profile) error
 
+	// RestoreRedundancy reconvierte al perfil del pool los chunks que NO lo
+	// tienen (balance con filtro soft: solo toca los que difieren). Necesario
+	// tras reparar un pool degradado: mientras estuvo en degraded,rw el kernel
+	// creó chunks nuevos en single que `btrfs replace` no convierte.
+	RestoreRedundancy(ctx context.Context, mountPoint string, profile Profile) error
+
 	// WipeDevice borra firmas de filesystem y particiones del device.
 	// Verifica defensivamente que el device no es boot disk ni está
 	// montado. Devuelve error si no es seguro hacerlo.

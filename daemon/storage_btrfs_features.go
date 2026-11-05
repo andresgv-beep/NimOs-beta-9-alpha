@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -501,9 +502,45 @@ func parseScrubStatusOutput(output string) map[string]interface{} {
 // ─── SCRUB SCHEDULER ─────────────────────────────────────────────────────────
 //
 // Beta 8.1: tabla scrub_schedule definida en storage_schema.sql §8.
+//
+// Antes el scheduler solo LEÍA filas de scrub_schedule y nada las creaba (ni
+// API ni UI): los scrubs programados no corrían nunca. Además exigía coincidir
+// con la hora:minuto exactos, así que una máquina apagada o suspendida a esa
+// hora se saltaba la verificación sin avisar.
+//
+// Ahora:
+//   - Todo pool managed y montado tiene programación: si no hay fila, se crea
+//     la de por defecto (mensual, día 1, 03:00, como los NAS comerciales).
+//   - Se dispara cuando now >= next_run, no en el minuto exacto: si la máquina
+//     estaba apagada, el scrub corre en cuanto vuelve (catch-up).
+//   - Si no arranca, se reintenta tras scrubRetryDelay y se avisa UNA vez por
+//     racha de fallos, no en cada intento.
+//   - Se recorren los POOLS, no las filas: la fila de un pool renombrado o
+//     borrado se ignora en vez de fallar para siempre.
 
-func calculateNextRun(freq string, hour, minute, dow, dom int) interface{} {
-	now := time.Now()
+const scrubRetryDelay = time.Hour
+
+// Programación por defecto (coincide con los DEFAULT del schema).
+const (
+	defaultScrubFrequency  = "monthly"
+	defaultScrubDayOfMonth = 1
+	defaultScrubHour       = 3
+)
+
+// runScheduledScrubFn lanza el scrub programado de un pool. Var para tests.
+var runScheduledScrubFn = func(poolName string) map[string]interface{} {
+	return startScrub(map[string]interface{}{"pool": poolName, "trigger": "scheduled"})
+}
+
+// scrubFailNotified marca los pools cuya racha de fallos ya se notificó.
+// Se limpia cuando el scrub vuelve a arrancar bien.
+var (
+	scrubFailMu       sync.Mutex
+	scrubFailNotified = map[string]bool{}
+)
+
+// nextScrubRun calcula la próxima ejecución estrictamente posterior a now.
+func nextScrubRun(now time.Time, freq string, hour, minute, dow, dom int) (time.Time, bool) {
 	target := time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())
 
 	switch freq {
@@ -523,9 +560,9 @@ func calculateNextRun(freq string, hour, minute, dow, dom int) interface{} {
 			target = target.AddDate(0, 1, 0)
 		}
 	default:
-		return nil
+		return time.Time{}, false
 	}
-	return target.Format(time.RFC3339)
+	return target, true
 }
 
 // startScrubScheduler starts a background goroutine that periodically
@@ -544,73 +581,94 @@ func startScrubScheduler() {
 }
 
 func checkAndRunScheduledScrubs() {
-	rows, err := db.Query(`SELECT pool_name, frequency, day_of_week, day_of_month, hour, minute, last_run
-		FROM scrub_schedule WHERE enabled = 1`)
-	if err != nil {
+	if storageService == nil {
 		return
 	}
-	defer rows.Close()
-
+	ctx := context.Background()
+	pools, err := storageService.repo.ListPools(ctx)
+	if err != nil {
+		logMsg("Scrub scheduler: no se pudieron listar los pools: %v", err)
+		return
+	}
 	now := time.Now()
-	for rows.Next() {
-		var (
-			poolName       string
-			freq           string
-			dow, dom, h, m int
-			lastRun        *string
-		)
-		if err := rows.Scan(&poolName, &freq, &dow, &dom, &h, &m, &lastRun); err != nil {
+	for _, p := range pools {
+		// Solo pools que NimOS gestiona y que están montados de verdad.
+		if p.ControlState != ControlStateManaged || !isPoolMounted(p.MountPoint) {
 			continue
 		}
-		lastRunStr := ""
-		if lastRun != nil {
-			lastRunStr = *lastRun
-		}
-		if shouldRunNow(freq, h, m, dow, dom, lastRunStr, now) {
-			logMsg("Scrub scheduler: starting scheduled scrub on %s", poolName)
-			res := startScrub(map[string]interface{}{"pool": poolName, "trigger": "scheduled"})
-
-			// FIX2: solo marcar como ejecutado si el scrub REALMENTE arrancó.
-			// Si falló (pool degradado, otro scrub en curso, error), NO tocar
-			// last_run → el scheduler reintenta en el próximo tick, y se avisa.
-			if ok, _ := res["ok"].(bool); ok {
-				_, _ = db.Exec(`UPDATE scrub_schedule SET last_run = ?, next_run = ? WHERE pool_name = ?`,
-					now.Format(time.RFC3339),
-					calculateNextRun(freq, h, m, dow, dom),
-					poolName)
-			} else {
-				reason, _ := res["error"].(string)
-				if reason == "" {
-					reason = "motivo desconocido"
-				}
-				logMsg("Scrub scheduler: scrub on %s NO arrancó (%s) — se reintentará", poolName, reason)
-				addNotification("warning", "system",
-					fmt.Sprintf("Scrub programado no pudo arrancar en %s", poolName),
-					fmt.Sprintf("La verificación de integridad programada de %s no pudo iniciarse: %s. Se reintentará automáticamente.", poolName, reason))
-			}
-		}
+		runScheduledScrubIfDue(ctx, storageService.db, p.Name, now)
 	}
 }
 
-func shouldRunNow(freq string, hour, minute, dow, dom int, lastRun string, now time.Time) bool {
-	// Avoid double-runs within the same minute window
-	if lastRun != "" {
-		if last, err := time.Parse(time.RFC3339, lastRun); err == nil {
-			if now.Sub(last) < 50*time.Second {
-				return false
-			}
+// runScheduledScrubIfDue crea la programación por defecto si falta y lanza el
+// scrub si ya toca (now >= next_run).
+func runScheduledScrubIfDue(ctx context.Context, conn *sql.DB, poolName string, now time.Time) {
+	var (
+		enabled, dow, dom, h, m int
+		freq                    string
+		nextRun                 sql.NullString
+	)
+	err := conn.QueryRowContext(ctx, `SELECT enabled, frequency, day_of_week, day_of_month, hour, minute, next_run
+		FROM scrub_schedule WHERE pool_name = ?`, poolName).Scan(&enabled, &freq, &dow, &dom, &h, &m, &nextRun)
+	if err == sql.ErrNoRows {
+		next, _ := nextScrubRun(now, defaultScrubFrequency, defaultScrubHour, 0, 0, defaultScrubDayOfMonth)
+		if _, err := conn.ExecContext(ctx, `INSERT INTO scrub_schedule
+			(pool_name, enabled, frequency, day_of_week, day_of_month, hour, minute, next_run)
+			VALUES (?, 1, ?, 0, ?, ?, 0, ?)`,
+			poolName, defaultScrubFrequency, defaultScrubDayOfMonth, defaultScrubHour, next.Format(time.RFC3339)); err != nil {
+			logMsg("Scrub scheduler: no se pudo crear la programación de %s: %v", poolName, err)
+			return
 		}
+		logMsg("Scrub scheduler: programación mensual creada para %s (próximo: %s)", poolName, next.Format(time.RFC3339))
+		return
 	}
-	if now.Hour() != hour || now.Minute() != minute {
-		return false
+	if err != nil || enabled != 1 {
+		return
 	}
-	switch freq {
-	case "daily":
-		return true
-	case "weekly":
-		return int(now.Weekday()) == dow
-	case "monthly":
-		return now.Day() == dom
+
+	due, perr := time.Parse(time.RFC3339, nextRun.String)
+	if !nextRun.Valid || perr != nil {
+		// Sin next_run válido: calcularlo y esperar a que toque.
+		if next, ok := nextScrubRun(now, freq, h, m, dow, dom); ok {
+			_, _ = conn.ExecContext(ctx, `UPDATE scrub_schedule SET next_run = ?, updated_at = datetime('now') WHERE pool_name = ?`,
+				next.Format(time.RFC3339), poolName)
+		}
+		return
 	}
-	return false
+	if now.Before(due) {
+		return
+	}
+
+	logMsg("Scrub scheduler: starting scheduled scrub on %s (programado para %s)", poolName, nextRun.String)
+	res := runScheduledScrubFn(poolName)
+	if ok, _ := res["ok"].(bool); ok {
+		next, _ := nextScrubRun(now, freq, h, m, dow, dom)
+		_, _ = conn.ExecContext(ctx, `UPDATE scrub_schedule SET last_run = ?, next_run = ?, updated_at = datetime('now') WHERE pool_name = ?`,
+			now.Format(time.RFC3339), next.Format(time.RFC3339), poolName)
+		scrubFailMu.Lock()
+		delete(scrubFailNotified, poolName)
+		scrubFailMu.Unlock()
+		return
+	}
+
+	// No arrancó (pool degradado, otro scrub en curso, error): reintentar más
+	// tarde sin tocar last_run, y avisar solo la primera vez de la racha.
+	reason, _ := res["error"].(string)
+	if reason == "" {
+		reason = "motivo desconocido"
+	}
+	retry := now.Add(scrubRetryDelay)
+	_, _ = conn.ExecContext(ctx, `UPDATE scrub_schedule SET next_run = ?, updated_at = datetime('now') WHERE pool_name = ?`,
+		retry.Format(time.RFC3339), poolName)
+	logMsg("Scrub scheduler: scrub on %s NO arrancó (%s) — reintento a las %s", poolName, reason, retry.Format("15:04"))
+
+	scrubFailMu.Lock()
+	alreadyNotified := scrubFailNotified[poolName]
+	scrubFailNotified[poolName] = true
+	scrubFailMu.Unlock()
+	if !alreadyNotified {
+		addNotification("warning", "system",
+			fmt.Sprintf("Scrub programado no pudo arrancar en %s", poolName),
+			fmt.Sprintf("La verificación de integridad programada de %s no pudo iniciarse: %s. Se reintentará cada hora hasta que funcione.", poolName, reason))
+	}
 }

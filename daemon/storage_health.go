@@ -46,7 +46,18 @@ func parseBtrfsDeviceStats(mountPoint string) (map[string]DiskStatus, error) {
 	if !ok || out == "" {
 		return nil, fmt.Errorf("cannot read btrfs device stats for %s", mountPoint)
 	}
+	return parseBtrfsDeviceStatsOutput(out), nil
+}
 
+// parseBtrfsDeviceStatsOutput es la parte PURA de parseBtrfsDeviceStats.
+//
+// Las claves tienen que coincidir con las de CollectDiagnostics (CurrentPath
+// sin "/dev/": "sda", "nvme0n1"...). Antes se sacaban con TrimRight de dígitos
+// —el mismo bug que ya se arregló en parentDeviceOf—: nvme0n1 quedaba en
+// "nvme0n", así que en un pool NVMe cada disco salía "no pertenece a este
+// pool" y nunca se revisaban sus errores; loop49/loop50 o dm-0/dm-1 colapsaban
+// en una sola clave y el último disco pisaba los errores del primero.
+func parseBtrfsDeviceStatsOutput(out string) map[string]DiskStatus {
 	// Accumulate errors per device
 	type devErrors struct {
 		read       int
@@ -71,10 +82,7 @@ func parseBtrfsDeviceStats(mountPoint string) (map[string]DiskStatus, error) {
 			continue
 		}
 
-		devPath := line[bracketStart+1 : bracketEnd]
-		diskName := strings.TrimPrefix(devPath, "/dev/")
-		// Strip partition number for BTRFS too (though BTRFS usually uses whole device)
-		baseName := strings.TrimRight(diskName, "0123456789")
+		baseName := statsDiskName(line[bracketStart+1 : bracketEnd])
 		if baseName == "" {
 			continue
 		}
@@ -94,17 +102,19 @@ func parseBtrfsDeviceStats(mountPoint string) (map[string]DiskStatus, error) {
 		}
 		de := devMap[baseName]
 
+		// Sumar, no asignar: si dos particiones del mismo disco están en el
+		// pool, los errores son del disco y no deben pisarse.
 		switch statName {
 		case "read_io_errs":
-			de.read = statVal
+			de.read += statVal
 		case "write_io_errs":
-			de.write = statVal
+			de.write += statVal
 		case "corruption_errs":
-			de.corruption = statVal
+			de.corruption += statVal
 		case "flush_io_errs":
-			de.flush = statVal
+			de.flush += statVal
 		case "generation_errs":
-			de.generation = statVal
+			de.generation += statVal
 		}
 	}
 
@@ -117,7 +127,22 @@ func parseBtrfsDeviceStats(mountPoint string) (map[string]DiskStatus, error) {
 			ChecksumErrors: de.corruption + de.flush + de.generation,
 		}
 	}
-	return result, nil
+	return result
+}
+
+// statsDiskName convierte el path que reporta btrfs en el nombre de disco que
+// usa CollectDiagnostics. Solo pliega particiones de esquemas conocidos
+// (sda1 → sda, nvme0n1p2 → nvme0n1); loop/dm/md/mapper conservan su nombre.
+func statsDiskName(devPath string) string {
+	name := strings.TrimPrefix(devPath, "/dev/")
+	switch {
+	case strings.HasPrefix(name, "nvme"), strings.HasPrefix(name, "mmcblk"):
+		return strings.TrimPrefix(parentDeviceOf("/dev/"+name), "/dev/")
+	case strings.HasPrefix(name, "sd"), strings.HasPrefix(name, "vd"),
+		strings.HasPrefix(name, "hd"), strings.HasPrefix(name, "xvd"):
+		return strings.TrimRight(name, "0123456789")
+	}
+	return name
 }
 
 // ─── getSmartDetailsForDisk ──────────────────────────────────────────────────

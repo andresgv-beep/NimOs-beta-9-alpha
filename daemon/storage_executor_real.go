@@ -112,9 +112,10 @@ func (e *RealBtrfsExecutor) CreateFilesystem(ctx context.Context, req CreateFile
 	}
 	switch req.Profile {
 	case ProfileSingle:
-		// single: si hay >1 disco, metadata raid1 igual (BTRFS default sano)
+		// single: si hay >1 disco, metadata raid1 igual (BTRFS default sano).
+		// Con 1 disco no se pasa -m: mkfs.btrfs usa dup por defecto.
 		if len(req.ByIDPaths) > 1 {
-			args = append(args, "-d", "single", "-m", "raid1")
+			args = append(args, "-d", "single", "-m", metadataProfileFor(ProfileSingle, len(req.ByIDPaths)))
 		}
 	case ProfileRaid1:
 		args = append(args, "-d", "raid1", "-m", "raid1")
@@ -360,13 +361,19 @@ func (e *RealBtrfsExecutor) ConvertProfile(ctx context.Context, mountPoint strin
 		return fmt.Errorf("ConvertProfile: invalid profile %q", newProfile)
 	}
 
-	profileStr := string(newProfile)
+	// La metadata NO sigue ciegamente al perfil de datos (ver metadataTarget).
+	// Antes se pasaba -mconvert=single y el kernel rechazaba la conversión a
+	// single (reduce la redundancia de la metadata): fallaba siempre.
+	meta, err := e.metadataTarget(ctx, mountPoint, newProfile)
+	if err != nil {
+		return fmt.Errorf("ConvertProfile: %w", err)
+	}
+
 	// btrfs balance start -dconvert=raid1 -mconvert=raid1 <mountpoint>
-	// Convertimos data Y metadata para mantener consistencia.
 	args := []string{
 		"balance", "start",
-		"-dconvert=" + profileStr,
-		"-mconvert=" + profileStr,
+		"-dconvert=" + string(newProfile),
+		"-mconvert=" + meta,
 		"--full-balance",
 		mountPoint,
 	}
@@ -377,11 +384,58 @@ func (e *RealBtrfsExecutor) ConvertProfile(ctx context.Context, mountPoint strin
 	// pool en estado intermedio. El balance de BTRFS es transaccional/resumible,
 	// pero matarlo genera un error innecesario. Usamos runCommandNoTimeout:
 	// el balance hace su propio control y termina cuando termina.
-	_, err := e.runCommandNoTimeout(ctx, "btrfs", args...)
-	if err != nil {
+	if _, err := e.runCommandNoTimeout(ctx, "btrfs", args...); err != nil {
 		return fmt.Errorf("ConvertProfile: %w", err)
 	}
 	return nil
+}
+
+// RestoreRedundancy reconvierte al perfil del pool los chunks que no lo tienen.
+//
+// Mientras un pool está montado degraded,rw (durante un replace), el kernel no
+// puede hacer raid1 con un disco ausente y crea los chunks NUEVOS en single;
+// `btrfs replace` solo reconstruye los que ya existían. Verificado con
+// loopback real: tras un replace quedaban Data, Metadata y System en single
+// junto a los RAID1, mientras NimOS notificaba "redundancia completa". Si
+// después moría el otro disco, la metadata single se llevaba el pool entero.
+//
+// El filtro `soft` solo toca los chunks que NO están ya en el perfil destino:
+// en un pool sano no hace nada y tras un replace mueve solo lo creado en
+// degradado, así que es rápido. -f es obligatorio para -sconvert.
+func (e *RealBtrfsExecutor) RestoreRedundancy(ctx context.Context, mountPoint string, profile Profile) error {
+	if !profile.IsValid() {
+		return fmt.Errorf("RestoreRedundancy: invalid profile %q", profile)
+	}
+	meta, err := e.metadataTarget(ctx, mountPoint, profile)
+	if err != nil {
+		return fmt.Errorf("RestoreRedundancy: %w", err)
+	}
+	args := []string{
+		"balance", "start", "-f",
+		"-dconvert=" + string(profile) + ",soft",
+		"-mconvert=" + meta + ",soft",
+		"-sconvert=" + meta + ",soft",
+		mountPoint,
+	}
+	if _, err := e.runCommandNoTimeout(ctx, "btrfs", args...); err != nil {
+		return fmt.Errorf("RestoreRedundancy: %w", err)
+	}
+	return nil
+}
+
+// metadataTarget decide el perfil de metadata para un perfil de datos en un
+// pool montado, contando sus discos reales (ver metadataProfileFor).
+func (e *RealBtrfsExecutor) metadataTarget(ctx context.Context, mountPoint string, data Profile) (string, error) {
+	numDevices := 0
+	if info, err := e.GetFilesystemInfo(ctx, mountPoint); err == nil && info != nil {
+		numDevices = len(info.Devices)
+	}
+	if data == ProfileSingle && numDevices == 0 {
+		// Sin contar discos no sabemos si dup basta o hace falta raid1.
+		// Fallar cerrado antes que arriesgar metadata sin redundancia.
+		return "", fmt.Errorf("no se pudo contar los discos de %s; operación abortada para no dejar la metadata sin redundancia", mountPoint)
+	}
+	return metadataProfileFor(data, numDevices), nil
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -715,4 +769,20 @@ func (e *RealBtrfsExecutor) FilesystemExistsByUUID(ctx context.Context, btrfsUUI
 
 	// Cualquier otro error: propagamos. El caller decide.
 	return false, fmt.Errorf("FilesystemExistsByUUID: %v: %s", err, strings.TrimSpace(string(output)))
+}
+
+// metadataProfileFor decide el perfil de METADATA para un perfil de datos.
+// La metadata es lo que hace legible el pool: si se pierde, se pierde TODO,
+// así que nunca debe tener menos redundancia de la que el pool puede dar.
+//   - single con varios discos → raid1 (perder un disco no tumba el pool)
+//   - single con un disco      → dup (dos copias en el mismo disco, default de mkfs)
+//   - el resto                 → el mismo perfil que los datos
+func metadataProfileFor(data Profile, numDevices int) string {
+	if data == ProfileSingle {
+		if numDevices > 1 {
+			return string(ProfileRaid1)
+		}
+		return "dup"
+	}
+	return string(data)
 }

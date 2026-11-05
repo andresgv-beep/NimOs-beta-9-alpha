@@ -667,6 +667,18 @@ func (s *StorageService) watchReadoptedReplace(op *Operation, poolID, mountPoint
 					"No se pudo confirmar que el disco nuevo forma parte del pool. NimOS no ha cambiado nada; revisa Almacenamiento.")
 				return
 			}
+			// Igual que en el flujo normal: reconvertir lo que se escribió en
+			// single mientras el pool estuvo en degraded,rw. No deshace el swap.
+			var redundancyErr error
+			if pool, perr := s.repo.GetPool(bgCtx, poolID); perr != nil || pool == nil {
+				redundancyErr = fmt.Errorf("no se pudo leer el perfil del pool: %v", perr)
+			} else {
+				redundancyErr = s.btrfs.RestoreRedundancy(bgCtx, mountPoint, pool.Profile)
+			}
+			if redundancyErr != nil {
+				logMsg("watchReadoptedReplace: replace OK en %s pero no se pudo restaurar la redundancia: %v", mountPoint, redundancyErr)
+			}
+
 			// Swap atómico old→new + completed (mismo cierre que el goroutine
 			// original de ReplaceDevice).
 			err := s.runInTx(bgCtx, func(tx *sql.Tx) error {
@@ -686,8 +698,13 @@ func (s *StorageService) watchReadoptedReplace(op *Operation, poolID, mountPoint
 			}
 			logMsg("Recovery: replace re-adoptado del pool %s terminó → swap %s→%s persistido, op %s completed",
 				poolID, data.OldDeviceID, data.NewDeviceID, op.ID)
-			notifSuccess("Reemplazo de disco completado",
-				"La reconstrucción que sobrevivió al reinicio ha terminado y el pool vuelve a tener redundancia completa.")
+			if redundancyErr != nil {
+				notifError("Disco reemplazado, pero sin redundancia completa",
+					fmt.Sprintf("La reconstrucción terminó, pero parte de los datos escritos en modo degradado sigue en un solo disco: %v. Revisa Almacenamiento.", redundancyErr))
+			} else {
+				notifSuccess("Reemplazo de disco completado",
+					"La reconstrucción que sobrevivió al reinicio ha terminado y el pool vuelve a tener redundancia completa.")
+			}
 			// Scrub de verificación, igual que en el flujo normal (best-effort).
 			if serr := startScrubOnPool(mountPoint, poolID); serr != nil {
 				logMsg("watchReadoptedReplace: no se pudo lanzar el scrub post-replace en %s: %v", mountPoint, serr)

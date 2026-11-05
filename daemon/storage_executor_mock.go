@@ -40,6 +40,7 @@ type MockBtrfsExecutor struct {
 	RemoveDeviceFn           func(ctx context.Context, mountPoint, byIDPath string) error
 	ReplaceDeviceFn          func(ctx context.Context, mountPoint, oldByIDPath, newByIDPath string) error
 	ConvertProfileFn         func(ctx context.Context, mountPoint string, newProfile Profile) error
+	RestoreRedundancyFn      func(ctx context.Context, mountPoint string, profile Profile) error
 	WipeDeviceFn             func(ctx context.Context, byIDPath string) error
 	GetFilesystemInfoFn      func(ctx context.Context, mountPoint string) (*FilesystemInfo, error)
 	FilesystemExistsByUUIDFn func(ctx context.Context, btrfsUUID string) (bool, error)
@@ -54,6 +55,7 @@ type MockBtrfsExecutor struct {
 	RemoveDeviceCalls           []MockDeviceCall
 	ReplaceDeviceCalls          []MockReplaceCall
 	ConvertProfileCalls         []MockConvertProfileCall
+	RestoreRedundancyCalls      []MockConvertProfileCall
 	WipeDeviceCalls             []string // by-id paths
 	GetFilesystemInfoCalls      []string // mount points
 	FilesystemExistsByUUIDCalls []string // UUIDs consultados
@@ -199,6 +201,20 @@ func (m *MockBtrfsExecutor) ReplaceDevice(ctx context.Context, mountPoint, oldBy
 	return nil
 }
 
+func (m *MockBtrfsExecutor) RestoreRedundancy(ctx context.Context, mountPoint string, profile Profile) error {
+	m.mu.Lock()
+	m.RestoreRedundancyCalls = append(m.RestoreRedundancyCalls, MockConvertProfileCall{
+		MountPoint: mountPoint, NewProfile: profile,
+	})
+	fn := m.RestoreRedundancyFn
+	m.mu.Unlock()
+
+	if fn != nil {
+		return fn(ctx, mountPoint, profile)
+	}
+	return nil
+}
+
 func (m *MockBtrfsExecutor) ConvertProfile(ctx context.Context, mountPoint string, newProfile Profile) error {
 	m.mu.Lock()
 	m.ConvertProfileCalls = append(m.ConvertProfileCalls, MockConvertProfileCall{
@@ -263,6 +279,7 @@ func (m *MockBtrfsExecutor) Reset() {
 	m.RemoveDeviceCalls = nil
 	m.ReplaceDeviceCalls = nil
 	m.ConvertProfileCalls = nil
+	m.RestoreRedundancyCalls = nil
 	m.WipeDeviceCalls = nil
 	m.GetFilesystemInfoCalls = nil
 	m.FilesystemExistsByUUIDCalls = nil
