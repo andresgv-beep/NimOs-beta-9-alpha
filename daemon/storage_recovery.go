@@ -75,6 +75,11 @@ func (s *StorageService) RecoverPendingOperations(ctx context.Context) (*Recover
 		// Persistir el desenlace en una tx propia (cada op es independiente:
 		// que falle el resolve de una NO debe abortar las demás).
 		err := s.runInTx(ctx, func(tx *sql.Tx) error {
+			if outcome.Quarantine && op.PoolID != nil {
+				if err := s.repo.SetPoolControlState(ctx, tx, *op.PoolID, ControlStateRecovery); err != nil {
+					return err
+				}
+			}
 			return s.repo.UpdateOperationStatus(ctx, tx, op.ID,
 				outcome.NewStatus, outcome.ErrorMsg, outcome.ErrorCode)
 		})
@@ -143,7 +148,8 @@ type recoveryOutcome struct {
 	// el kernel tras el restart del daemon. La op se mantiene in_progress (el
 	// lock se conserva) y el caller lanza un watcher que la cierra cuando el
 	// balance termine. NewStatus en este caso es OpStatusInProgress.
-	Readopted bool
+	Readopted  bool
+	Quarantine bool // persist recovery state before releasing the operation lock
 }
 
 // resolveOrphanOperation decide el desenlace de una operation huérfana
@@ -371,8 +377,8 @@ var readBalanceStatusFn = readBalanceStatus
 
 // replaceKernelState resume la salida de `btrfs replace status -1`.
 type replaceKernelState struct {
-	Active   bool    // copia en curso
-	Finished bool    // terminó con éxito ("finished on ...")
+	Active   bool // copia en curso
+	Finished bool // terminó con éxito ("finished on ...")
 	// AUDIT-R5: tras un REBOOT completo de la máquina (no solo del daemon),
 	// btrfs SUSPENDE el replace y solo lo reanuda al montar el pool en rw.
 	// Como NimOS monta los pools degradados en `degraded,ro`, un replace
@@ -462,14 +468,14 @@ func kernelPoolHasDevice(mountPoint string, dev *Device) bool {
 // actual, seguro).
 func (s *StorageService) resolveOrphanLayoutOp(ctx context.Context, op *Operation) recoveryOutcome {
 	if op.PoolID == nil {
-		return inconclusiveOutcome(fmt.Sprintf(
+		return layoutInconclusiveOutcome(fmt.Sprintf(
 			"layout op %s sin pool_id, no se puede consultar balance", op.Type))
 	}
 
 	pool, err := s.repo.GetPool(ctx, *op.PoolID)
 	if err != nil || pool == nil || pool.MountPoint == "" {
 		// Sin pool/mountpoint no podemos consultar el balance → inconclusive.
-		return inconclusiveOutcome(fmt.Sprintf(
+		return layoutInconclusiveOutcome(fmt.Sprintf(
 			"layout op %s on pool %v interrupted by daemon restart (pool no resoluble)",
 			op.Type, derefStr(op.PoolID)))
 	}
@@ -493,16 +499,16 @@ func (s *StorageService) resolveOrphanLayoutOp(ctx context.Context, op *Operatio
 				op.ID, pool.Name, state, rst.Pct)
 			return recoveryOutcome{NewStatus: OpStatusInProgress, Readopted: true}
 		}
-		// Sin replace vivo, suspendido ni terminado ("Never started" o
-		// cancelado): cae al camino inconclusive de abajo (seguro).
+		// A balance cannot establish the result of a replace.
+		return layoutInconclusiveOutcome("replace sin resultado verificable; revisar membresía antes de operar")
 	}
 
 	st := readBalanceStatusFn(pool.MountPoint)
-	if !st.Active {
+	if !st.Known || !st.Active {
 		// No hay balance vivo. O terminó (y no lo cerramos), o nunca arrancó.
 		// No podemos distinguir con certeza → inconclusive (seguro). El
 		// self-heal del profile (Regla 16) corrige el estado en BD aparte.
-		return inconclusiveOutcome(fmt.Sprintf(
+		return layoutInconclusiveOutcome(fmt.Sprintf(
 			"layout op %s on pool %s interrupted by daemon restart (sin balance activo)",
 			op.Type, pool.Name))
 	}
@@ -515,50 +521,58 @@ func (s *StorageService) resolveOrphanLayoutOp(ctx context.Context, op *Operatio
 	return recoveryOutcome{NewStatus: OpStatusInProgress, Readopted: true}
 }
 
-// watchReadoptedBalance espera a que el balance BTRFS de un pool re-adoptado
-// termine y entonces cierra la op (completed) y reconcilia el profile real.
-// Corre en su propia goroutine con context.Background() (vive lo que viva el
-// daemon), replicando el patrón del convert_profile async.
+// A recovered balance has no exit result: disappearance can mean success,
+// cancellation or ENOSPC. Never infer completion from absence alone.
 func (s *StorageService) watchReadoptedBalance(opID, poolID, mountPoint string) {
-	bgCtx := context.Background()
-	const pollInterval = 10 * time.Second
-	const maxWait = 24 * time.Hour // tope defensivo: un balance no dura días
+	s.watchRecoveredBalance(context.Background(), opID, poolID, mountPoint, readBalanceStatusFn, 10*time.Second, 24*time.Hour)
+}
 
+func (s *StorageService) watchRecoveredBalance(ctx context.Context, opID, poolID, mountPoint string, read func(string) BalanceStatus, interval, maxWait time.Duration) {
 	deadline := time.Now().Add(maxWait)
 	for {
-		st := readBalanceStatusFn(mountPoint)
-		if !st.Active {
-			// Balance terminado. Cerrar la op y reconciliar el profile real.
-			// Reusa el self-heal de Regla 16: leer el profile real de BTRFS y
-			// persistirlo, luego marcar la op completed.
-			if pool, err := s.repo.GetPool(bgCtx, poolID); err == nil && pool != nil {
-				reconcilePoolProfileWithReality(pool)
-			}
-			err := s.runInTx(bgCtx, func(tx *sql.Tx) error {
-				return s.repo.UpdateOperationStatus(bgCtx, tx, opID, OpStatusCompleted, nil, nil)
-			})
-			if err != nil {
-				s.markOperationFailed(bgCtx, opID,
-					fmt.Sprintf("watcher no pudo cerrar op re-adoptada: %v", err),
-					ErrCodeInternal)
-				return
-			}
-			logMsg("Recovery: balance re-adoptado del pool %s terminó → op %s completed", poolID, opID)
+		st := read(mountPoint)
+		reason := ""
+		switch {
+		case !st.Known:
+			reason = "no se puede consultar el balance recuperado; resultado desconocido"
+		case !st.Active:
+			reason = "el balance recuperado ya no está activo; no se puede distinguir éxito, cancelación o fallo"
+		case time.Now().After(deadline):
+			reason = "el balance recuperado excedió el tiempo de supervisión; puede seguir activo"
+		}
+		if reason != "" {
+			s.quarantineLayoutOperation(ctx, opID, poolID, reason)
 			return
 		}
-
-		if time.Now().After(deadline) {
-			// El balance lleva demasiado: algo va mal. Marcar failed para
-			// liberar el lock; el siguiente boot/reconcile lo reevaluará.
-			s.markOperationFailed(bgCtx, opID,
-				"balance re-adoptado excedió el tiempo máximo de espera (24h)",
-				ErrCodeRecoveryInconclusive)
-			logMsg("Recovery: watcher de balance del pool %s excedió 24h → op %s failed", poolID, opID)
-			return
+		timer := time.NewTimer(interval)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return // retain the durable operation lock
+		case <-timer.C:
 		}
-
-		time.Sleep(pollInterval)
 	}
+}
+
+// Recovery state and failure are atomic. If persistence fails, the existing
+// in_progress operation remains locked rather than allowing another mutation.
+func (s *StorageService) quarantineLayoutOperation(ctx context.Context, opID, poolID, reason string) {
+	code := ErrCodeRecoveryInconclusive
+	err := s.runInTx(ctx, func(tx *sql.Tx) error {
+		if err := s.repo.SetPoolControlState(ctx, tx, poolID, ControlStateRecovery); err != nil {
+			return err
+		}
+		return s.repo.UpdateOperationStatus(ctx, tx, opID, OpStatusFailed, &reason, &code)
+	})
+	if err != nil {
+		logMsg("Recovery: cannot quarantine operation %s: %v; lock retained", opID, err)
+	}
+}
+
+func layoutInconclusiveOutcome(reason string) recoveryOutcome {
+	out := inconclusiveOutcome(reason)
+	out.Quarantine = true
+	return out
 }
 
 // watchReadoptedReplace espera a que el `btrfs replace` del kernel de una op

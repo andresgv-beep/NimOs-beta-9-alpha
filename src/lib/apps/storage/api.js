@@ -223,8 +223,9 @@ export async function getBalanceStatus(poolId) {
   return unwrap(res, 'balance status');
 }
 
-export async function getOperations({ poolId, status, limit } = {}) {
+export async function getOperations({ id, poolId, status, limit } = {}) {
   const params = new URLSearchParams();
+  if (id) params.set('id', id);
   if (poolId) params.set('pool_id', poolId);
   if (status) params.set('status', status);
   if (limit) params.set('limit', String(limit));

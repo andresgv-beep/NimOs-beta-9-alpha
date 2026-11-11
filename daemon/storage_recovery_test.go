@@ -291,7 +291,7 @@ func TestStorageRecoveryLayoutOpsInconclusiveWhenNoBalance(t *testing.T) {
 	}
 	// Inyectar: no hay balance activo en ningún pool.
 	prev := readBalanceStatusFn
-	readBalanceStatusFn = func(mp string) BalanceStatus { return BalanceStatus{Active: false} }
+	readBalanceStatusFn = func(mp string) BalanceStatus { return BalanceStatus{Known: true, Active: false} }
 	defer func() { readBalanceStatusFn = prev }()
 
 	for _, opType := range cases {
@@ -336,7 +336,7 @@ func TestStorageRecoveryLayoutOpsInconclusiveWhenNoBalance(t *testing.T) {
 func TestStorageRecoveryLayoutOpReadoptedWhenBalanceActive(t *testing.T) {
 	prev := readBalanceStatusFn
 	readBalanceStatusFn = func(mp string) BalanceStatus {
-		return BalanceStatus{Active: true, PercentDone: 42}
+		return BalanceStatus{Known: true, Active: true, PercentDone: 42}
 	}
 	defer func() { readBalanceStatusFn = prev }()
 
@@ -363,12 +363,11 @@ func TestStorageRecoveryLayoutOpReadoptedWhenBalanceActive(t *testing.T) {
 	}
 	injectOrphanOp(t, service, op)
 
-	result, _ := service.RecoverPendingOperations(ctx)
-	if result.Readopted != 1 {
-		t.Errorf("Readopted got %d, want 1 (balance activo)", result.Readopted)
-	}
-	if result.Inconclusive != 0 {
-		t.Errorf("Inconclusive got %d, want 0", result.Inconclusive)
+	// Resolve without launching an unbounded background watcher. The watcher
+	// lifecycle and durable quarantine are exercised separately.
+	outcome := service.resolveOrphanLayoutOp(ctx, op)
+	if !outcome.Readopted || outcome.NewStatus != OpStatusInProgress {
+		t.Fatalf("active balance was not readopted: %+v", outcome)
 	}
 
 	// La op debe seguir in_progress (lock conservado), no failed.

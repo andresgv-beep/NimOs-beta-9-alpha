@@ -707,6 +707,9 @@ func (h *StorageHTTPHandler) handleOperations(w http.ResponseWriter, r *http.Req
 
 	q := r.URL.Query()
 	filter := OperationFilter{}
+	if id := q.Get("id"); id != "" {
+		filter.ID = &id
+	}
 
 	if poolID := q.Get("pool_id"); poolID != "" {
 		filter.PoolID = &poolID

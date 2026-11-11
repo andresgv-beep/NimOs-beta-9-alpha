@@ -299,6 +299,11 @@ func resolvePoolRecoveryAccept(ctx context.Context, poolID string) error {
 		return fmt.Errorf("accept: el pool no está montado, no se puede leer su profile real")
 	}
 
+	// Do not unlock layout while a balance is active, paused or unobservable.
+	if st := readBalanceStatusFn(pool.MountPoint); !st.Known || st.Active {
+		return fmt.Errorf("accept: el balance está activo o su estado es desconocido; no se puede desbloquear el pool")
+	}
+
 	realProfile := readRealDataProfile(pool.MountPoint)
 	if realProfile == "" {
 		return fmt.Errorf("accept: no se pudo leer el profile real del filesystem")

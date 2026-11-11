@@ -137,7 +137,7 @@ func TestRecoveryReplaceOrphanReadoptedViaReplaceStatus(t *testing.T) {
 	// exacto que la lógica antigua (solo balance) daba por muerto.
 	origBal, origRep := readBalanceStatusFn, readReplaceStateFn
 	defer func() { readBalanceStatusFn, readReplaceStateFn = origBal, origRep }()
-	readBalanceStatusFn = func(string) BalanceStatus { return BalanceStatus{Active: false} }
+	readBalanceStatusFn = func(string) BalanceStatus { return BalanceStatus{Known: true, Active: false} }
 	readReplaceStateFn = func(string) replaceKernelState {
 		return replaceKernelState{Active: true, Pct: 42.0}
 	}
@@ -174,7 +174,7 @@ func TestRecoveryReplaceOrphanStillInconclusiveWithoutKernelReplace(t *testing.T
 
 	origBal, origRep := readBalanceStatusFn, readReplaceStateFn
 	defer func() { readBalanceStatusFn, readReplaceStateFn = origBal, origRep }()
-	readBalanceStatusFn = func(string) BalanceStatus { return BalanceStatus{Active: false} }
+	readBalanceStatusFn = func(string) BalanceStatus { return BalanceStatus{Known: true, Active: false} }
 	readReplaceStateFn = func(string) replaceKernelState { return replaceKernelState{} } // Never started
 
 	outcome := service.resolveOrphanLayoutOp(ctx, op)
@@ -312,7 +312,6 @@ func TestWatchReadoptedReplaceRefusesSwapIfDiskStillMissing(t *testing.T) {
 	}
 }
 
-
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT-R6 · El swap exige que el KERNEL confirme el disco nuevo como
 // miembro. Cubre el 'finished' residual de un replace anterior sobre una op
@@ -353,7 +352,7 @@ func TestWatchReadoptedReplaceRefusesSwapIfKernelLacksNewDevice(t *testing.T) {
 	readReplaceStateFn = func(string) replaceKernelState {
 		return replaceKernelState{Finished: true, Pct: 100} // residual de OTRO replace
 	}
-	missingDevidCheckFn = func(string) string { return "" }              // sin missing (proactivo)
+	missingDevidCheckFn = func(string) string { return "" }             // sin missing (proactivo)
 	kernelPoolHasDeviceFn = func(string, *Device) bool { return false } // kernel NO ve el nuevo
 
 	service.watchReadoptedReplace(op, poolID, "/nimos/pools/data")
@@ -478,7 +477,7 @@ func TestRecoveryReplaceOrphanReadoptedWhenSuspended(t *testing.T) {
 
 	origBal, origRep := readBalanceStatusFn, readReplaceStateFn
 	defer func() { readBalanceStatusFn, readReplaceStateFn = origBal, origRep }()
-	readBalanceStatusFn = func(string) BalanceStatus { return BalanceStatus{Active: false} }
+	readBalanceStatusFn = func(string) BalanceStatus { return BalanceStatus{Known: true, Active: false} }
 	readReplaceStateFn = func(string) replaceKernelState {
 		return replaceKernelState{Suspended: true, Pct: 37.5}
 	}

@@ -75,6 +75,7 @@ func (r *StorageRepo) GetOperation(ctx context.Context, id string) (*Operation, 
 
 // OperationFilter permite filtrar listados de operaciones.
 type OperationFilter struct {
+	ID     *string
 	PoolID *string
 	Status *OperationStatus
 	Type   *OperationType
@@ -88,6 +89,10 @@ func (r *StorageRepo) ListOperations(ctx context.Context, f OperationFilter) ([]
 	q := strings.Builder{}
 	q.WriteString(`SELECT ` + operationColumns + ` FROM storage_operations WHERE 1=1`)
 	args := []any{}
+	if f.ID != nil {
+		q.WriteString(" AND id = ?")
+		args = append(args, *f.ID)
+	}
 
 	if f.PoolID != nil {
 		q.WriteString(` AND pool_id = ?`)

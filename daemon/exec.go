@@ -14,6 +14,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"strings"
@@ -91,6 +92,24 @@ func runSafe(cmd string, args ...string) (string, bool) {
 		return result, false
 	}
 	return result, true
+}
+
+// runSafeStatusContext is for bounded read-only probes whose exit status is
+// part of the protocol (for example btrfs balance status).
+func runSafeStatusContext(ctx context.Context, command string, args ...string) (string, int) {
+	cmd := exec.CommandContext(ctx, command, args...)
+	cmd.Env = cLocaleEnv()
+	out, err := cmd.CombinedOutput()
+	if ctx.Err() != nil {
+		return string(out), -1
+	}
+	if err == nil {
+		return string(out), 0
+	}
+	if exit, ok := err.(*exec.ExitError); ok {
+		return string(out), exit.ExitCode()
+	}
+	return string(out), -1
 }
 
 // runSafeInput executes a command with data piped to stdin (no shell).

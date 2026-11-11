@@ -39,10 +39,10 @@ func TestParseBalanceStatus_Paused(t *testing.T) {
 }
 
 func TestParseBalanceStatus_GarbageSafe(t *testing.T) {
-	// Output corrupto/desconocido → inactivo, sin panic ni estado inventado.
+	// Output corrupto/desconocido → desconocido, nunca una observación válida.
 	for _, out := range []string{"", "???", "ERROR: cannot access", "Balance on '/x' is doing something weird"} {
 		st := parseBalanceStatus(out)
-		if st.Active {
+		if st.Known || st.Active {
 			t.Errorf("output no reconocido %q: no debe inventar Active=true", out)
 		}
 	}

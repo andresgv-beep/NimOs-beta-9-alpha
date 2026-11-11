@@ -22,6 +22,7 @@
    */
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import * as api from './api.js';
+  import { conversionResult } from './conversion-progress.js';
 
   export let pool;
   export let eligibleDisks = [];
@@ -36,6 +37,8 @@
   let percent = 0;
   let balanceDetail = '';
   let pollTimer = null;
+  let conversionId = null;
+  let polling = false;
 
   // ¿El pool ya tiene 2+ discos? Entonces el disco nuevo es opcional
   // (se puede convertir directamente con los que tiene).
@@ -77,7 +80,9 @@
       // 2. Lanzar la conversión (async: devuelve op in_progress al instante)
       phase = 'converting';
       percent = 0;
-      await api.convertPoolProfile(pool.id, 'raid1');
+      const conversion = await api.convertPoolProfile(pool.id, 'raid1');
+      if (!conversion?.id) throw new Error('No se pudo identificar la conversión');
+      conversionId = conversion.id;
 
       // 3. Polling del progreso hasta que el balance termine
       pollTimer = setInterval(checkProgress, 2500);
@@ -89,28 +94,36 @@
   }
 
   async function checkProgress() {
+    if (polling || phase !== 'converting') return;
+    polling = true;
     try {
-      const st = await api.getBalanceStatus(pool.id);
-      if (st?.active) {
-        if (st.percent_done > percent) percent = st.percent_done;
-        balanceDetail = st.detail || '';
-        return; // sigue en marcha
+      // Follow this operation, never an unrelated newer entry in the journal.
+      const ops = await api.getOperations({ id: conversionId, poolId: pool.id });
+      const result = conversionResult(ops, conversionId);
+      if (result.phase === 'done') {
+        stopPolling();
+        percent = 100;
+        phase = 'done';
+        return;
       }
-
-      // El balance ya no está activo → ¿completó o falló? Miramos la op.
-      stopPolling();
-      const ops = await api.getOperations({ poolId: pool.id, limit: 1 });
-      const last = Array.isArray(ops) ? ops[0] : (ops?.operations?.[0] || null);
-      if (last && last.type === 'convert_profile' && last.status === 'failed') {
-        error = last.error || 'La conversión falló (ver logs del daemon)';
+      if (result.phase === 'error') {
+        stopPolling();
+        error = result.error;
         phase = 'error';
         return;
       }
-      percent = 100;
-      phase = 'done';
+      const st = await api.getBalanceStatus(pool.id);
+      if (st?.known && st.active) {
+        percent = Math.max(percent, Math.min(99, st.percent_done || 0));
+        balanceDetail = st.paused ? 'Balance pausado' : st.detail || '';
+      } else {
+        balanceDetail = 'Esperando confirmación del estado de la conversión…';
+      }
     } catch (e) {
-      // Error transitorio de red: no abortar el polling por un fallo puntual.
+      balanceDetail = 'No se pudo consultar el estado; se volverá a intentar…';
       console.warn('balance-status poll:', e);
+    } finally {
+      polling = false;
     }
   }
 

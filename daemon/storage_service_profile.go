@@ -79,7 +79,7 @@ func (s *StorageService) ConvertProfile(ctx context.Context, req ConvertProfileR
 	go func() {
 		bgCtx := context.Background()
 		if err := s.btrfs.ConvertProfile(bgCtx, mountPoint, newProfile); err != nil {
-			s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeBtrfsCommandFailed)
+			s.quarantineLayoutOperation(bgCtx, op.ID, poolID, "conversión fallida; el layout puede haberse aplicado parcialmente: "+err.Error())
 			logMsg("ConvertProfile async: balance falló en pool %s: %v", poolID, err)
 			return
 		}
@@ -91,7 +91,7 @@ func (s *StorageService) ConvertProfile(ctx context.Context, req ConvertProfileR
 			return s.repo.UpdateOperationStatus(bgCtx, tx, op.ID, OpStatusCompleted, nil, nil)
 		})
 		if err != nil {
-			s.markOperationFailed(bgCtx, op.ID, err.Error(), ErrCodeInternal)
+			s.quarantineLayoutOperation(bgCtx, op.ID, poolID, "conversión ejecutada pero no persistida: "+err.Error())
 			return
 		}
 		logMsg("ConvertProfile async: pool %s convertido a %s", poolID, newProfile)
