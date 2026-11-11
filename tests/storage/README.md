@@ -75,3 +75,34 @@ No simula cortes eléctricos, corrupción de sectores ni reinicios del kernel.
 No considerar esto una certificación para datos críticos. Faltan ejecutar la
 prueba virtual, validar recuperación tras cortes/reinicios y probar restauración
 desde copias externas en el hardware y kernel de destino.
+
+## Segunda revisión: identidad y discos ausentes
+
+Se sustituyeron las coincidencias por subcadenas por comparación exacta de las
+rutas de las filas `devid`. Una ruta en la etiqueta del pool no acredita un disco.
+Cuando existe `by-id`, debe poder resolverse y prevalece sobre `CurrentPath` para
+no aceptar un nombre de dispositivo reutilizado.
+
+La consulta de miembros ahora devuelve error si falla el comando, falta el total,
+hay filas incompletas/duplicadas o la cantidad de miembros no cuadra. La ausencia
+de discos solo se considera comprobada con una lectura completa. Si faltan varios
+discos, no se elige automáticamente el primero como origen del reemplazo.
+Los formatos de salida no reconocidos requieren revisión: se rechazan en lugar
+de asumir que el pool está completo.
+
+Durante la recuperación de un reemplazo, una consulta fallida o un disco nuevo no
+confirmado conserva la asignación anterior y pone el pool en `recovery`. No se
+restaura redundancia ni se confirma el intercambio sobre esa evidencia dudosa.
+
+Pruebas específicas (sin discos reales):
+
+```bash
+GOCACHE=/tmp/nimos-go-cache go -C daemon test -race ./... \
+  -run 'Test(StorageMembership|StorageReplaceUnknown|StorageRecoveredReplace|WatchReadoptedReplace)'
+```
+
+Incluyen `/dev/loop1` frente a `/dev/loop10`, etiquetas que contienen rutas,
+`by-id` válido/roto, rutas antiguas, errores de comando, filas truncadas, varios
+discos ausentes y conservación de la asignación en SQLite tras un falso
+`finished`. Las antiguas pruebas de discos ausentes duplicaban el algoritmo:
+ahora ejercitan el parser y el lector que se usan en producción.

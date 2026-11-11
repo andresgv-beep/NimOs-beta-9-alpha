@@ -393,7 +393,7 @@ func TestStorageIntegrationFailureDiskLossDegradedBootAndReplace(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(pool.MountPoint, "nuevo.txt"), []byte("x"), 0644); err == nil {
 		t.Fatal("un pool degradado no debe aceptar escrituras")
 	}
-	if devid := missingDevidForPool(pool.MountPoint); devid == "" {
+	if devid, err := missingDevidForPool(pool.MountPoint); err != nil || devid == "" {
 		t.Fatalf("missingDevidForPool no detecta el disco ausente:\n%s",
 			run(t, "btrfs", "filesystem", "show", pool.MountPoint))
 	}

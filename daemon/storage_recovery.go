@@ -29,7 +29,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -416,7 +415,7 @@ func readReplaceState(mountPoint string) replaceKernelState {
 }
 
 // missingDevidCheckFn es inyectable para tests. Producción: missingDevidForPool
-// (storage_executor_real.go) — devuelve "" si el pool no tiene disco missing.
+// (storage_membership.go) — devuelve ("", nil) solo si no falta ningún disco.
 var missingDevidCheckFn = missingDevidForPool
 
 // kernelPoolHasDeviceFn verifica que un device es MIEMBRO REAL del filesystem
@@ -431,32 +430,6 @@ var missingDevidCheckFn = missingDevidForPool
 // Regla 16: la membresía en BD solo cambia si el kernel confirma que el
 // disco NUEVO está dentro.
 var kernelPoolHasDeviceFn = kernelPoolHasDevice
-
-func kernelPoolHasDevice(mountPoint string, dev *Device) bool {
-	if dev == nil {
-		return false
-	}
-	out, ok := runSafe("btrfs", "filesystem", "show", mountPoint)
-	if !ok {
-		return false // sin lectura del kernel no hay certeza → no confirmar
-	}
-	// `filesystem show` imprime paths /dev/sdX; el by-id es un symlink que
-	// puede no aparecer literal. Comprobar ambos y, como refuerzo, resolver
-	// el symlink del by-id a su target real.
-	if dev.CurrentPath != "" && strings.Contains(out, dev.CurrentPath) {
-		return true
-	}
-	if dev.ByIDPath != "" {
-		if strings.Contains(out, dev.ByIDPath) {
-			return true
-		}
-		if target, err := filepath.EvalSymlinks(dev.ByIDPath); err == nil && target != "" &&
-			strings.Contains(out, target) {
-			return true
-		}
-	}
-	return false
-}
 
 // resolveOrphanLayoutOp decide el desenlace de una op de layout (add/remove/
 // replace device, convert profile) interrumpida por un restart del daemon.
@@ -660,7 +633,14 @@ func (s *StorageService) watchReadoptedReplace(op *Operation, poolID, mountPoint
 			// Reality check 1: tras un replace finished no debe quedar disco
 			// missing en el pool. Si lo hay, el 'finished' es de otro replace
 			// anterior y NO corresponde a esta op → no tocar membresía.
-			if devid := missingDevidCheckFn(mountPoint); devid != "" {
+			devid, membershipErr := missingDevidCheckFn(mountPoint)
+			if membershipErr != nil {
+				s.quarantineLayoutOperation(bgCtx, op.ID, poolID,
+					"replace sin confirmación de membresía: "+membershipErr.Error())
+				notifError("Reemplazo de disco: estado desconocido", "No se pudo comprobar si faltan discos. El pool requiere revisión; no se ha confirmado el reemplazo.")
+				return
+			}
+			if devid != "" {
 				s.markOperationFailed(bgCtx, op.ID,
 					fmt.Sprintf("replace 'finished' pero el pool aún reporta un disco missing (devid %s); membresía sin tocar", devid),
 					ErrCodeRecoveryInconclusive)
@@ -674,9 +654,8 @@ func (s *StorageService) watchReadoptedReplace(op *Operation, poolID, mountPoint
 			// pero jamás ejecutada (reemplazo proactivo sin disco missing).
 			newDev, derr := s.repo.GetDevice(bgCtx, data.NewDeviceID)
 			if derr != nil || newDev == nil || !kernelPoolHasDeviceFn(mountPoint, newDev) {
-				s.markOperationFailed(bgCtx, op.ID,
-					"replace 'finished' pero el kernel no confirma el disco nuevo como miembro del pool; membresía sin tocar",
-					ErrCodeRecoveryInconclusive)
+				s.quarantineLayoutOperation(bgCtx, op.ID, poolID,
+					"replace 'finished' pero el kernel no confirma el disco nuevo como miembro del pool; membresía sin tocar")
 				notifError("Reemplazo de disco: sin confirmación del kernel",
 					"No se pudo confirmar que el disco nuevo forma parte del pool. NimOS no ha cambiado nada; revisa Almacenamiento.")
 				return

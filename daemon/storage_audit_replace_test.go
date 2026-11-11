@@ -228,7 +228,7 @@ func TestWatchReadoptedReplacePersistsSwapOnFinish(t *testing.T) {
 	readReplaceStateFn = func(string) replaceKernelState {
 		return replaceKernelState{Active: false, Finished: true, Pct: 100}
 	}
-	missingDevidCheckFn = func(string) string { return "" } // pool sano
+	missingDevidCheckFn = func(string) (string, error) { return "", nil } // pool sano
 	// AUDIT-R6: el kernel confirma el disco nuevo como miembro.
 	kernelPoolHasDeviceFn = func(string, *Device) bool { return true }
 
@@ -286,7 +286,7 @@ func TestWatchReadoptedReplaceRefusesSwapIfDiskStillMissing(t *testing.T) {
 	readReplaceStateFn = func(string) replaceKernelState {
 		return replaceKernelState{Finished: true, Pct: 100}
 	}
-	missingDevidCheckFn = func(string) string { return "2" } // aún falta un disco
+	missingDevidCheckFn = func(string) (string, error) { return "2", nil } // aún falta un disco
 	kernelPoolHasDeviceFn = func(string, *Device) bool { return true }
 
 	service.watchReadoptedReplace(op, poolID, "/nimos/pools/data")
@@ -352,8 +352,8 @@ func TestWatchReadoptedReplaceRefusesSwapIfKernelLacksNewDevice(t *testing.T) {
 	readReplaceStateFn = func(string) replaceKernelState {
 		return replaceKernelState{Finished: true, Pct: 100} // residual de OTRO replace
 	}
-	missingDevidCheckFn = func(string) string { return "" }             // sin missing (proactivo)
-	kernelPoolHasDeviceFn = func(string, *Device) bool { return false } // kernel NO ve el nuevo
+	missingDevidCheckFn = func(string) (string, error) { return "", nil } // sin missing (proactivo)
+	kernelPoolHasDeviceFn = func(string, *Device) bool { return false }   // kernel NO ve el nuevo
 
 	service.watchReadoptedReplace(op, poolID, "/nimos/pools/data")
 
@@ -428,7 +428,7 @@ func TestWatchReadoptedReplaceResumesSuspendedAfterReboot(t *testing.T) {
 		}
 		return replaceKernelState{Finished: true, Pct: 100}
 	}
-	missingDevidCheckFn = func(string) string { return "" }
+	missingDevidCheckFn = func(string) (string, error) { return "", nil }
 	kernelPoolHasDeviceFn = func(string, *Device) bool { return true }
 
 	service.watchReadoptedReplace(op, poolID, "/nimos/pools/data")
@@ -542,5 +542,72 @@ func TestFailedLayoutOpBecomesAlert(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("AUDIT-R7: un replace fallido reciente debe aparecer como alerta")
+	}
+}
+
+// Failed observations and prefix collisions must not swap membership or unlock
+// the pool for a second mutation, even when replace status says "finished".
+func TestStorageRecoveredReplaceRejectsUnverifiedMembership(t *testing.T) {
+	for _, tc := range []struct{ name, out, exit string }{
+		{"query error", healthyMemberListing, "1"},
+		{"truncated listing", "Total devices 2 FS bytes used 1GiB\ndevid 1 size 2GiB used 1GiB path /dev/loop10", "0"},
+		{"wrong disk prefix", healthyMemberListing, "0"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			service, mock, cleanup := setupTestService(t)
+			defer cleanup()
+			ctx := context.Background()
+			poolID, deviceIDs := createTestPool(t, service, ctx, "membership", ProfileRaid1, 2)
+			err := service.runInTx(ctx, func(tx *sql.Tx) error {
+				_, err := service.repo.UpsertDevice(ctx, tx, &Device{ID: "new-membership", Serial: "NEW-MEMBERSHIP", CurrentPath: "/dev/loop1", SizeBytes: 2e12})
+				return err
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			op := &Operation{ID: newUUID(), Type: OpTypeReplaceDevice, PoolID: &poolID, Status: OpStatusInProgress,
+				Data: rawJSON(map[string]string{"old_device_id": deviceIDs[0], "new_device_id": "new-membership"})}
+			if err := service.runInTx(ctx, func(tx *sql.Tx) error { return service.repo.CreateOperation(ctx, tx, op) }); err != nil {
+				t.Fatal(err)
+			}
+			prevRep, prevMissing, prevKernel := readReplaceStateFn, missingDevidCheckFn, kernelPoolHasDeviceFn
+			defer func() {
+				readReplaceStateFn, missingDevidCheckFn, kernelPoolHasDeviceFn = prevRep, prevMissing, prevKernel
+			}()
+			readReplaceStateFn = func(string) replaceKernelState { return replaceKernelState{Finished: true, Pct: 100} }
+			missingDevidCheckFn = missingDevidForPool
+			kernelPoolHasDeviceFn = kernelPoolHasDevice
+			mockMembershipCommand(t, tc.out, tc.exit)
+			service.watchReadoptedReplace(op, poolID, "/mock")
+			final, err := service.repo.GetOperation(ctx, op.ID)
+			if err != nil || final.Status != OpStatusFailed || final.ErrorCode == nil || *final.ErrorCode != ErrCodeRecoveryInconclusive {
+				t.Fatalf("incorrect result: %+v %v", final, err)
+			}
+			pool, err := service.GetPool(ctx, poolID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if pool.ControlState != ControlStateRecovery {
+				t.Fatalf("pool was not quarantined: %s", pool.ControlState)
+			}
+			oldPresent := false
+			for _, dev := range pool.Devices {
+				if dev.ID == deviceIDs[0] {
+					oldPresent = true
+				}
+				if dev.ID == "new-membership" {
+					t.Fatal("unverified new disk assigned")
+				}
+			}
+			if !oldPresent {
+				t.Fatal("old disk incorrectly unassigned")
+			}
+			if len(mock.RestoreRedundancyCalls) != 0 {
+				t.Fatal("attempted mutation before confirming membership")
+			}
+			if NewPolicyChecker().Allows(pool, OpTypeReplaceDevice) {
+				t.Fatal("second replacement allowed")
+			}
+		})
 	}
 }

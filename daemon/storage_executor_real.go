@@ -292,10 +292,15 @@ func (e *RealBtrfsExecutor) ReplaceDevice(ctx context.Context, mountPoint, oldBy
 	// resolver el devid del disco missing desde `btrfs filesystem show`.
 	oldRef := oldByIDPath
 	if !devicePathExists(oldByIDPath) {
-		if devid := missingDevidForPool(mountPoint); devid != "" {
-			logMsg("ReplaceDevice: old device no existe (%s); usando devid=%s del disco missing", oldByIDPath, devid)
-			oldRef = devid
+		devid, err := missingDevidForPool(mountPoint)
+		if err != nil {
+			return fmt.Errorf("ReplaceDevice: cannot identify missing source: %w", err)
 		}
+		if devid == "" {
+			return fmt.Errorf("ReplaceDevice: source unavailable but no missing device was confirmed")
+		}
+		logMsg("ReplaceDevice: old device no existe (%s); usando devid=%s del disco missing", oldByIDPath, devid)
+		oldRef = devid
 	}
 
 	// `-B` = foreground: BLOQUEA hasta que la reconstrucción TERMINA. Sin él,
@@ -323,34 +328,6 @@ func (e *RealBtrfsExecutor) ReplaceDevice(ctx context.Context, mountPoint, oldBy
 		}
 	}
 	return nil
-}
-
-// missingDevidForPool devuelve el devid (como string) del disco que falta en un
-// pool degradado, leyéndolo de `btrfs filesystem show <mountpoint>`. Devuelve ""
-// si no hay disco missing o no se puede determinar.
-//
-// Salida típica:
-//
-//	devid    1 size 111.79GiB used 44.03GiB path /dev/sda
-//	devid    2 size 0 used 0 path <missing disk> MISSING
-func missingDevidForPool(mountPoint string) string {
-	out, ok := runSafe("btrfs", "filesystem", "show", mountPoint)
-	if !ok {
-		return ""
-	}
-	for _, line := range strings.Split(out, "\n") {
-		if !strings.Contains(line, "MISSING") && !strings.Contains(line, "missing") {
-			continue
-		}
-		// Buscar "devid N"
-		fields := strings.Fields(line)
-		for i, f := range fields {
-			if f == "devid" && i+1 < len(fields) {
-				return fields[i+1]
-			}
-		}
-	}
-	return ""
 }
 
 // ConvertProfile cambia el profile de un pool ejecutando btrfs balance
